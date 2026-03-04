@@ -59,17 +59,31 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
 
   // ── Re-scan ────────────────────────────────────────────────────────────────
   const handleRescan = async () => {
-    if (!invoice?.image_url) { setError('No image available to re-scan'); return; }
+    if (!invoice?.image_path && !invoice?.image_url) { setError('No image available to re-scan'); return; }
     setRescanning(true); setRescanDone(false); setError(null);
     try {
-      const imgRes = await fetch(invoice.image_url);
-      const blob = await imgRes.blob();
-      const base64 = await new Promise<string>((res, rej) => {
-        const r = new FileReader();
-        r.onloadend = () => res(r.result as string);
-        r.onerror = rej;
-        r.readAsDataURL(blob);
-      });
+      let base64: string;
+      if (invoice.image_path) {
+        // Use Supabase storage download to avoid CORS issues
+        const { data, error: dlError } = await supabase.storage.from('invoices').download(invoice.image_path);
+        if (dlError || !data) throw new Error('Could not download image from storage');
+        base64 = await new Promise<string>((res, rej) => {
+          const r = new FileReader();
+          r.onloadend = () => res(r.result as string);
+          r.onerror = rej;
+          r.readAsDataURL(data);
+        });
+      } else {
+        const imgRes = await fetch(invoice.image_url!);
+        if (!imgRes.ok) throw new Error('Could not fetch image');
+        const blob = await imgRes.blob();
+        base64 = await new Promise<string>((res, rej) => {
+          const r = new FileReader();
+          r.onloadend = () => res(r.result as string);
+          r.onerror = rej;
+          r.readAsDataURL(blob);
+        });
+      }
 
       const ocrRes = await fetch('/api/ocr', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -227,13 +241,13 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
         {!editing && (
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
             {invoice.image_url && (
-              <button onClick={handleRescan} disabled={rescanning} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: rescanDone ? '#f0fdf4' : '#fff', color: rescanDone ? '#15803d' : '#334155', fontSize: 13, fontWeight: 600, cursor: rescanning ? 'default' : 'pointer', fontFamily: 'inherit' }}>
-                {rescanning ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : rescanDone ? <CheckCircle size={14} /> : <ScanLine size={14} />}
-                {rescanning ? 'Scanning…' : rescanDone ? 'Updated' : 'Re-scan'}
+              <button onClick={handleRescan} disabled={rescanning} style={{ width: 40, height: 40, borderRadius: 8, border: '1.5px solid #e2e8f0', background: rescanDone ? '#f0fdf4' : '#fff', color: rescanDone ? '#15803d' : '#64748b', cursor: rescanning ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {rescanning ? <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} /> : rescanDone ? <CheckCircle size={20} /> : <ScanLine size={20} />}
+                
               </button>
             )}
-            <button onClick={() => setEditing(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: '#fff', color: '#334155', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-              <Edit2 size={15} /> Edit
+            <button onClick={() => setEditing(true)} style={{ width: 40, height: 40, borderRadius: 8, border: '1.5px solid #e2e8f0', background: '#fff', color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Edit2 size={18} />
             </button>
             <button onClick={handleDelete} disabled={deleting} style={{ width: 36, height: 36, borderRadius: 8, border: 'none', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e11d48', cursor: 'pointer' }}>
               {deleting ? <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} /> : <Trash2 size={18} />}
