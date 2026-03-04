@@ -139,6 +139,24 @@ export default function InvoicesPage() {
   });
   const topSuppliers = Object.entries(supplierMap).sort((a, b) => b[1].total - a[1].total).slice(0, 5);
 
+  // Category breakdown for period
+  const categoryMap: Record<string, { count: number; total: number }> = {};
+  periodInvoices.forEach((inv) => {
+    const cat = inv.category || 'Uncategorised';
+    if (!categoryMap[cat]) categoryMap[cat] = { count: 0, total: 0 };
+    categoryMap[cat].count++;
+    categoryMap[cat].total += inv.amount ?? 0;
+  });
+  const topCategories = Object.entries(categoryMap).sort((a, b) => b[1].total - a[1].total).slice(0, 6);
+  const catTotal = topCategories.reduce((s, [, v]) => s + v.total, 0) || 1;
+  const CAT_COLORS: Record<string, string> = {
+    'Travel & Transport': '#3b82f6', 'Utilities': '#f59e0b',
+    'Materials & Supplies': '#8b5cf6', 'Subscriptions & Software': '#06b6d4',
+    'Professional Services': '#10b981', 'Food & Entertainment': '#f97316',
+    'Equipment': '#6366f1', 'Marketing': '#ec4899',
+    'Other': '#94a3b8', 'Uncategorised': '#cbd5e1',
+  };
+
   return (
     <>
       <style>{`
