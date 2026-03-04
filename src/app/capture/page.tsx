@@ -224,7 +224,7 @@ function CapturePageInner() {
           <ArrowLeft size={20} />
         </button>
         <div>
-          <div style={{ fontSize: 17, fontWeight: 700, color: '#0f172a' }}>Review Invoice</div>
+          <div style={{ fontSize: 17, fontWeight: 700, color: '#0f172a' }}>Review Document</div>
           {ocrConfidence !== null && (
             <div style={{ fontSize: 12, color: '#64748b' }}>AI Confidence: {Math.round(ocrConfidence * 100)}%</div>
           )}
@@ -238,23 +238,46 @@ function CapturePageInner() {
         )}
 
 
-        {/* Category */}
-        {category && (
-          <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: 16, marginBottom: 12 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: 10 }}>Category</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              {['Travel & Transport','Utilities','Materials & Supplies','Subscriptions & Software','Professional Services','Food & Entertainment','Equipment','Marketing','Other'].map(cat => (
-                <button key={cat} onClick={() => setCategory(cat)}
-                  style={{ padding: '6px 12px', borderRadius: 20, border: '1.5px solid', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-                    borderColor: category === cat ? '#2563eb' : '#e2e8f0',
-                    background: category === cat ? '#eff6ff' : '#fff',
-                    color: category === cat ? '#2563eb' : '#64748b' }}>
-                  {cat}
-                </button>
-              ))}
-            </div>
+        {/* Document Type + Number */}
+        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: 16, marginBottom: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: 10 }}>Document Type</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+            {[['invoice','Tax Invoice'],['quote','Quote'],['purchase_order','Purchase Order'],['credit_note','Credit Note'],['delivery_note','Delivery Note'],['receipt','Receipt']].map(([val, label]) => (
+              <button key={val} onClick={() => setDocumentType(val)}
+                style={{ padding: '6px 12px', borderRadius: 20, border: '1.5px solid', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                  borderColor: documentType === val ? '#2563eb' : '#e2e8f0',
+                  background: documentType === val ? '#eff6ff' : '#fff',
+                  color: documentType === val ? '#2563eb' : '#64748b' }}>
+                {label}
+              </button>
+            ))}
           </div>
-        )}
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 6 }}>Document / Reference Number</div>
+            <input
+              value={documentNumber || ''}
+              onChange={e => setDocumentNumber(e.target.value || null)}
+              placeholder="e.g. INV-0042"
+              style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 14, fontFamily: 'DM Mono, monospace', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#fff' }}
+            />
+          </div>
+        </div>
+
+        {/* Category */}
+        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: 16, marginBottom: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: 10 }}>Category</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {['Travel & Transport','Utilities','Materials & Supplies','Subscriptions & Software','Professional Services','Food & Entertainment','Equipment','Marketing','Other'].map(cat => (
+              <button key={cat} onClick={() => setCategory(cat)}
+                style={{ padding: '6px 12px', borderRadius: 20, border: '1.5px solid', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                  borderColor: category === cat ? '#2563eb' : '#e2e8f0',
+                  background: category === cat ? '#eff6ff' : '#fff',
+                  color: category === cat ? '#2563eb' : '#64748b' }}>
+                {cat}
+              </button>
+            ))}
+          </div>
+        </div>
 
         {/* Line Items */}
         {lineItems.length > 0 && (
