@@ -20,191 +20,148 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
   const videoConstraints = {
     width: { ideal: 1920 },
     height: { ideal: 1080 },
-    facingMode: facingMode,
+    facingMode,
   };
 
   const capture = useCallback(() => {
     if (webcamRef.current) {
       const imageSrc = webcamRef.current.getScreenshot();
-      if (imageSrc) {
-        setCapturedImage(imageSrc);
-      }
+      if (imageSrc) setCapturedImage(imageSrc);
     }
   }, []);
 
-  const retake = () => {
-    setCapturedImage(null);
-  };
-
-  const confirm = () => {
-    if (capturedImage) {
-      onCapture(capturedImage);
-    }
-  };
-
-  const switchCamera = () => {
-    setFacingMode((prev) => (prev === 'user' ? 'environment' : 'user'));
-  };
+  const switchCamera = () => setFacingMode((prev) => prev === 'user' ? 'environment' : 'user');
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result as string;
-        setCapturedImage(result);
-      };
+      reader.onloadend = () => setCapturedImage(reader.result as string);
       reader.readAsDataURL(file);
     }
   };
 
-  const handleUserMedia = () => {
-    setHasPermission(true);
-    setError(null);
-  };
-
-  const handleUserMediaError = (err: string | DOMException) => {
-    setHasPermission(false);
-    setError(typeof err === 'string' ? err : err.message);
-  };
-
-  // Show captured image preview
+  // ── Preview (after capture) ────────────────────────────────────────────────
   if (capturedImage) {
     return (
-      <div className="fixed inset-0 bg-black z-50 flex flex-col">
-        <div className="flex-1 flex items-center justify-center p-4">
-          <img
-            src={capturedImage}
-            alt="Captured invoice"
-            className="max-w-full max-h-full object-contain rounded-lg"
-          />
+      <div style={{ position: 'fixed', inset: 0, background: '#000', zIndex: 100, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <img src={capturedImage} alt="Captured invoice" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 12 }} />
         </div>
-        <div className="p-4 flex justify-center gap-4 bg-black/80">
+        <div style={{ padding: '20px 24px', paddingBottom: 'max(20px, env(safe-area-inset-bottom))', display: 'flex', justifyContent: 'center', gap: 16, background: 'rgba(0,0,0,0.85)' }}>
           <button
-            onClick={retake}
-            className="flex items-center gap-2 px-6 py-3 bg-gray-600 text-white rounded-full hover:bg-gray-500 transition-colors"
+            onClick={() => setCapturedImage(null)}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 24px', background: '#374151', color: '#fff', border: 'none', borderRadius: 50, fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}
           >
-            <RotateCcw size={20} />
-            Retake
+            <RotateCcw size={18} />Retake
           </button>
           <button
-            onClick={confirm}
-            className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-full hover:bg-green-500 transition-colors"
+            onClick={() => onCapture(capturedImage)}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 24px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 50, fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}
           >
-            <Check size={20} />
-            Use Photo
+            <Check size={18} />Use Photo
           </button>
         </div>
       </div>
     );
   }
 
-  // Show error or no permission state
+  // ── No permission ──────────────────────────────────────────────────────────
   if (hasPermission === false) {
     return (
-      <div className="fixed inset-0 bg-black z-50 flex flex-col items-center justify-center p-4">
-        <div className="text-center text-white max-w-md">
-          <Camera size={64} className="mx-auto mb-4 opacity-50" />
-          <h2 className="text-xl font-semibold mb-2">Camera Access Required</h2>
-          <p className="text-gray-400 mb-6">
+      <div style={{ position: 'fixed', inset: 0, background: '#000', zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <div style={{ textAlign: 'center', color: '#fff', maxWidth: 360 }}>
+          <Camera size={64} color="rgba(255,255,255,0.4)" style={{ marginBottom: 16 }} />
+          <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 8px' }}>Camera Access Required</h2>
+          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)', margin: '0 0 24px' }}>
             {error || 'Please grant camera access to capture invoices.'}
           </p>
-          <div className="flex flex-col gap-3">
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-full hover:bg-blue-500 transition-colors"
-            >
-              <Upload size={20} />
-              Upload from Gallery
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px 24px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 50, fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', width: '100%', marginBottom: 12 }}
+          >
+            <Upload size={18} />Upload from Gallery
+          </button>
+          {onClose && (
+            <button onClick={onClose} style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 8 }}>
+              Cancel
             </button>
-            {onClose && (
-              <button
-                onClick={onClose}
-                className="px-6 py-3 text-gray-400 hover:text-white transition-colors"
-              >
-                Cancel
-              </button>
-            )}
-          </div>
+          )}
         </div>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleFileUpload}
-          className="hidden"
-        />
+        <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} style={{ display: 'none' }} />
       </div>
     );
   }
 
-  // Show camera view
+  // ── Camera view ────────────────────────────────────────────────────────────
   return (
-    <div className="fixed inset-0 bg-black z-50 flex flex-col">
-      {/* Header */}
-      <div className="absolute top-0 left-0 right-0 z-10 p-4 flex justify-between items-center bg-gradient-to-b from-black/80 to-transparent">
-        {onClose && (
-          <button
-            onClick={onClose}
-            className="p-2 text-white hover:bg-white/20 rounded-full transition-colors"
-          >
-            <X size={24} />
+    <div style={{ position: 'fixed', inset: 0, background: '#000', zIndex: 100, display: 'flex', flexDirection: 'column' }}>
+      {/* Top bar */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, padding: '16px 16px', paddingTop: 'max(16px, env(safe-area-inset-top))', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'linear-gradient(to bottom, rgba(0,0,0,0.7), transparent)' }}>
+        {onClose ? (
+          <button onClick={onClose} style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer' }}>
+            <X size={22} />
           </button>
-        )}
-        <button
-          onClick={switchCamera}
-          className="p-2 text-white hover:bg-white/20 rounded-full transition-colors"
-        >
-          <RotateCcw size={24} />
+        ) : <div style={{ width: 40 }} />}
+        <span style={{ color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: 'DM Sans, sans-serif' }}>Scan Invoice</span>
+        <button onClick={switchCamera} style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer' }}>
+          <RotateCcw size={20} />
         </button>
       </div>
 
-      {/* Camera View */}
-      <div className="flex-1 flex items-center justify-center">
+      {/* Webcam */}
+      <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
         <Webcam
           ref={webcamRef}
           audio={false}
           screenshotFormat="image/jpeg"
           screenshotQuality={0.92}
           videoConstraints={videoConstraints}
-          onUserMedia={handleUserMedia}
-          onUserMediaError={handleUserMediaError}
-          className="w-full h-full object-cover"
+          onUserMedia={() => { setHasPermission(true); setError(null); }}
+          onUserMediaError={(err) => { setHasPermission(false); setError(typeof err === 'string' ? err : (err as DOMException).message); }}
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />
+
         {/* Frame guide */}
-        <div className="absolute inset-8 border-2 border-white/30 rounded-lg pointer-events-none">
-          <div className="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-white rounded-tl-lg" />
-          <div className="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-white rounded-tr-lg" />
-          <div className="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-white rounded-bl-lg" />
-          <div className="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-white rounded-br-lg" />
+        <div style={{ position: 'absolute', inset: 48, border: '2px solid rgba(255,255,255,0.25)', borderRadius: 12, pointerEvents: 'none' }}>
+          {[['top', 'left', 'borderTop', 'borderLeft', 'borderTopLeftRadius'], ['top', 'right', 'borderTop', 'borderRight', 'borderTopRightRadius'], ['bottom', 'left', 'borderBottom', 'borderLeft', 'borderBottomLeftRadius'], ['bottom', 'right', 'borderBottom', 'borderRight', 'borderBottomRightRadius']].map(([v, h, b1, b2, r], i) => (
+            <div key={i} style={{ position: 'absolute', [v]: -2, [h]: -2, width: 28, height: 28, [b1]: '3px solid #fff', [b2]: '3px solid #fff', [r]: 6 }} />
+          ))}
         </div>
       </div>
 
-      {/* Controls */}
-      <div className="p-6 flex justify-center items-center gap-6 bg-gradient-to-t from-black/80 to-transparent">
+      {/* Controls — fixed height, guaranteed visible */}
+      <div style={{
+        height: 140,
+        paddingBottom: 'env(safe-area-inset-bottom)',
+        background: 'rgba(0,0,0,0.85)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 40,
+        flexShrink: 0,
+      }}>
+        {/* Upload */}
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="p-3 text-white hover:bg-white/20 rounded-full transition-colors"
+          style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer' }}
         >
-          <Upload size={24} />
+          <Upload size={22} />
         </button>
+
+        {/* Shutter */}
         <button
           onClick={capture}
-          className="w-16 h-16 bg-white rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors"
+          style={{ width: 72, height: 72, borderRadius: '50%', background: '#fff', border: '4px solid rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 0 0 6px rgba(255,255,255,0.2)' }}
         >
-          <div className="w-12 h-12 bg-white border-4 border-gray-800 rounded-full" />
+          <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#fff', border: '3px solid #1a1a1a' }} />
         </button>
-        <div className="w-12" /> {/* Spacer */}
+
+        {/* Spacer */}
+        <div style={{ width: 48 }} />
       </div>
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        onChange={handleFileUpload}
-        className="hidden"
-      />
+      <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handleFileUpload} style={{ display: 'none' }} />
     </div>
   );
 }
