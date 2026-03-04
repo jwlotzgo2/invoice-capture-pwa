@@ -93,7 +93,8 @@ export default function InvoicesPage() {
   const fetchInvoices = useCallback(async () => {
     setLoading(true);
     try {
-      let query = supabase.from('invoices').select('*').order(filters.sortBy, { ascending: filters.sortOrder === 'asc' });
+      const { data: { user: fetchUser } } = await supabase.auth.getUser();
+      let query = supabase.from('invoices').select('*').eq('user_id', fetchUser?.id || '').order(filters.sortBy, { ascending: filters.sortOrder === 'asc' });
       if (filters.search) query = query.or(`supplier.ilike.%${filters.search}%,description.ilike.%${filters.search}%,business_name.ilike.%${filters.search}%`);
       if (filters.status) query = query.eq('status', filters.status);
       if (filters.dateFrom) query = query.gte('invoice_date', filters.dateFrom);
