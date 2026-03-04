@@ -109,7 +109,7 @@ export default function AdminDashboardPage() {
   const orgs = stats?.orgs || [];
   const filteredOrg = orgFilter !== 'all' ? orgs.find(o => o.id === orgFilter) : null;
 
-  const avgConf = filteredOrg ? filteredOrg.avg_confidence : stats?.avgConfidence;
+  const avgConf = filteredOrg ? filteredOrg.avg_confidence : (stats?.avgConfidence ?? null);
   const confPct = avgConf ? Math.round(avgConf * 100) : null;
   const docsProcessed = filteredOrg ? filteredOrg.invoice_count : (stats?.totalInvoices || 0);
   const usersCount = filteredOrg ? filteredOrg.user_count : (stats?.totalUsers || 0);
