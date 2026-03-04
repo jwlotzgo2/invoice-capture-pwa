@@ -118,6 +118,7 @@ Return ONLY the JSON object, no additional text or markdown.`,
     } catch (parseError) {
       console.error('Failed to parse OCR response:', textContent.text);
       ocrData = {
+        document_type: 'invoice', document_number: null,
         supplier: null, description: null, invoice_date: null,
         amount: null, vat_amount: null, products_services: null,
         business_name: null, confidence: 0, category: null,
