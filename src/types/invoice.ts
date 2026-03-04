@@ -9,6 +9,27 @@ export type InvoiceCategory =
   | 'Marketing'
   | 'Other';
 
+
+export type DocumentType = 'invoice' | 'quote' | 'purchase_order' | 'credit_note' | 'delivery_note' | 'receipt';
+export type DocStatus = 'open' | 'accepted' | 'rejected' | 'converted' | 'closed';
+
+export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
+  invoice: 'Tax Invoice',
+  quote: 'Quote',
+  purchase_order: 'Purchase Order',
+  credit_note: 'Credit Note',
+  delivery_note: 'Delivery Note',
+  receipt: 'Receipt',
+};
+
+export const DOC_STATUS_LABELS: Record<DocStatus, string> = {
+  open: 'Open',
+  accepted: 'Accepted',
+  rejected: 'Rejected',
+  converted: 'Converted',
+  closed: 'Closed',
+};
+
 export interface LineItem {
   description: string;
   quantity: number | null;
@@ -32,8 +53,14 @@ export interface Invoice {
   original_ocr_values: Record<string, unknown> | null;
   status: 'pending' | 'reviewed' | 'approved' | 'rejected';
   source: 'camera' | 'upload' | 'email';
+  document_type: DocumentType | null;
+  doc_status: DocStatus | null;
+  document_number: string | null;
+  reference_number: string | null;
   is_paid: boolean | null;
   payment_method: 'cash' | 'card' | 'eft' | null;
+  document_type: DocumentType | null;
+  document_number: string | null;
   category: InvoiceCategory | null;
   line_items: LineItem[] | null;
   created_at: string;
@@ -126,6 +153,8 @@ export interface OCRResult {
   products_services: string | null;
   business_name: string | null;
   confidence: number;
+  document_type: DocumentType | null;
+  document_number: string | null;
   category: InvoiceCategory | null;
   line_items: LineItem[];
   raw_response: string;

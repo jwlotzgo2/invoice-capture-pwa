@@ -1,269 +1,269 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { Invoice } from '@/types/invoice';
-import { Search, Download, Edit2, Loader2, FileText, X, SlidersHorizontal, ChevronUp, ChevronDown, CreditCard, Banknote, ArrowLeftRight } from 'lucide-react';
+import { Invoice, DocumentType, DocStatus, DOCUMENT_TYPE_LABELS, DOC_STATUS_LABELS } from '@/types/invoice';
+import { Search, SlidersHorizontal, X, Download, ChevronUp, ChevronDown, Banknote, CreditCard, ArrowLeftRight } from 'lucide-react';
 
-const fmtZAR = (n: number | null) => n
-  ? new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(n).replace('ZAR', 'R')
-  : '—';
+type SortField = 'created_at' | 'invoice_date' | 'amount' | 'supplier';
 
-const STATUS_STYLES: Record<string, React.CSSProperties> = {
-  pending:  { background: '#fef9c3', color: '#854d0e' },
-  reviewed: { background: '#eff6ff', color: '#1d4ed8' },
-  approved: { background: '#f0fdf4', color: '#15803d' },
-  rejected: { background: '#fff1f2', color: '#be123c' },
+const DOC_TABS: { key: 'all' | DocumentType; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'invoice', label: 'Invoices' },
+  { key: 'quote', label: 'Quotes' },
+  { key: 'purchase_order', label: 'Orders' },
+  { key: 'credit_note', label: 'Credits' },
+  { key: 'delivery_note', label: 'Delivery' },
+  { key: 'receipt', label: 'Receipts' },
+];
+
+const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
+  pending:   { bg: '#fef9c3', color: '#854d0e' },
+  reviewed:  { bg: '#eff6ff', color: '#1d4ed8' },
+  approved:  { bg: '#f0fdf4', color: '#15803d' },
+  rejected:  { bg: '#fff1f2', color: '#be123c' },
 };
 
-const PMT_ICON: Record<string, React.ReactNode> = {
-  cash: <Banknote size={11} />,
-  card: <CreditCard size={11} />,
-  eft:  <ArrowLeftRight size={11} />,
+const DOC_STATUS_COLORS: Record<string, { bg: string; color: string }> = {
+  open:      { bg: '#f0f9ff', color: '#0369a1' },
+  accepted:  { bg: '#f0fdf4', color: '#15803d' },
+  rejected:  { bg: '#fff1f2', color: '#be123c' },
+  converted: { bg: '#f5f3ff', color: '#6d28d9' },
+  closed:    { bg: '#f8fafc', color: '#64748b' },
 };
 
-function exportToCSV(invoices: Invoice[]) {
-  const headers = ['Date', 'Supplier', 'Business Name', 'Amount', 'VAT', 'Excl VAT', 'Paid', 'Payment Method', 'Status', 'Source', 'Description'];
-  const rows = invoices.map((inv) => [
-    inv.invoice_date || '',
-    inv.supplier || '',
-    inv.business_name || '',
-    inv.amount?.toFixed(2) || '',
-    inv.vat_amount?.toFixed(2) || '',
-    inv.amount && inv.vat_amount ? (inv.amount - inv.vat_amount).toFixed(2) : '',
-    (inv as any).is_paid ? 'Yes' : 'No',
-    (inv as any).payment_method || '',
-    inv.status,
-    inv.source,
-    (inv.description || '').replace(/,/g, ';'),
-  ]);
-  const csv = [headers, ...rows].map((r) => r.join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `invoices-${new Date().toISOString().split('T')[0]}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
+const css = `
+  .list-page { font-family: 'DM Sans', sans-serif; min-height: 100svh; background: #f8fafc; }
+  .list-header { background: #fff; border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; z-index: 40; }
+  .list-header-top { padding: 12px 16px; display: flex; align-items: center; gap: 10px; }
+  .list-search { flex: 1; display: flex; align-items: center; gap: 8px; background: #f1f5f9; border-radius: 10px; padding: 8px 12px; }
+  .list-search input { flex: 1; border: none; background: transparent; outline: none; font-size: 14px; font-family: inherit; color: #0f172a; }
+  .list-search input::placeholder { color: #94a3b8; }
+  .list-icon-btn { width: 38px; height: 38px; border-radius: 9px; border: 1.5px solid #e2e8f0; background: #fff; display: flex; align-items: center; justify-content: center; color: #64748b; cursor: pointer; flex-shrink: 0; }
+  .list-icon-btn.active { border-color: #2563eb; background: #eff6ff; color: #2563eb; }
 
-type SortKey = 'invoice_date' | 'supplier' | 'amount' | 'created_at';
+  /* Doc type tabs */
+  .doc-tabs { display: flex; gap: 0; overflow-x: auto; padding: 0 16px; scrollbar-width: none; border-top: 1px solid #f1f5f9; }
+  .doc-tabs::-webkit-scrollbar { display: none; }
+  .doc-tab { padding: 10px 14px; font-size: 13px; font-weight: 600; color: #64748b; border: none; background: transparent; cursor: pointer; font-family: inherit; white-space: nowrap; border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s; }
+  .doc-tab.active { color: #2563eb; border-bottom-color: #2563eb; }
 
-export default function InvoicesListPage() {
+  /* Filter panel */
+  .filter-panel { padding: 12px 16px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .filter-select { padding: 7px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 13px; font-family: inherit; color: #334155; background: #fff; outline: none; }
+  .filter-input { padding: 7px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 13px; font-family: inherit; color: #334155; background: #fff; outline: none; width: 130px; }
+
+  /* Summary bar */
+  .summary-bar { padding: 8px 16px; background: #fff; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: #64748b; }
+
+  /* Sort bar */
+  .sort-bar { display: flex; gap: 6px; padding: 10px 16px; overflow-x: auto; scrollbar-width: none; }
+  .sort-bar::-webkit-scrollbar { display: none; }
+  .sort-pill { padding: '5px 12px'; border-radius: 20px; border: 1.5px solid #e2e8f0; background: #fff; font-size: 12px; font-weight: 600; color: #64748b; cursor: pointer; font-family: inherit; display: flex; align-items: center; gap: 4px; white-space: nowrap; padding: 5px 12px; }
+  .sort-pill.active { border-color: #2563eb; background: #eff6ff; color: #2563eb; }
+
+  /* Cards */
+  .card-list { padding: 0 16px 100px; display: flex; flex-direction: column; gap: 10px; }
+  .inv-card { background: #fff; border-radius: 14px; border: 1px solid #e2e8f0; padding: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); cursor: pointer; transition: box-shadow 0.15s, border-color 0.15s; }
+  .inv-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-color: #bfdbfe; }
+  .inv-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+  .inv-supplier { font-size: 15px; font-weight: 700; color: #0f172a; }
+  .inv-amount { font-size: 17px; font-weight: 700; color: #0f172a; font-family: 'DM Mono', monospace; }
+  .inv-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; }
+  .inv-desc { font-size: 13px; color: #64748b; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .empty-state { text-align: center; padding: 60px 24px; color: #94a3b8; font-size: 15px; }
+`;
+
+export default function InvoiceListPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [supplierFilter, setSupplierFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-  const [sortKey, setSortKey] = useState<SortKey>('created_at');
-  const [sortAsc, setSortAsc] = useState(false);
+  const [docTab, setDocTab] = useState<'all' | DocumentType>('all');
+  const [filterSupplier, setFilterSupplier] = useState('');
+  const [filterDocStatus, setFilterDocStatus] = useState('');
+  const [filterDateFrom, setFilterDateFrom] = useState('');
+  const [filterDateTo, setFilterDateTo] = useState('');
+  const [sortBy, setSortBy] = useState<SortField>('created_at');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const router = useRouter();
   const supabase = createClient();
 
-  useEffect(() => {
-    const load = async () => {
+  const fetchInvoices = useCallback(async () => {
+    setLoading(true);
+    try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/auth/login'); return; }
-      const { data } = await supabase.from('invoices').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
+      let q = supabase.from('invoices').select('*').eq('user_id', user?.id || '').order(sortBy, { ascending: sortDir === 'asc' });
+      const { data } = await q;
       setInvoices(data || []);
+    } finally {
       setLoading(false);
-    };
-    load();
-  }, []);
+    }
+  }, [sortBy, sortDir]);
 
-  const supplierOptions = Array.from(new Set(invoices.map((i) => i.supplier).filter(Boolean))) as string[];
+  useEffect(() => { fetchInvoices(); }, [fetchInvoices]);
 
-  const filtered = invoices
-    .filter((inv) => {
+  // Filtering
+  const filtered = invoices.filter(inv => {
+    if (docTab !== 'all' && (inv.document_type || 'invoice') !== docTab) return false;
+    if (filterSupplier && !(inv.supplier || '').toLowerCase().includes(filterSupplier.toLowerCase())) return false;
+    if (filterDocStatus && inv.doc_status !== filterDocStatus) return false;
+    if (filterDateFrom && inv.invoice_date && inv.invoice_date < filterDateFrom) return false;
+    if (filterDateTo && inv.invoice_date && inv.invoice_date > filterDateTo) return false;
+    if (search) {
       const q = search.toLowerCase();
-      const matchSearch = !q || inv.supplier?.toLowerCase().includes(q) || inv.business_name?.toLowerCase().includes(q) || inv.description?.toLowerCase().includes(q);
-      const matchSupplier = !supplierFilter || inv.supplier === supplierFilter;
-      const matchStatus = statusFilter === 'all' || inv.status === statusFilter;
-      const d = inv.invoice_date || inv.created_at?.split('T')[0];
-      return matchSearch && matchSupplier && matchStatus && (!dateFrom || d >= dateFrom) && (!dateTo || d <= dateTo);
-    })
-    .sort((a, b) => {
-      const va: string | number = sortKey === 'amount' ? (a.amount || 0) : (a[sortKey] || '');
-      const vb: string | number = sortKey === 'amount' ? (b.amount || 0) : (b[sortKey] || '');
-      return sortAsc ? (va < vb ? -1 : 1) : (va > vb ? -1 : 1);
-    });
+      if (!(inv.supplier || '').toLowerCase().includes(q) && !(inv.description || '').toLowerCase().includes(q) && !(inv.document_number || '').toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
 
-  const toggleSort = (key: SortKey) => { if (sortKey === key) setSortAsc(!sortAsc); else { setSortKey(key); setSortAsc(false); } };
-  const SortIcon = ({ k }: { k: SortKey }) => sortKey === k
-    ? sortAsc ? <ChevronUp size={12} color="#2563eb" /> : <ChevronDown size={12} color="#2563eb" />
-    : <ChevronDown size={12} color="#cbd5e1" />;
+  const total = filtered.reduce((s, i) => s + (i.amount || 0), 0);
+  const totalVat = filtered.reduce((s, i) => s + (i.vat_amount || 0), 0);
+  const suppliers = [...new Set(invoices.map(i => i.supplier).filter(Boolean))];
 
-  const hasFilters = supplierFilter || statusFilter !== 'all' || dateFrom || dateTo;
-  const clearFilters = () => { setSupplierFilter(''); setStatusFilter('all'); setDateFrom(''); setDateTo(''); };
+  // Tab counts
+  const tabCounts = DOC_TABS.reduce((acc, t) => {
+    acc[t.key] = t.key === 'all' ? invoices.length : invoices.filter(i => (i.document_type || 'invoice') === t.key).length;
+    return acc;
+  }, {} as Record<string, number>);
 
-  const totalAmount = filtered.reduce((s, i) => s + (i.amount || 0), 0);
-  const totalVAT = filtered.reduce((s, i) => s + (i.vat_amount || 0), 0);
+  const toggleSort = (field: SortField) => {
+    if (sortBy === field) setSortDir(d => d === 'desc' ? 'asc' : 'desc');
+    else { setSortBy(field); setSortDir('desc'); }
+  };
 
-  const inp: React.CSSProperties = { width: '100%', padding: '8px 10px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, color: '#0f172a', outline: 'none', fontFamily: 'inherit', background: '#fff', boxSizing: 'border-box' };
+  const exportCSV = () => {
+    const rows = [
+      ['Date','Doc Type','Doc No.','Supplier','Business','Description','Amount','VAT','Excl VAT','Paid','Payment','Doc Status','Category'],
+      ...filtered.map(i => [
+        i.invoice_date || '', DOCUMENT_TYPE_LABELS[i.document_type as DocumentType] || 'Invoice',
+        i.document_number || '', i.supplier || '', i.business_name || '', i.description || '',
+        i.amount || '', i.vat_amount || '', i.amount && i.vat_amount ? (i.amount - i.vat_amount).toFixed(2) : '',
+        i.is_paid ? 'Yes' : 'No', i.payment_method || '', i.doc_status || '', i.category || '',
+      ])
+    ];
+    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    a.download = `documents-${new Date().toISOString().slice(0,10)}.csv`; a.click();
+  };
+
+  const fmtZAR = (n: number) => `R ${n.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const SortIcon = ({ f }: { f: SortField }) => sortBy === f ? (sortDir === 'desc' ? <ChevronDown size={12} /> : <ChevronUp size={12} />) : null;
 
   return (
-    <div style={{ minHeight: '100svh', background: '#f8fafc', fontFamily: 'DM Sans, sans-serif' }}>
-      {/* Header */}
-      <header style={{ background: '#fff', borderBottom: '1px solid #e2e8f0', padding: '14px 16px', position: 'sticky', top: 0, zIndex: 40 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <div style={{ fontSize: 17, fontWeight: 700, color: '#0f172a' }}>Invoices</div>
-          <button onClick={() => exportToCSV(filtered)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: '#fff', color: '#334155', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-            <Download size={14} />Export
-          </button>
+    <>
+      <style>{css}</style>
+      <div className="list-page">
+
+        {/* Header */}
+        <header className="list-header">
+          <div className="list-header-top">
+            <button onClick={() => router.push('/invoices')} style={{ width: 36, height: 36, borderRadius: 8, border: 'none', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', cursor: 'pointer', flexShrink: 0 }}>
+              ←
+            </button>
+            <div className="list-search">
+              <Search size={16} color="#94a3b8" />
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search supplier, description, doc no…" />
+              {search && <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 0 }}><X size={14} /></button>}
+            </div>
+            <button className={`list-icon-btn${showFilters ? ' active' : ''}`} onClick={() => setShowFilters(f => !f)}><SlidersHorizontal size={16} /></button>
+            <button className="list-icon-btn" onClick={exportCSV}><Download size={16} /></button>
+          </div>
+
+          {/* Doc type tabs */}
+          <div className="doc-tabs">
+            {DOC_TABS.map(t => (
+              <button key={t.key} className={`doc-tab${docTab === t.key ? ' active' : ''}`} onClick={() => setDocTab(t.key)}>
+                {t.label}{tabCounts[t.key] > 0 ? ` (${tabCounts[t.key]})` : ''}
+              </button>
+            ))}
+          </div>
+
+          {/* Filter panel */}
+          {showFilters && (
+            <div className="filter-panel">
+              <select className="filter-select" value={filterSupplier} onChange={e => setFilterSupplier(e.target.value)}>
+                <option value="">All Suppliers</option>
+                {suppliers.map(s => <option key={s} value={s!}>{s}</option>)}
+              </select>
+              <select className="filter-select" value={filterDocStatus} onChange={e => setFilterDocStatus(e.target.value)}>
+                <option value="">All Statuses</option>
+                {Object.entries(DOC_STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
+              <input type="date" className="filter-input" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} />
+              <input type="date" className="filter-input" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} />
+              {(filterSupplier || filterDocStatus || filterDateFrom || filterDateTo) && (
+                <button onClick={() => { setFilterSupplier(''); setFilterDocStatus(''); setFilterDateFrom(''); setFilterDateTo(''); }} style={{ fontSize: 12, color: '#e11d48', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, fontFamily: 'inherit' }}>Clear</button>
+              )}
+            </div>
+          )}
+        </header>
+
+        {/* Summary */}
+        <div className="summary-bar">
+          <span>{filtered.length} of {invoices.length} documents</span>
+          <span style={{ fontFamily: 'DM Mono, monospace', fontWeight: 700, color: '#0f172a' }}>{fmtZAR(total)} <span style={{ fontWeight: 400, color: '#94a3b8' }}>({fmtZAR(totalVat)} VAT)</span></span>
         </div>
 
-        {/* Search */}
-        <div style={{ display: 'flex', gap: 8 }}>
-          <div style={{ position: 'relative', flex: 1 }}>
-            <Search size={15} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' }} />
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search supplier, description…"
-              style={{ width: '100%', padding: '9px 30px 9px 34px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 14, color: '#0f172a', outline: 'none', fontFamily: 'inherit', background: '#f8fafc', boxSizing: 'border-box' }}
-              onFocus={e => e.target.style.borderColor = '#2563eb'} onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
-            {search && <button onClick={() => setSearch('')} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none', cursor: 'pointer', color: '#94a3b8', padding: 2 }}><X size={14} /></button>}
-          </div>
-          <button onClick={() => setShowFilters(!showFilters)} style={{ width: 40, height: 40, borderRadius: 10, border: '1.5px solid', borderColor: hasFilters ? '#2563eb' : '#e2e8f0', background: hasFilters ? '#eff6ff' : '#fff', color: hasFilters ? '#2563eb' : '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <SlidersHorizontal size={16} />
-          </button>
-        </div>
-
-        {/* Filter panel */}
-        {showFilters && (
-          <div style={{ marginTop: 10, padding: 14, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>Filters</span>
-              {hasFilters && <button onClick={clearFilters} style={{ fontSize: 12, fontWeight: 600, color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Clear all</button>}
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <div>
-                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 4 }}>Supplier</label>
-                <select value={supplierFilter} onChange={(e) => setSupplierFilter(e.target.value)} style={inp}>
-                  <option value="">All</option>
-                  {supplierOptions.map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 4 }}>Status</label>
-                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={inp}>
-                  <option value="all">All</option>
-                  <option value="pending">Pending</option>
-                  <option value="reviewed">Reviewed</option>
-                  <option value="approved">Approved</option>
-                  <option value="rejected">Rejected</option>
-                </select>
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 4 }}>From</label>
-                <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} style={inp} />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 4 }}>To</label>
-                <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} style={inp} />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Sort bar */}
-        <div style={{ display: 'flex', gap: 6, marginTop: 10, paddingBottom: 2 }}>
-          {([['supplier', 'Supplier'], ['invoice_date', 'Date'], ['amount', 'Amount']] as [SortKey, string][]).map(([key, label]) => (
-            <button key={key} onClick={() => toggleSort(key)} style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '4px 10px', borderRadius: 20, border: '1.5px solid', borderColor: sortKey === key ? '#2563eb' : '#e2e8f0', background: sortKey === key ? '#eff6ff' : '#fff', fontSize: 12, fontWeight: 600, color: sortKey === key ? '#2563eb' : '#64748b', cursor: 'pointer', fontFamily: 'inherit' }}>
-              {label}<SortIcon k={key} />
+        {/* Sort pills */}
+        <div className="sort-bar">
+          {([['supplier','Supplier'],['invoice_date','Date'],['amount','Amount'],['created_at','Added']] as [SortField, string][]).map(([f, l]) => (
+            <button key={f} className={`sort-pill${sortBy === f ? ' active' : ''}`} onClick={() => toggleSort(f)}>
+              {l}<SortIcon f={f} />
             </button>
           ))}
         </div>
 
-        {/* Summary */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 12, color: '#64748b' }}>
-          <span>{filtered.length} of {invoices.length} invoices</span>
-          <span style={{ fontFamily: 'DM Mono, monospace', fontWeight: 600, color: '#0f172a' }}>
-            {fmtZAR(totalAmount)} · VAT {fmtZAR(totalVAT)}
-          </span>
-        </div>
-      </header>
-
-      <main style={{ padding: '12px 16px 80px' }}>
-        {loading ? (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>
-            <Loader2 size={28} color="#2563eb" style={{ animation: 'spin 1s linear infinite' }} />
-          </div>
-        ) : filtered.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '48px 24px' }}>
-            <FileText size={40} color="#cbd5e1" />
-            <p style={{ fontSize: 16, fontWeight: 600, color: '#0f172a', margin: '12px 0 4px' }}>No invoices found</p>
-            <p style={{ fontSize: 13, color: '#64748b' }}>Try adjusting your filters</p>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {filtered.map((inv) => {
-              const isPaid = (inv as any).is_paid;
-              const paymentMethod = (inv as any).payment_method as string | null;
-              const confidence = (inv.raw_ocr_data as any)?.confidence as number | null ?? null;
-              const date = inv.invoice_date || inv.created_at?.split('T')[0];
-
-              return (
-                <div key={inv.id} style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: '14px 16px', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
-                  {/* Row 1: Supplier + Edit */}
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 6 }}>
-                    <div style={{ flex: 1, minWidth: 0, marginRight: 10 }}>
-                      <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 1 }}>
-                        {inv.supplier || <span style={{ color: '#94a3b8', fontWeight: 500 }}>No supplier</span>}
-                      </div>
-                      {inv.business_name && inv.business_name !== inv.supplier && (
-                        <div style={{ fontSize: 12, color: '#64748b' }}>{inv.business_name}</div>
-                      )}
-                      {inv.description && (
-                        <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{inv.description}</div>
-                      )}
-                    </div>
-                    <button onClick={() => router.push(`/invoices/${inv.id}`)} style={{ width: 34, height: 34, borderRadius: 9, border: '1.5px solid #e2e8f0', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', cursor: 'pointer', flexShrink: 0 }}>
-                      <Edit2 size={14} />
-                    </button>
+        {/* Cards */}
+        <div className="card-list">
+          {loading ? (
+            <div className="empty-state">Loading…</div>
+          ) : filtered.length === 0 ? (
+            <div className="empty-state">No documents found</div>
+          ) : filtered.map(inv => {
+            const docType = (inv.document_type || 'invoice') as DocumentType;
+            const docStatusKey = (inv.doc_status || 'open') as DocStatus;
+            const docStatusStyle = DOC_STATUS_COLORS[docStatusKey] || DOC_STATUS_COLORS.open;
+            const statusStyle = STATUS_COLORS[inv.status] || STATUS_COLORS.pending;
+            return (
+              <div key={inv.id} className="inv-card" onClick={() => router.push(`/invoices/${inv.id}`)}>
+                <div className="inv-card-top">
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="inv-supplier">{inv.supplier || 'Unknown Supplier'}</div>
+                    {inv.business_name && <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 1 }}>{inv.business_name}</div>}
+                    {inv.description && <div className="inv-desc">{inv.description}</div>}
                   </div>
-
-                  {/* Row 2: Amount + Date */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <div style={{ fontSize: 17, fontWeight: 700, color: '#0f172a', fontFamily: 'DM Mono, monospace' }}>
-                      {fmtZAR(inv.amount)}
-                    </div>
-                    <div style={{ fontSize: 12, color: '#64748b' }}>{date}</div>
-                  </div>
-
-                  {/* Row 3: Badges */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
-                    {/* Status */}
-                    <span style={{ padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px', ...STATUS_STYLES[inv.status] }}>
-                      {inv.status}
-                    </span>
-
-                    {/* Paid / Unpaid */}
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px', background: isPaid ? '#f0fdf4' : '#fafafa', color: isPaid ? '#15803d' : '#94a3b8', border: isPaid ? 'none' : '1px solid #e2e8f0' }}>
-                      {isPaid && paymentMethod && PMT_ICON[paymentMethod]}
-                      {isPaid ? (paymentMethod ? paymentMethod.toUpperCase() : 'PAID') : 'UNPAID'}
-                    </span>
-
-                    {/* AI confidence */}
-                    {confidence !== null && (
-                      <span style={{ fontSize: 11, fontWeight: 700, color: confidence >= 0.9 ? '#16a34a' : confidence >= 0.7 ? '#d97706' : '#e11d48', marginLeft: 'auto' }}>
-                        AI {Math.round(confidence * 100)}%
-                      </span>
-                    )}
+                  <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 12 }}>
+                    <div className="inv-amount">{inv.amount ? fmtZAR(inv.amount) : '—'}</div>
+                    {inv.invoice_date && <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{new Date(inv.invoice_date).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })}</div>}
                   </div>
                 </div>
-              );
-            })}
-
-            <div style={{ textAlign: 'center', marginTop: 8 }}>
-              <button onClick={() => exportToCSV(filtered)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
-                <Download size={15} />Export {filtered.length} invoices to CSV
-              </button>
-            </div>
-          </div>
-        )}
-      </main>
-    </div>
+                <div className="inv-meta">
+                  {/* Doc type */}
+                  <span className="badge" style={{ background: '#f1f5f9', color: '#475569' }}>{DOCUMENT_TYPE_LABELS[docType]}</span>
+                  {/* Doc number */}
+                  {inv.document_number && <span style={{ fontSize: 11, color: '#64748b', fontFamily: 'DM Mono, monospace' }}>#{inv.document_number}</span>}
+                  {/* Doc status */}
+                  <span className="badge" style={{ background: docStatusStyle.bg, color: docStatusStyle.color }}>{DOC_STATUS_LABELS[docStatusKey]}</span>
+                  {/* OCR status */}
+                  <span className="badge" style={{ background: statusStyle.bg, color: statusStyle.color }}>{inv.status}</span>
+                  {/* Category */}
+                  {inv.category && <span className="badge" style={{ background: '#eff6ff', color: '#2563eb' }}>{inv.category}</span>}
+                  {/* Paid */}
+                  {inv.is_paid && (
+                    <span className="badge" style={{ background: '#f0fdf4', color: '#15803d', gap: 4 }}>
+                      {inv.payment_method === 'cash' ? <Banknote size={11} /> : inv.payment_method === 'card' ? <CreditCard size={11} /> : <ArrowLeftRight size={11} />}
+                      {inv.payment_method?.toUpperCase() || 'PAID'}
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </>
   );
 }

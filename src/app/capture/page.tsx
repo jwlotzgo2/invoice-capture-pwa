@@ -23,6 +23,8 @@ function CapturePageInner() {
   const [isPaid, setIsPaid] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<string>('');
   const [category, setCategory] = useState<string | null>(null);
+  const [documentType, setDocumentType] = useState<string>('invoice');
+  const [documentNumber, setDocumentNumber] = useState<string | null>(null);
   const [lineItems, setLineItems] = useState<Array<{description:string;quantity:number|null;unit_price:number|null;line_total:number|null}>>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
@@ -60,6 +62,8 @@ function CapturePageInner() {
       });
       setOcrConfidence(result.confidence);
       setCategory(result.category || null);
+      setDocumentType(result.document_type || 'invoice');
+      setDocumentNumber(result.document_number || null);
       setLineItems(result.line_items || []);
       setStep('review');
     } catch (err) {
@@ -112,6 +116,9 @@ function CapturePageInner() {
         source: 'camera', status: 'pending',
         is_paid: isPaid,
         payment_method: isPaid && paymentMethod ? paymentMethod : null,
+        document_type: documentType || 'invoice',
+        doc_status: 'open',
+        document_number: documentNumber || null,
         category: category || null,
         line_items: lineItems.length > 0 ? lineItems : null,
       }).select().single();

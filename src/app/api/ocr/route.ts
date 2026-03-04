@@ -4,6 +4,8 @@ import { OCRResult } from '@/types/invoice';
 
 const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
 
+const DOCUMENT_TYPES = ['invoice', 'quote', 'purchase_order', 'credit_note', 'delivery_note', 'receipt'];
+
 const CATEGORIES = [
   'Travel & Transport',
   'Utilities',
@@ -56,6 +58,8 @@ export async function POST(request: NextRequest) {
                 type: 'text',
                 text: `Analyze this invoice image and extract all information. Return a JSON object with these exact fields:
 
+- document_type: The type of document. Must be exactly one of: "invoice" (use for tax invoices and invoices), "quote", "purchase_order", "credit_note", "delivery_note", "receipt". Look at the document header/title to determine this.
+- document_number: The invoice/quote/order/PO number shown on the document, as a string. Null if not found.
 - supplier: Company or person who issued the invoice
 - description: Brief description of what this invoice is for
 - invoice_date: Date on the invoice in YYYY-MM-DD format
@@ -96,6 +100,11 @@ Return ONLY the JSON object, no additional text or markdown.`,
         jsonText = jsonText.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
       }
       ocrData = JSON.parse(jsonText);
+
+      // Validate document_type
+      if (!ocrData.document_type || !DOCUMENT_TYPES.includes(ocrData.document_type)) {
+        ocrData.document_type = 'invoice';
+      }
 
       // Validate category is from our list
       if (ocrData.category && !CATEGORIES.includes(ocrData.category)) {

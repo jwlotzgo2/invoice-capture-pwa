@@ -3,7 +3,7 @@
 import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { Invoice, InvoiceFormData, LineItem, InvoiceCategory } from '@/types/invoice';
+import { Invoice, InvoiceFormData, LineItem, InvoiceCategory, DocumentType, DocStatus, DOCUMENT_TYPE_LABELS, DOC_STATUS_LABELS } from '@/types/invoice';
 import InvoiceForm from '@/components/InvoiceForm';
 import { ArrowLeft, Trash2, Edit2, Loader2, AlertCircle, ScanLine, CheckCircle } from 'lucide-react';
 
@@ -26,6 +26,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   const [rescanDone, setRescanDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [category, setCategory] = useState<InvoiceCategory | null>(null);
+  const [docStatus, setDocStatus] = useState<DocStatus>('open');
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [formData, setFormData] = useState<InvoiceFormData>({
     supplier: '', description: '', invoice_date: '',
@@ -41,6 +42,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
         if (error) throw error;
         setInvoice(data);
         setCategory(data.category || null);
+        setDocStatus((data.doc_status as DocStatus) || 'open');
         setLineItems(Array.isArray(data.line_items) ? data.line_items : []);
         setFormData({
           supplier: data.supplier || '', description: data.description || '',
@@ -57,7 +59,14 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
     fetchInvoice();
   }, [id]);
 
-  // ── Re-scan ────────────────────────────────────────────────────────────────
+  // ── Update doc status ──────────────────────────────────────────────────────
+  const updateDocStatus = async (status: DocStatus) => {
+    setDocStatus(status);
+    await supabase.from('invoices').update({ doc_status: status, updated_at: new Date().toISOString() }).eq('id', id);
+    setInvoice(prev => prev ? { ...prev, doc_status: status } : prev);
+  };
+
+    // ── Re-scan ────────────────────────────────────────────────────────────────
   const handleRescan = async () => {
     if (!invoice?.image_path && !invoice?.image_url) { setError('No image available to re-scan'); return; }
     setRescanning(true); setRescanDone(false); setError(null);
@@ -154,6 +163,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
         business_name: formData.business_name || null,
         category: category || null,
         line_items: lineItems.length > 0 ? lineItems : null,
+        doc_status: docStatus,
         status: 'reviewed', updated_at: new Date().toISOString(),
       }).eq('id', id);
 
@@ -196,6 +206,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
         products_services: invoice.products_services || '', business_name: invoice.business_name || '',
       });
       setCategory(invoice.category || null);
+      setDocStatus((invoice.doc_status as DocStatus) || 'open');
       setLineItems(Array.isArray(invoice.line_items) ? invoice.line_items : []);
     }
   };
@@ -268,7 +279,39 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
           <img src={invoice.image_url} alt="Invoice" style={{ width: '100%', borderRadius: 14, border: '1px solid #e2e8f0', marginBottom: 12 }} />
         )}
 
-        {/* Badges */}
+          {/* Doc type + number + status */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <span style={{ padding: '4px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700, background: '#f1f5f9', color: '#475569' }}>
+              {DOCUMENT_TYPE_LABELS[(invoice.document_type as DocumentType) || 'invoice']}
+            </span>
+            {invoice.document_number && (
+              <span style={{ fontSize: 12, color: '#64748b', fontFamily: 'DM Mono, monospace', fontWeight: 600 }}>#{invoice.document_number}</span>
+            )}
+            <span style={{ padding: '4px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700,
+              background: docStatus === 'accepted' ? '#f0fdf4' : docStatus === 'rejected' ? '#fff1f2' : docStatus === 'converted' ? '#f5f3ff' : docStatus === 'closed' ? '#f8fafc' : '#f0f9ff',
+              color: docStatus === 'accepted' ? '#15803d' : docStatus === 'rejected' ? '#be123c' : docStatus === 'converted' ? '#6d28d9' : docStatus === 'closed' ? '#64748b' : '#0369a1' }}>
+              {DOC_STATUS_LABELS[docStatus]}
+            </span>
+          </div>
+
+          {/* Doc status action buttons (only for non-invoice types when open) */}
+          {!editing && invoice.document_type && invoice.document_type !== 'invoice' && (
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+              {docStatus === 'open' && (<>
+                <button onClick={() => updateDocStatus('accepted')} style={{ padding: '7px 14px', borderRadius: 8, border: 'none', background: '#16a34a', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Accept</button>
+                <button onClick={() => updateDocStatus('rejected')} style={{ padding: '7px 14px', borderRadius: 8, border: 'none', background: '#e11d48', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Reject</button>
+                <button onClick={() => updateDocStatus('converted')} style={{ padding: '7px 14px', borderRadius: 8, border: 'none', background: '#7c3aed', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Convert to Invoice</button>
+              </>)}
+              {docStatus === 'accepted' && (
+                <button onClick={() => updateDocStatus('closed')} style={{ padding: '7px 14px', borderRadius: 8, border: 'none', background: '#64748b', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Close</button>
+              )}
+              {(docStatus === 'accepted' || docStatus === 'rejected' || docStatus === 'converted') && (
+                <button onClick={() => updateDocStatus('open')} style={{ padding: '7px 14px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Reopen</button>
+              )}
+            </div>
+          )}
+
+        {/* OCR + payment badges */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
           {confidence != null && (
             <span style={{ padding: '4px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700, background: confidence >= 0.85 ? '#f0fdf4' : confidence >= 0.65 ? '#fffbeb' : '#fff1f2', color: confidence >= 0.85 ? '#15803d' : confidence >= 0.65 ? '#854d0e' : '#be123c' }}>
