@@ -6,7 +6,7 @@ import { LayoutDashboard, FileText, Camera, Settings } from 'lucide-react';
 
 const tabs = [
   { href: '/invoices', icon: LayoutDashboard, label: 'Dashboard' },
-  { href: '/invoices/list', icon: FileText, label: 'Invoices' },
+  { href: '/invoices/list', icon: FileText, label: 'Documents' },
   { href: '/capture', icon: Camera, label: 'Capture', primary: true },
   { href: '/settings', icon: Settings, label: 'Settings' },
 ];

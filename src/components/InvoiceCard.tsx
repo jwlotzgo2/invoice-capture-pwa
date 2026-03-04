@@ -1,103 +1,79 @@
 'use client';
 
-import React from 'react';
 import Link from 'next/link';
-import { format } from 'date-fns';
-import { FileText, Calendar, Building2 } from 'lucide-react';
-import { Invoice } from '@/types/invoice';
+import { FileText } from 'lucide-react';
+import { Invoice, DOCUMENT_TYPE_LABELS, DocumentType } from '@/types/invoice';
 
-interface InvoiceCardProps {
-  invoice: Invoice;
-}
-
-const statusStyles: Record<string, string> = {
-  pending:  'background:#fef9c3;color:#854d0e',
-  reviewed: 'background:#eff6ff;color:#1d4ed8',
-  approved: 'background:#f0fdf4;color:#15803d',
-  rejected: 'background:#fff1f2;color:#be123c',
+const STATUS_STYLE: Record<string, { bg: string; color: string }> = {
+  pending:  { bg: '#fef9c3', color: '#854d0e' },
+  reviewed: { bg: '#eff6ff', color: '#1d4ed8' },
+  approved: { bg: '#f0fdf4', color: '#15803d' },
+  rejected: { bg: '#fff1f2', color: '#be123c' },
 };
 
-export default function InvoiceCard({ invoice }: InvoiceCardProps) {
-  const formatCurrency = (amount: number | null) => {
-    if (amount === null) return 'N/A';
-    return new Intl.NumberFormat('en-ZA', {
-      style: 'currency',
-      currency: 'ZAR',
-    }).format(amount);
-  };
+export default function InvoiceCard({ invoice }: { invoice: Invoice }) {
+  const fmtZAR = (n: number | null) => n != null
+    ? new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(n).replace('ZAR', 'R')
+    : '—';
+
+  const s = STATUS_STYLE[invoice.status] || STATUS_STYLE.pending;
+  const docType = (invoice.document_type || 'invoice') as DocumentType;
+  const dateStr = invoice.invoice_date
+    ? new Date(invoice.invoice_date).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })
+    : null;
 
   return (
     <Link href={`/invoices/${invoice.id}`} style={{ textDecoration: 'none' }}>
       <div style={{
-        background: '#fff',
-        borderRadius: 14,
-        border: '1px solid #e2e8f0',
-        padding: '14px',
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: 12,
-        boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
-        transition: 'box-shadow 0.15s',
-        cursor: 'pointer',
+        background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0',
+        padding: 14, boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+        display: 'flex', gap: 12, fontFamily: 'DM Sans, sans-serif',
       }}>
         {/* Thumbnail */}
-        <div style={{
-          width: 56, height: 56, borderRadius: 10, flexShrink: 0,
-          overflow: 'hidden', background: '#f1f5f9',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          {invoice.image_url ? (
-            <img src={invoice.image_url} alt="Invoice" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          ) : (
-            <FileText size={22} color="#94a3b8" />
-          )}
+        <div style={{ width: 56, height: 56, borderRadius: 10, background: '#f1f5f9', flexShrink: 0, overflow: 'hidden' }}>
+          {invoice.image_url
+            ? <img src={invoice.image_url} alt="Invoice" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><FileText size={22} color="#94a3b8" /></div>
+          }
         </div>
 
         {/* Content */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-            <span style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {invoice.supplier || 'Unknown Supplier'}
-            </span>
-            <span style={{
-              padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700,
-              textTransform: 'uppercase', letterSpacing: '0.4px', flexShrink: 0,
-              ...(invoice.status ? Object.fromEntries(
-                statusStyles[invoice.status]?.split(';').map(s => {
-                  const [k, v] = s.split(':');
-                  return [k.trim().replace(/-([a-z])/g, (_: string, c: string) => c.toUpperCase()), v?.trim()];
-                }) ?? []
-              ) : {}),
-            }}>
-              {invoice.status}
-            </span>
-          </div>
-
-          <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 3 }}>
-            {invoice.business_name && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#475569' }}>
-                <Building2 size={13} />
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{invoice.business_name}</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {invoice.supplier || 'Unknown Supplier'}
               </div>
-            )}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              {invoice.invoice_date && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, color: '#64748b' }}>
-                  <Calendar size={13} />
-                  <span>{format(new Date(invoice.invoice_date), 'dd MMM yyyy')}</span>
-                </div>
+              {invoice.business_name && (
+                <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{invoice.business_name}</div>
               )}
-              <span style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', fontFamily: 'DM Mono, monospace' }}>
-                {formatCurrency(invoice.amount)}
-              </span>
+            </div>
+            <div style={{ textAlign: 'right', flexShrink: 0 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', fontFamily: 'DM Mono, monospace' }}>{fmtZAR(invoice.amount)}</div>
+              {dateStr && <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 1 }}>{dateStr}</div>}
             </div>
           </div>
 
           {invoice.description && (
-            <p style={{ margin: '6px 0 0', fontSize: 13, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {invoice.description}
-            </p>
+            <div style={{ fontSize: 13, color: '#64748b', marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{invoice.description}</div>
           )}
+
+          <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <span style={{ padding: '2px 7px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: '#f1f5f9', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+              {DOCUMENT_TYPE_LABELS[docType]}
+            </span>
+            <span style={{ padding: '2px 7px', borderRadius: 6, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px', background: s.bg, color: s.color }}>
+              {invoice.status}
+            </span>
+            {invoice.category && (
+              <span style={{ padding: '2px 7px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: '#eff6ff', color: '#2563eb' }}>{invoice.category}</span>
+            )}
+            {invoice.is_paid && (
+              <span style={{ padding: '2px 7px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: '#f0fdf4', color: '#15803d' }}>
+                {invoice.payment_method?.toUpperCase() || 'PAID'}
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </Link>
