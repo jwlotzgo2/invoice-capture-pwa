@@ -22,6 +22,8 @@ function CapturePageInner() {
   const [ocrConfidence, setOcrConfidence] = useState<number | null>(null);
   const [isPaid, setIsPaid] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<string>('');
+  const [category, setCategory] = useState<string | null>(null);
+  const [lineItems, setLineItems] = useState<Array<{description:string;quantity:number|null;unit_price:number|null;line_total:number|null}>>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -57,6 +59,8 @@ function CapturePageInner() {
         products_services: result.products_services || '', business_name: result.business_name || '',
       });
       setOcrConfidence(result.confidence);
+      setCategory(result.category || null);
+      setLineItems(result.line_items || []);
       setStep('review');
     } catch (err) {
       console.error('OCR Error:', err);
@@ -108,6 +112,8 @@ function CapturePageInner() {
         source: 'camera', status: 'pending',
         is_paid: isPaid,
         payment_method: isPaid && paymentMethod ? paymentMethod : null,
+        category: category || null,
+        line_items: lineItems.length > 0 ? lineItems : null,
       }).select().single();
 
       if (insertError) throw insertError;
@@ -224,6 +230,52 @@ function CapturePageInner() {
           </div>
         )}
 
+
+        {/* Category */}
+        {category && (
+          <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: 16, marginBottom: 12 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: 10 }}>Category</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {['Travel & Transport','Utilities','Materials & Supplies','Subscriptions & Software','Professional Services','Food & Entertainment','Equipment','Marketing','Other'].map(cat => (
+                <button key={cat} onClick={() => setCategory(cat)}
+                  style={{ padding: '6px 12px', borderRadius: 20, border: '1.5px solid', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                    borderColor: category === cat ? '#2563eb' : '#e2e8f0',
+                    background: category === cat ? '#eff6ff' : '#fff',
+                    color: category === cat ? '#2563eb' : '#64748b' }}>
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Line Items */}
+        {lineItems.length > 0 && (
+          <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: 16, marginBottom: 12 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: 12 }}>Line Items</div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                    {['Description','Qty','Unit Price','Total'].map(h => (
+                      <th key={h} style={{ textAlign: h === 'Description' ? 'left' : 'right', padding: '4px 8px', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.3px' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {lineItems.map((item, i) => (
+                    <tr key={i} style={{ borderBottom: '1px solid #f8fafc' }}>
+                      <td style={{ padding: '8px 8px', color: '#0f172a' }}>{item.description}</td>
+                      <td style={{ padding: '8px 8px', textAlign: 'right', color: '#64748b' }}>{item.quantity ?? '—'}</td>
+                      <td style={{ padding: '8px 8px', textAlign: 'right', color: '#64748b', fontFamily: 'DM Mono, monospace' }}>{item.unit_price != null ? `R ${item.unit_price.toFixed(2)}` : '—'}</td>
+                      <td style={{ padding: '8px 8px', textAlign: 'right', fontWeight: 700, color: '#0f172a', fontFamily: 'DM Mono, monospace' }}>{item.line_total != null ? `R ${item.line_total.toFixed(2)}` : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
         {/* Payment */}
         <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: 16, marginBottom: 12 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: 12 }}>Payment</div>

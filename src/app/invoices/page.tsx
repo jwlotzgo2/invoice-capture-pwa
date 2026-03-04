@@ -220,6 +220,11 @@ export default function InvoicesPage() {
 
         .list-wrap { padding: 0 16px 100px; display: flex; flex-direction: column; gap: 10px; }
         .recent-list { margin: 0 16px 100px; display: flex; flex-direction: column; gap: 8px; }
+        .cat-card { margin: 0 16px 16px; background: var(--card); border-radius: 14px; border: 1px solid var(--border); padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+        .cat-bar-row { margin-bottom: 10px; }
+        .cat-bar-top { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; }
+        .cat-bar-track { height: 6px; background: var(--surface); border-radius: 99px; overflow: hidden; }
+        .cat-bar-fill { height: 100%; border-radius: 99px; }
 
         .empty-state { text-align: center; padding: 48px 24px; }
         .empty-icon { width: 64px; height: 64px; background: var(--blue-light); border-radius: 20px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px; }
@@ -292,6 +297,29 @@ export default function InvoicesPage() {
                 <div className="suppliers-card">
                   {topSuppliers.map(([name, stats], i) => (
                     <SupplierRow key={name} name={name} count={stats.count} total={stats.total} rank={i + 1} />
+                  ))}
+                </div>
+              </>
+            )}
+
+
+            {/* Category Breakdown */}
+            {topCategories.length > 0 && (
+              <>
+                <div className="section-header">
+                  <span className="section-title">By Category · {periodLabel}</span>
+                </div>
+                <div className="cat-card">
+                  {topCategories.map(([cat, stats]) => (
+                    <div key={cat} className="cat-bar-row">
+                      <div className="cat-bar-top">
+                        <span style={{ color: 'var(--ink-2)', fontWeight: 600 }}>{cat}</span>
+                        <span style={{ fontFamily: 'DM Mono, monospace', fontWeight: 700, color: 'var(--ink)' }}>{formatZAR(stats.total)}</span>
+                      </div>
+                      <div className="cat-bar-track">
+                        <div className="cat-bar-fill" style={{ width: `${(stats.total / catTotal) * 100}%`, background: CAT_COLORS[cat] || '#94a3b8' }} />
+                      </div>
+                    </div>
                   ))}
                 </div>
               </>

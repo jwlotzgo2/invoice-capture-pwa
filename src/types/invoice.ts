@@ -1,3 +1,21 @@
+export type InvoiceCategory =
+  | 'Travel & Transport'
+  | 'Utilities'
+  | 'Materials & Supplies'
+  | 'Subscriptions & Software'
+  | 'Professional Services'
+  | 'Food & Entertainment'
+  | 'Equipment'
+  | 'Marketing'
+  | 'Other';
+
+export interface LineItem {
+  description: string;
+  quantity: number | null;
+  unit_price: number | null;
+  line_total: number | null;
+}
+
 export interface Invoice {
   id: string;
   user_id: string;
@@ -16,6 +34,8 @@ export interface Invoice {
   source: 'camera' | 'upload' | 'email';
   is_paid: boolean | null;
   payment_method: 'cash' | 'card' | 'eft' | null;
+  category: InvoiceCategory | null;
+  line_items: LineItem[] | null;
   created_at: string;
   updated_at: string;
 }
@@ -106,6 +126,8 @@ export interface OCRResult {
   products_services: string | null;
   business_name: string | null;
   confidence: number;
+  category: InvoiceCategory | null;
+  line_items: LineItem[];
   raw_response: string;
 }
 
