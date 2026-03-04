@@ -59,8 +59,6 @@ export interface Invoice {
   reference_number: string | null;
   is_paid: boolean | null;
   payment_method: 'cash' | 'card' | 'eft' | null;
-  document_type: DocumentType | null;
-  document_number: string | null;
   category: InvoiceCategory | null;
   line_items: LineItem[] | null;
   created_at: string;
