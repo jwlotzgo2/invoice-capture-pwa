@@ -1,8 +1,6 @@
 'use client';
-export const dynamic = 'force-dynamic';
 
-
-import { useState, useEffect, useRef } from 'react';
+import { Suspense, useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import CameraCapture from '@/components/CameraCapture';
 import InvoiceForm from '@/components/InvoiceForm';
@@ -12,7 +10,7 @@ import { ArrowLeft, Loader2, Sparkles, AlertCircle, Camera, Upload, FileImage } 
 
 type Step = 'choose' | 'capture' | 'processing' | 'review';
 
-export default function CapturePage() {
+function CapturePageInner() {
   const [step, setStep] = useState<Step>('choose');
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [formData, setFormData] = useState<InvoiceFormData>({
@@ -95,7 +93,7 @@ export default function CapturePage() {
         imageUrl = urlData.publicUrl;
       }
 
-      const { data: invoice, error: insertError } = await supabase.from('invoices').insert({
+      const { error: insertError } = await supabase.from('invoices').insert({
         user_id: user.id,
         supplier: formData.supplier || null, description: formData.description || null,
         invoice_date: formData.invoice_date || null,
@@ -127,7 +125,6 @@ export default function CapturePage() {
     }
   };
 
-  // ── Choose ─────────────────────────────────────────────────────────────────
   if (step === 'choose') {
     return (
       <div style={{ minHeight: '100svh', background: '#f8fafc', fontFamily: 'DM Sans, sans-serif', display: 'flex', flexDirection: 'column' }}>
@@ -147,7 +144,6 @@ export default function CapturePage() {
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', maxWidth: 360 }}>
-            {/* Camera */}
             <div onClick={() => setStep('capture')} style={{ background: 'linear-gradient(135deg,#1d4ed8,#3b82f6)', borderRadius: 16, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer', boxShadow: '0 4px 20px rgba(37,99,235,0.25)' }}>
               <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <Camera size={24} color="#fff" />
@@ -158,7 +154,6 @@ export default function CapturePage() {
               </div>
             </div>
 
-            {/* Upload */}
             <div onClick={() => fileInputRef.current?.click()} style={{ background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 16, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer' }}>
               <div style={{ width: 48, height: 48, borderRadius: 12, background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <Upload size={24} color="#2563eb" />
@@ -169,7 +164,6 @@ export default function CapturePage() {
               </div>
             </div>
 
-            {/* Gallery */}
             <div onClick={() => fileInputRef.current?.click()} style={{ background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 16, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer' }}>
               <div style={{ width: 48, height: 48, borderRadius: 12, background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <FileImage size={24} color="#2563eb" />
@@ -187,12 +181,10 @@ export default function CapturePage() {
     );
   }
 
-  // ── Camera ─────────────────────────────────────────────────────────────────
   if (step === 'capture') {
     return <CameraCapture onCapture={handleCapture} onClose={() => setStep('choose')} />;
   }
 
-  // ── Processing ─────────────────────────────────────────────────────────────
   if (step === 'processing') {
     return (
       <div style={{ minHeight: '100svh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', fontFamily: 'DM Sans, sans-serif' }}>
@@ -208,15 +200,9 @@ export default function CapturePage() {
     );
   }
 
-  // ── Review ─────────────────────────────────────────────────────────────────
-  // InvoiceForm has its own Save + Cancel buttons — no extra buttons here
   return (
     <div style={{ minHeight: '100svh', background: '#f8fafc', fontFamily: 'DM Sans, sans-serif' }}>
-      <header style={{
-        position: 'sticky', top: 0, zIndex: 40, background: '#fff',
-        borderBottom: '1px solid #e2e8f0', padding: '12px 16px',
-        display: 'flex', alignItems: 'center', gap: 12,
-      }}>
+      <header style={{ position: 'sticky', top: 0, zIndex: 40, background: '#fff', borderBottom: '1px solid #e2e8f0', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
         <button onClick={handleBack} style={{ width: 36, height: 36, borderRadius: 8, border: 'none', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', cursor: 'pointer' }}>
           <ArrowLeft size={20} />
         </button>
@@ -227,7 +213,6 @@ export default function CapturePage() {
           )}
         </div>
       </header>
-
       <main style={{ padding: 16 }}>
         {error && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 12, background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: 10, marginBottom: 16, color: '#be123c', fontSize: 14 }}>
@@ -250,4 +235,10 @@ export default function CapturePage() {
   );
 }
 
-
+export default function CapturePage() {
+  return (
+    <Suspense>
+      <CapturePageInner />
+    </Suspense>
+  );
+}
