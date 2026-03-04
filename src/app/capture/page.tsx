@@ -20,6 +20,8 @@ function CapturePageInner() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ocrConfidence, setOcrConfidence] = useState<number | null>(null);
+  const [isPaid, setIsPaid] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -104,6 +106,8 @@ function CapturePageInner() {
         image_url: imageUrl, image_path: imagePath,
         original_ocr_values: { ...formData },
         source: 'camera', status: 'pending',
+        is_paid: isPaid,
+        payment_method: isPaid && paymentMethod ? paymentMethod : null,
       }).select().single();
 
       if (insertError) throw insertError;
@@ -219,6 +223,37 @@ function CapturePageInner() {
             <AlertCircle size={18} />{error}
           </div>
         )}
+
+        {/* Payment */}
+        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: 16, marginBottom: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: 12 }}>Payment</div>
+          
+          {/* Paid toggle */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: isPaid ? 12 : 0 }}>
+            <span style={{ fontSize: 14, fontWeight: 500, color: '#334155' }}>Paid?</span>
+            <button
+              onClick={() => { setIsPaid(!isPaid); if (isPaid) setPaymentMethod(''); }}
+              style={{ width: 48, height: 26, borderRadius: 13, border: 'none', cursor: 'pointer', position: 'relative', background: isPaid ? '#16a34a' : '#e2e8f0', transition: 'background 0.2s' }}
+            >
+              <span style={{ position: 'absolute', top: 3, left: isPaid ? 25 : 3, width: 20, height: 20, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s' }} />
+            </button>
+          </div>
+
+          {/* Payment method */}
+          {isPaid && (
+            <div style={{ display: 'flex', gap: 8 }}>
+              {['cash', 'card', 'eft'].map((method) => (
+                <button
+                  key={method}
+                  onClick={() => setPaymentMethod(method)}
+                  style={{ flex: 1, padding: '8px 0', borderRadius: 10, border: '1.5px solid', borderColor: paymentMethod === method ? '#2563eb' : '#e2e8f0', background: paymentMethod === method ? '#eff6ff' : '#fff', color: paymentMethod === method ? '#2563eb' : '#64748b', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', textTransform: 'uppercase', letterSpacing: '0.3px' }}
+                >
+                  {method}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: 16 }}>
           <InvoiceForm
             formData={formData}

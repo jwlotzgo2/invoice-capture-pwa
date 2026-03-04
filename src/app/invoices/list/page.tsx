@@ -4,22 +4,27 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Invoice } from '@/types/invoice';
-import { Search, Download, Edit2, Loader2, FileText, ChevronDown, ChevronUp, X, Filter, SlidersHorizontal } from 'lucide-react';
+import { Search, Download, Edit2, Loader2, FileText, X, SlidersHorizontal, ChevronUp, ChevronDown, CreditCard, Banknote, ArrowLeftRight } from 'lucide-react';
 
-const fmt = new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' });
-const fmtZAR = (n: number | null) => n ? fmt.format(n).replace('ZAR', 'R') : '—';
+const fmtZAR = (n: number | null) => n
+  ? new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(n).replace('ZAR', 'R')
+  : '—';
 
-const statusStyle = (s: string): React.CSSProperties => ({
-  display: 'inline-block', padding: '2px 8px', borderRadius: 6,
-  fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px',
-  background: s === 'approved' ? '#f0fdf4' : s === 'rejected' ? '#fff1f2' : s === 'reviewed' ? '#eff6ff' : '#fef9c3',
-  color: s === 'approved' ? '#15803d' : s === 'rejected' ? '#be123c' : s === 'reviewed' ? '#1d4ed8' : '#854d0e',
-});
+const STATUS_STYLES: Record<string, React.CSSProperties> = {
+  pending:  { background: '#fef9c3', color: '#854d0e' },
+  reviewed: { background: '#eff6ff', color: '#1d4ed8' },
+  approved: { background: '#f0fdf4', color: '#15803d' },
+  rejected: { background: '#fff1f2', color: '#be123c' },
+};
 
-const confColor = (c: number | null) => !c ? '#94a3b8' : c >= 0.9 ? '#16a34a' : c >= 0.7 ? '#d97706' : '#e11d48';
+const PMT_ICON: Record<string, React.ReactNode> = {
+  cash: <Banknote size={11} />,
+  card: <CreditCard size={11} />,
+  eft:  <ArrowLeftRight size={11} />,
+};
 
 function exportToCSV(invoices: Invoice[]) {
-  const headers = ['Date', 'Supplier', 'Business Name', 'Amount (ZAR)', 'VAT (ZAR)', 'Excl VAT', 'Status', 'Source', 'Description'];
+  const headers = ['Date', 'Supplier', 'Business Name', 'Amount', 'VAT', 'Excl VAT', 'Paid', 'Payment Method', 'Status', 'Source', 'Description'];
   const rows = invoices.map((inv) => [
     inv.invoice_date || '',
     inv.supplier || '',
@@ -27,6 +32,8 @@ function exportToCSV(invoices: Invoice[]) {
     inv.amount?.toFixed(2) || '',
     inv.vat_amount?.toFixed(2) || '',
     inv.amount && inv.vat_amount ? (inv.amount - inv.vat_amount).toFixed(2) : '',
+    (inv as any).is_paid ? 'Yes' : 'No',
+    (inv as any).payment_method || '',
     inv.status,
     inv.source,
     (inv.description || '').replace(/,/g, ';'),
@@ -68,7 +75,6 @@ export default function InvoicesListPage() {
     load();
   }, []);
 
-  // All unique suppliers for dropdown
   const supplierOptions = Array.from(new Set(invoices.map((i) => i.supplier).filter(Boolean))) as string[];
 
   const filtered = invoices
@@ -78,26 +84,22 @@ export default function InvoicesListPage() {
       const matchSupplier = !supplierFilter || inv.supplier === supplierFilter;
       const matchStatus = statusFilter === 'all' || inv.status === statusFilter;
       const d = inv.invoice_date || inv.created_at?.split('T')[0];
-      const matchFrom = !dateFrom || d >= dateFrom;
-      const matchTo = !dateTo || d <= dateTo;
-      return matchSearch && matchSupplier && matchStatus && matchFrom && matchTo;
+      return matchSearch && matchSupplier && matchStatus && (!dateFrom || d >= dateFrom) && (!dateTo || d <= dateTo);
     })
     .sort((a, b) => {
-      let va: string | number = a[sortKey] || '';
-      let vb: string | number = b[sortKey] || '';
-      if (sortKey === 'amount') { va = a.amount || 0; vb = b.amount || 0; }
+      const va: string | number = sortKey === 'amount' ? (a.amount || 0) : (a[sortKey] || '');
+      const vb: string | number = sortKey === 'amount' ? (b.amount || 0) : (b[sortKey] || '');
       return sortAsc ? (va < vb ? -1 : 1) : (va > vb ? -1 : 1);
     });
 
   const toggleSort = (key: SortKey) => { if (sortKey === key) setSortAsc(!sortAsc); else { setSortKey(key); setSortAsc(false); } };
   const SortIcon = ({ k }: { k: SortKey }) => sortKey === k
-    ? sortAsc ? <ChevronUp size={13} color="#2563eb" /> : <ChevronDown size={13} color="#2563eb" />
-    : <ChevronDown size={13} color="#cbd5e1" />;
+    ? sortAsc ? <ChevronUp size={12} color="#2563eb" /> : <ChevronDown size={12} color="#2563eb" />
+    : <ChevronDown size={12} color="#cbd5e1" />;
 
   const hasFilters = supplierFilter || statusFilter !== 'all' || dateFrom || dateTo;
   const clearFilters = () => { setSupplierFilter(''); setStatusFilter('all'); setDateFrom(''); setDateTo(''); };
 
-  // Totals for filtered set
   const totalAmount = filtered.reduce((s, i) => s + (i.amount || 0), 0);
   const totalVAT = filtered.reduce((s, i) => s + (i.vat_amount || 0), 0);
 
@@ -109,22 +111,18 @@ export default function InvoicesListPage() {
       <header style={{ background: '#fff', borderBottom: '1px solid #e2e8f0', padding: '14px 16px', position: 'sticky', top: 0, zIndex: 40 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div style={{ fontSize: 17, fontWeight: 700, color: '#0f172a' }}>Invoices</div>
-          <button onClick={() => exportToCSV(filtered)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: '#fff', color: '#334155', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-            <Download size={15} />Export CSV
+          <button onClick={() => exportToCSV(filtered)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: '#fff', color: '#334155', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+            <Download size={14} />Export
           </button>
         </div>
 
-        {/* Search row */}
+        {/* Search */}
         <div style={{ display: 'flex', gap: 8 }}>
           <div style={{ position: 'relative', flex: 1 }}>
             <Search size={15} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' }} />
-            <input
-              value={search} onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search supplier, description…"
-              style={{ width: '100%', padding: '9px 32px 9px 34px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 14, color: '#0f172a', outline: 'none', fontFamily: 'inherit', background: '#f8fafc', boxSizing: 'border-box' }}
-              onFocus={e => e.target.style.borderColor = '#2563eb'}
-              onBlur={e => e.target.style.borderColor = '#e2e8f0'}
-            />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search supplier, description…"
+              style={{ width: '100%', padding: '9px 30px 9px 34px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 14, color: '#0f172a', outline: 'none', fontFamily: 'inherit', background: '#f8fafc', boxSizing: 'border-box' }}
+              onFocus={e => e.target.style.borderColor = '#2563eb'} onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
             {search && <button onClick={() => setSearch('')} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none', cursor: 'pointer', color: '#94a3b8', padding: 2 }}><X size={14} /></button>}
           </div>
           <button onClick={() => setShowFilters(!showFilters)} style={{ width: 40, height: 40, borderRadius: 10, border: '1.5px solid', borderColor: hasFilters ? '#2563eb' : '#e2e8f0', background: hasFilters ? '#eff6ff' : '#fff', color: hasFilters ? '#2563eb' : '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -143,14 +141,14 @@ export default function InvoicesListPage() {
               <div>
                 <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 4 }}>Supplier</label>
                 <select value={supplierFilter} onChange={(e) => setSupplierFilter(e.target.value)} style={inp}>
-                  <option value="">All suppliers</option>
+                  <option value="">All</option>
                   {supplierOptions.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 4 }}>Status</label>
                 <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={inp}>
-                  <option value="all">All status</option>
+                  <option value="all">All</option>
                   <option value="pending">Pending</option>
                   <option value="reviewed">Reviewed</option>
                   <option value="approved">Approved</option>
@@ -158,19 +156,28 @@ export default function InvoicesListPage() {
                 </select>
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 4 }}>From Date</label>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 4 }}>From</label>
                 <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} style={inp} />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 4 }}>To Date</label>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 4 }}>To</label>
                 <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} style={inp} />
               </div>
             </div>
           </div>
         )}
 
-        {/* Summary row */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, fontSize: 12, color: '#64748b' }}>
+        {/* Sort bar */}
+        <div style={{ display: 'flex', gap: 6, marginTop: 10, paddingBottom: 2 }}>
+          {([['supplier', 'Supplier'], ['invoice_date', 'Date'], ['amount', 'Amount']] as [SortKey, string][]).map(([key, label]) => (
+            <button key={key} onClick={() => toggleSort(key)} style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '4px 10px', borderRadius: 20, border: '1.5px solid', borderColor: sortKey === key ? '#2563eb' : '#e2e8f0', background: sortKey === key ? '#eff6ff' : '#fff', fontSize: 12, fontWeight: 600, color: sortKey === key ? '#2563eb' : '#64748b', cursor: 'pointer', fontFamily: 'inherit' }}>
+              {label}<SortIcon k={key} />
+            </button>
+          ))}
+        </div>
+
+        {/* Summary */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 12, color: '#64748b' }}>
           <span>{filtered.length} of {invoices.length} invoices</span>
           <span style={{ fontFamily: 'DM Mono, monospace', fontWeight: 600, color: '#0f172a' }}>
             {fmtZAR(totalAmount)} · VAT {fmtZAR(totalVAT)}
@@ -178,7 +185,7 @@ export default function InvoicesListPage() {
         </div>
       </header>
 
-      <main style={{ padding: 16, paddingBottom: 40 }}>
+      <main style={{ padding: '12px 16px 80px' }}>
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>
             <Loader2 size={28} color="#2563eb" style={{ animation: 'spin 1s linear infinite' }} />
@@ -190,72 +197,71 @@ export default function InvoicesListPage() {
             <p style={{ fontSize: 13, color: '#64748b' }}>Try adjusting your filters</p>
           </div>
         ) : (
-          <>
-            {/* Sort bar */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 90px 90px 60px 36px', gap: 8, padding: '4px 12px 8px', alignItems: 'center' }}>
-              {[
-                { label: 'Supplier', key: 'supplier' as SortKey },
-                { label: 'Date', key: 'invoice_date' as SortKey },
-                { label: 'Amount', key: 'amount' as SortKey },
-                { label: 'Status', key: null },
-                { label: '', key: null },
-              ].map(({ label, key }) => (
-                <button key={label} onClick={() => key && toggleSort(key)} style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.4px', background: 'none', border: 'none', cursor: key ? 'pointer' : 'default', fontFamily: 'inherit', padding: 0 }}>
-                  {label}{key && <SortIcon k={key} />}
-                </button>
-              ))}
-            </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {filtered.map((inv) => {
+              const isPaid = (inv as any).is_paid;
+              const paymentMethod = (inv as any).payment_method as string | null;
+              const confidence = (inv.raw_ocr_data as any)?.confidence as number | null ?? null;
+              const date = inv.invoice_date || inv.created_at?.split('T')[0];
 
-            {/* Rows */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {filtered.map((inv) => {
-                const confidence = inv.raw_ocr_data?.confidence as number | null ?? null;
-                return (
-                  <div key={inv.id} style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: '12px 14px', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 90px 90px 60px 36px', gap: 8, alignItems: 'center' }}>
-                      {/* Supplier */}
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {inv.supplier || <span style={{ color: '#94a3b8' }}>No supplier</span>}
-                        </div>
-                        {inv.description && <div style={{ fontSize: 12, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 2 }}>{inv.description}</div>}
+              return (
+                <div key={inv.id} style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: '14px 16px', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+                  {/* Row 1: Supplier + Edit */}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <div style={{ flex: 1, minWidth: 0, marginRight: 10 }}>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 1 }}>
+                        {inv.supplier || <span style={{ color: '#94a3b8', fontWeight: 500 }}>No supplier</span>}
                       </div>
-
-                      {/* Date */}
-                      <div style={{ fontSize: 12, color: '#64748b' }}>
-                        {inv.invoice_date || inv.created_at?.split('T')[0]}
-                      </div>
-
-                      {/* Amount */}
-                      <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', fontFamily: 'DM Mono, monospace', textAlign: 'right' }}>
-                        {fmtZAR(inv.amount)}
-                      </div>
-
-                      {/* Status + AI */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center' }}>
-                        <span style={statusStyle(inv.status)}>{inv.status}</span>
-                        {confidence !== null && (
-                          <span style={{ fontSize: 11, fontWeight: 700, color: confColor(confidence) }}>{Math.round(confidence * 100)}%</span>
-                        )}
-                      </div>
-
-                      {/* Edit */}
-                      <button onClick={() => router.push(`/invoices/${inv.id}`)} style={{ width: 32, height: 32, borderRadius: 8, border: '1.5px solid #e2e8f0', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', cursor: 'pointer' }}>
-                        <Edit2 size={14} />
-                      </button>
+                      {inv.business_name && inv.business_name !== inv.supplier && (
+                        <div style={{ fontSize: 12, color: '#64748b' }}>{inv.business_name}</div>
+                      )}
+                      {inv.description && (
+                        <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{inv.description}</div>
+                      )}
                     </div>
+                    <button onClick={() => router.push(`/invoices/${inv.id}`)} style={{ width: 34, height: 34, borderRadius: 9, border: '1.5px solid #e2e8f0', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', cursor: 'pointer', flexShrink: 0 }}>
+                      <Edit2 size={14} />
+                    </button>
                   </div>
-                );
-              })}
-            </div>
 
-            {/* Bottom export */}
-            <div style={{ textAlign: 'center', marginTop: 20 }}>
+                  {/* Row 2: Amount + Date */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <div style={{ fontSize: 17, fontWeight: 700, color: '#0f172a', fontFamily: 'DM Mono, monospace' }}>
+                      {fmtZAR(inv.amount)}
+                    </div>
+                    <div style={{ fontSize: 12, color: '#64748b' }}>{date}</div>
+                  </div>
+
+                  {/* Row 3: Badges */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+                    {/* Status */}
+                    <span style={{ padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px', ...STATUS_STYLES[inv.status] }}>
+                      {inv.status}
+                    </span>
+
+                    {/* Paid / Unpaid */}
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px', background: isPaid ? '#f0fdf4' : '#fafafa', color: isPaid ? '#15803d' : '#94a3b8', border: isPaid ? 'none' : '1px solid #e2e8f0' }}>
+                      {isPaid && paymentMethod && PMT_ICON[paymentMethod]}
+                      {isPaid ? (paymentMethod ? paymentMethod.toUpperCase() : 'PAID') : 'UNPAID'}
+                    </span>
+
+                    {/* AI confidence */}
+                    {confidence !== null && (
+                      <span style={{ fontSize: 11, fontWeight: 700, color: confidence >= 0.9 ? '#16a34a' : confidence >= 0.7 ? '#d97706' : '#e11d48', marginLeft: 'auto' }}>
+                        AI {Math.round(confidence * 100)}%
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+
+            <div style={{ textAlign: 'center', marginTop: 8 }}>
               <button onClick={() => exportToCSV(filtered)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
                 <Download size={15} />Export {filtered.length} invoices to CSV
               </button>
             </div>
-          </>
+          </div>
         )}
       </main>
     </div>

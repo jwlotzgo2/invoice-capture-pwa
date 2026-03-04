@@ -14,6 +14,8 @@ export interface Invoice {
   original_ocr_values: Record<string, unknown> | null;
   status: 'pending' | 'reviewed' | 'approved' | 'rejected';
   source: 'camera' | 'upload' | 'email';
+  is_paid: boolean | null;
+  payment_method: 'cash' | 'card' | 'eft' | null;
   created_at: string;
   updated_at: string;
 }
