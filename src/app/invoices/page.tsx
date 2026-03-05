@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { Invoice, InvoiceFilters } from '@/types/invoice';
-import InvoiceCard from '@/components/InvoiceCard';
 import { Camera, Shield, TrendingUp, FileText, Receipt, Building2, ChevronRight, Upload } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, startOfYear, endOfYear, subMonths } from 'date-fns';
 
@@ -32,7 +31,7 @@ function getPeriodRange(period: Period): { from: Date | null; to: Date | null } 
 
 function formatZAR(amount: number | null) {
   if (!amount) return 'R 0.00';
-  return new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR', minimumFractionDigits: 2 }).format(amount).replace('ZAR', 'R');
+  return new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount).replace('ZAR', 'R');
 }
 
 function KPICard({ label, value, sub, icon, accent }: { label: string; value: string; sub?: string; icon: React.ReactNode; accent: string }) {
@@ -54,7 +53,7 @@ function SupplierRow({ name, count, total, rank }: { name: string; count: number
       <span className="supplier-rank">{rank}</span>
       <div className="supplier-info">
         <span className="supplier-name">{name}</span>
-        <span className="supplier-count">{count} invoice{count !== 1 ? 's' : ''}</span>
+  
       </div>
       <span className="supplier-total">{formatZAR(total)}</span>
     </div>
@@ -361,7 +360,18 @@ export default function InvoicesPage() {
                           </div>
                         </div>
                       ))
-                    : invoices.slice(0, 5).map((inv) => <InvoiceCard key={inv.id} invoice={inv} />)
+                    : invoices.slice(0, 5).map((inv) => (
+                        <div key={inv.id} onClick={() => router.push(`/invoices/${inv.id}`)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{inv.supplier || 'Unknown'}</div>
+                            {inv.document_number && <div style={{ fontSize: 11, color: 'var(--ink-3)', fontFamily: 'DM Mono, monospace' }}>#{inv.document_number}</div>}
+                          </div>
+                          <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 16 }}>
+                            <div style={{ fontSize: 14, fontWeight: 700, fontFamily: 'DM Mono, monospace', color: 'var(--ink)' }}>{inv.amount ? formatZAR(inv.amount) : '—'}</div>
+                            {inv.invoice_date && <div style={{ fontSize: 11, color: 'var(--ink-3)' }}>{new Date(inv.invoice_date).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' })}</div>}
+                          </div>
+                        </div>
+                      ))
                   }
                 </div>
               </>

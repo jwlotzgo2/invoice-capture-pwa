@@ -294,22 +294,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
             </span>
           </div>
 
-          {/* Doc status action buttons (only for non-invoice types when open) */}
-          {!editing && invoice.document_type && invoice.document_type !== 'invoice' && (
-            <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-              {docStatus === 'open' && (<>
-                <button onClick={() => updateDocStatus('accepted')} style={{ padding: '7px 14px', borderRadius: 8, border: 'none', background: '#16a34a', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Accept</button>
-                <button onClick={() => updateDocStatus('rejected')} style={{ padding: '7px 14px', borderRadius: 8, border: 'none', background: '#e11d48', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Reject</button>
-                <button onClick={() => updateDocStatus('converted')} style={{ padding: '7px 14px', borderRadius: 8, border: 'none', background: '#7c3aed', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Convert to Invoice</button>
-              </>)}
-              {docStatus === 'accepted' && (
-                <button onClick={() => updateDocStatus('closed')} style={{ padding: '7px 14px', borderRadius: 8, border: 'none', background: '#64748b', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Close</button>
-              )}
-              {(docStatus === 'accepted' || docStatus === 'rejected' || docStatus === 'converted') && (
-                <button onClick={() => updateDocStatus('open')} style={{ padding: '7px 14px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Reopen</button>
-              )}
-            </div>
-          )}
+
 
         {/* OCR + payment badges */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>

@@ -251,6 +251,48 @@ export default function AdminDashboardPage() {
             </div>
           )}
 
+
+          {/* Platform Costs */}
+          <div className="adm-card">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <div className="adm-section-title" style={{ margin: 0 }}>Platform Costs · This Month</div>
+              <span style={{ fontSize: 11, color: '#94a3b8' }}>est.</span>
+            </div>
+            {(() => {
+              const scanCount = filteredOrg ? filteredOrg.invoice_count : (stats?.totalInvoices || 0);
+              const claudeCost = scanCount * 0.02;
+              const supabaseCost = 25;
+              const vercelCost = 20;
+              const totalCost = claudeCost + supabaseCost + vercelCost;
+              const costPerDoc = scanCount > 0 ? totalCost / scanCount : 0;
+              const items = [
+                { label: 'Claude OCR', detail: `${scanCount} scans × $0.02`, cost: claudeCost, color: '#7c3aed' },
+                { label: 'Supabase Pro', detail: 'fixed monthly', cost: supabaseCost, color: '#3b82f6' },
+                { label: 'Vercel Pro', detail: 'fixed monthly', cost: vercelCost, color: '#0f172a' },
+              ];
+              return (
+                <>
+                  {items.map(item => (
+                    <div key={item.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #f1f5f9' }}>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{item.label}</div>
+                        <div style={{ fontSize: 11, color: '#94a3b8' }}>{item.detail}</div>
+                      </div>
+                      <div style={{ fontSize: 14, fontWeight: 700, fontFamily: 'DM Mono, monospace', color: item.color }}>${item.cost.toFixed(2)}</div>
+                    </div>
+                  ))}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 10, marginTop: 2 }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>Total</div>
+                      {costPerDoc > 0 && <div style={{ fontSize: 11, color: '#94a3b8' }}>${costPerDoc.toFixed(3)} per document</div>}
+                    </div>
+                    <div style={{ fontSize: 16, fontWeight: 700, fontFamily: 'DM Mono, monospace', color: '#0f172a' }}>${totalCost.toFixed(2)}</div>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+
           {/* Quick links */}
           <div className="adm-grid-3">
             {[

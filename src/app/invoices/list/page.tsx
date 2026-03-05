@@ -3,8 +3,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { Invoice, DocumentType, DocStatus, DOCUMENT_TYPE_LABELS, DOC_STATUS_LABELS } from '@/types/invoice';
-import { Search, SlidersHorizontal, X, Download, ChevronUp, ChevronDown, Banknote, CreditCard, ArrowLeftRight } from 'lucide-react';
+import { Invoice, DocumentType, DOC_STATUS_LABELS } from '@/types/invoice';
+import { Search, SlidersHorizontal, X, Download, ChevronUp, ChevronDown } from 'lucide-react';
 
 type SortField = 'created_at' | 'invoice_date' | 'amount' | 'supplier';
 
@@ -17,21 +17,6 @@ const DOC_TABS: { key: 'all' | DocumentType; label: string }[] = [
   { key: 'delivery_note', label: 'Delivery' },
   { key: 'receipt', label: 'Receipts' },
 ];
-
-const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
-  pending:   { bg: '#fef9c3', color: '#854d0e' },
-  reviewed:  { bg: '#eff6ff', color: '#1d4ed8' },
-  approved:  { bg: '#f0fdf4', color: '#15803d' },
-  rejected:  { bg: '#fff1f2', color: '#be123c' },
-};
-
-const DOC_STATUS_COLORS: Record<string, { bg: string; color: string }> = {
-  open:      { bg: '#f0f9ff', color: '#0369a1' },
-  accepted:  { bg: '#f0fdf4', color: '#15803d' },
-  rejected:  { bg: '#fff1f2', color: '#be123c' },
-  converted: { bg: '#f5f3ff', color: '#6d28d9' },
-  closed:    { bg: '#f8fafc', color: '#64748b' },
-};
 
 const css = `
   .list-page { font-family: 'DM Sans', sans-serif; min-height: 100svh; background: #f8fafc; }
@@ -149,7 +134,7 @@ export default function InvoiceListPage() {
     a.download = `documents-${new Date().toISOString().slice(0,10)}.csv`; a.click();
   };
 
-  const fmtZAR = (n: number) => `R ${n.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const fmtZAR = (n: number) => `R ${Math.round(n).toLocaleString('en-ZA')}`;
   const SortIcon = ({ f }: { f: SortField }) => sortBy === f ? (sortDir === 'desc' ? <ChevronDown size={12} /> : <ChevronUp size={12} />) : null;
 
   return (
@@ -204,7 +189,7 @@ export default function InvoiceListPage() {
         {/* Summary */}
         <div className="summary-bar">
           <span>{filtered.length} of {invoices.length} documents</span>
-          <span style={{ fontFamily: 'DM Mono, monospace', fontWeight: 700, color: '#0f172a' }}>{fmtZAR(total)} <span style={{ fontWeight: 400, color: '#94a3b8' }}>({fmtZAR(totalVat)} VAT)</span></span>
+          <span style={{ fontFamily: 'DM Mono, monospace', fontWeight: 700, color: '#0f172a' }}>{fmtZAR(total)}</span>
         </div>
 
         {/* Sort pills */}
@@ -223,10 +208,7 @@ export default function InvoiceListPage() {
           ) : filtered.length === 0 ? (
             <div className="empty-state">No documents found</div>
           ) : filtered.map(inv => {
-            const docType = (inv.document_type || 'invoice') as DocumentType;
-            const docStatusKey = (inv.doc_status || 'open') as DocStatus;
-            const docStatusStyle = DOC_STATUS_COLORS[docStatusKey] || DOC_STATUS_COLORS.open;
-            const statusStyle = STATUS_COLORS[inv.status] || STATUS_COLORS.pending;
+
             return (
               <div key={inv.id} className="inv-card" onClick={() => router.push(`/invoices/${inv.id}`)}>
                 <div className="inv-card-top">
@@ -241,23 +223,7 @@ export default function InvoiceListPage() {
                   </div>
                 </div>
                 <div className="inv-meta">
-                  {/* Doc type */}
-                  <span className="badge" style={{ background: '#f1f5f9', color: '#475569' }}>{DOCUMENT_TYPE_LABELS[docType]}</span>
-                  {/* Doc number */}
-                  {inv.document_number && <span style={{ fontSize: 11, color: '#64748b', fontFamily: 'DM Mono, monospace' }}>#{inv.document_number}</span>}
-                  {/* Doc status */}
-                  <span className="badge" style={{ background: docStatusStyle.bg, color: docStatusStyle.color }}>{DOC_STATUS_LABELS[docStatusKey]}</span>
-                  {/* OCR status */}
-                  <span className="badge" style={{ background: statusStyle.bg, color: statusStyle.color }}>{inv.status}</span>
-                  {/* Category */}
                   {inv.category && <span className="badge" style={{ background: '#eff6ff', color: '#2563eb' }}>{inv.category}</span>}
-                  {/* Paid */}
-                  {inv.is_paid && (
-                    <span className="badge" style={{ background: '#f0fdf4', color: '#15803d', gap: 4 }}>
-                      {inv.payment_method === 'cash' ? <Banknote size={11} /> : inv.payment_method === 'card' ? <CreditCard size={11} /> : <ArrowLeftRight size={11} />}
-                      {inv.payment_method?.toUpperCase() || 'PAID'}
-                    </span>
-                  )}
                 </div>
               </div>
             );
