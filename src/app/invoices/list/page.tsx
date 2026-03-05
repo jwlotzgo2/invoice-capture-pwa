@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { Invoice, DocumentType, DOC_STATUS_LABELS } from '@/types/invoice';
+import { Invoice, DocumentType, DOC_STATUS_LABELS, DOCUMENT_TYPE_LABELS } from '@/types/invoice';
 import { Search, SlidersHorizontal, X, Download, ChevronUp, ChevronDown } from 'lucide-react';
 
 type SortField = 'created_at' | 'invoice_date' | 'amount' | 'supplier';
