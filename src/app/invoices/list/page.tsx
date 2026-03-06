@@ -71,6 +71,8 @@ export default function InvoiceListPage() {
   const [filterDocStatus, setFilterDocStatus] = useState('');
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo] = useState('');
+  const [filterProject, setFilterProject] = useState('');
+  const [projects, setProjects] = useState<{id:string;name:string}[]>([]);
   const [sortBy, setSortBy] = useState<SortField>('created_at');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const router = useRouter();
@@ -89,12 +91,21 @@ export default function InvoiceListPage() {
   }, [sortBy, sortDir]);
 
   useEffect(() => { fetchInvoices(); }, [fetchInvoices]);
+  useEffect(() => {
+    const load = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data } = await supabase.from('projects').select('id, name').eq('user_id', user?.id || '').order('name');
+      setProjects(data || []);
+    };
+    load();
+  }, []);
 
   // Filtering
   const filtered = invoices.filter(inv => {
     if (docTab !== 'all' && (inv.document_type || 'invoice') !== docTab) return false;
     if (filterSupplier && !(inv.supplier || '').toLowerCase().includes(filterSupplier.toLowerCase())) return false;
     if (filterDocStatus && inv.doc_status !== filterDocStatus) return false;
+    if (filterProject && (inv as any).project_id !== filterProject) return false;
     if (filterDateFrom && inv.invoice_date && inv.invoice_date < filterDateFrom) return false;
     if (filterDateTo && inv.invoice_date && inv.invoice_date > filterDateTo) return false;
     if (search) {
@@ -177,10 +188,16 @@ export default function InvoiceListPage() {
                 <option value="">All Statuses</option>
                 {Object.entries(DOC_STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </select>
+              {projects.length > 0 && (
+                <select className="filter-select" value={filterProject} onChange={e => setFilterProject(e.target.value)}>
+                  <option value="">All Projects</option>
+                  {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              )}
               <input type="date" className="filter-input" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} />
               <input type="date" className="filter-input" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} />
-              {(filterSupplier || filterDocStatus || filterDateFrom || filterDateTo) && (
-                <button onClick={() => { setFilterSupplier(''); setFilterDocStatus(''); setFilterDateFrom(''); setFilterDateTo(''); }} style={{ fontSize: 12, color: '#e11d48', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, fontFamily: 'inherit' }}>Clear</button>
+              {(filterSupplier || filterDocStatus || filterProject || filterDateFrom || filterDateTo) && (
+                <button onClick={() => { setFilterSupplier(''); setFilterDocStatus(''); setFilterProject(''); setFilterDateFrom(''); setFilterDateTo(''); }} style={{ fontSize: 12, color: '#e11d48', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, fontFamily: 'inherit' }}>Clear</button>
               )}
             </div>
           )}

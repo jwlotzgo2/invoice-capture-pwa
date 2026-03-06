@@ -26,10 +26,21 @@ function CapturePageInner() {
   const [documentType, setDocumentType] = useState<string>('invoice');
   const [documentNumber, setDocumentNumber] = useState<string | null>(null);
   const [lineItems, setLineItems] = useState<Array<{description:string;quantity:number|null;unit_price:number|null;line_total:number|null}>>([]);
+  const [projects, setProjects] = useState<{id:string;name:string}[]>([]);
+  const [projectId, setProjectId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
+
+  useEffect(() => {
+    const loadProjects = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data } = await supabase.from('projects').select('id, name').eq('user_id', user?.id || '').order('name');
+      setProjects(data || []);
+    };
+    loadProjects();
+  }, []);
 
   useEffect(() => {
     if (searchParams.get('source') === 'upload') {
@@ -119,6 +130,7 @@ function CapturePageInner() {
         document_type: documentType || 'invoice',
         doc_status: 'open',
         document_number: documentNumber || null,
+        project_id: projectId || null,
         category: category || null,
         line_items: lineItems.length > 0 ? lineItems : null,
       }).select().single();
@@ -306,6 +318,18 @@ function CapturePageInner() {
             </div>
           </div>
         )}
+        {/* Project */}
+        {projects.length > 0 && (
+          <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: 16, marginBottom: 12 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: 10 }}>Project</div>
+            <select value={projectId || ''} onChange={e => setProjectId(e.target.value || null)}
+              style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 14, fontFamily: 'DM Sans, sans-serif', color: '#0f172a', outline: 'none', background: '#fff' }}>
+              <option value="">No project</option>
+              {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </div>
+        )}
+
         {/* Payment */}
         <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: 16, marginBottom: 12 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: 12 }}>Payment</div>

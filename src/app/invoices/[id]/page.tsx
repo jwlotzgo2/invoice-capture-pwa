@@ -28,6 +28,8 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   const [category, setCategory] = useState<InvoiceCategory | null>(null);
   const [docStatus, setDocStatus] = useState<DocStatus>('open');
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  const [projects, setProjects] = useState<{id: string; name: string}[]>([]);
+  const [projectId, setProjectId] = useState<string | null>(null);
   const [formData, setFormData] = useState<InvoiceFormData>({
     supplier: '', description: '', invoice_date: '',
     amount: '', vat_amount: '', products_services: '', business_name: '',
@@ -44,6 +46,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
         setCategory(data.category || null);
         setDocStatus((data.doc_status as DocStatus) || 'open');
         setLineItems(Array.isArray(data.line_items) ? data.line_items : []);
+        setProjectId(data.project_id || null);
         setFormData({
           supplier: data.supplier || '', description: data.description || '',
           invoice_date: data.invoice_date || '', amount: data.amount?.toString() || '',
@@ -57,6 +60,12 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       }
     };
     fetchInvoice();
+    const fetchProjects = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data } = await supabase.from('projects').select('id, name').eq('user_id', user?.id || '').order('name');
+      setProjects(data || []);
+    };
+    fetchProjects();
   }, [id]);
 
   // ── Update doc status ──────────────────────────────────────────────────────
@@ -164,6 +173,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
         category: category || null,
         line_items: lineItems.length > 0 ? lineItems : null,
         doc_status: docStatus,
+        project_id: projectId || null,
         status: 'reviewed', updated_at: new Date().toISOString(),
       }).eq('id', id);
 
@@ -207,6 +217,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       });
       setCategory(invoice.category || null);
       setDocStatus((invoice.doc_status as DocStatus) || 'open');
+      setProjectId((invoice as any).project_id || null);
       setLineItems(Array.isArray(invoice.line_items) ? invoice.line_items : []);
     }
   };
@@ -348,32 +359,54 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
             </div>
 
             {/* Line items */}
-            {lineItems.length > 0 && (
-              <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: 16 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: 12 }}>Line Items</div>
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                    <thead>
-                      <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        {['Description','Qty','Unit Price','Total'].map(h => (
-                          <th key={h} style={{ textAlign: h === 'Description' ? 'left' : 'right', padding: '4px 8px', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.3px' }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {lineItems.map((item, i) => (
-                        <tr key={i} style={{ borderBottom: i < lineItems.length - 1 ? '1px solid #f8fafc' : 'none' }}>
-                          <td style={{ padding: '8px', color: '#0f172a' }}>{item.description}</td>
-                          <td style={{ padding: '8px', textAlign: 'right', color: '#64748b' }}>{item.quantity ?? '—'}</td>
-                          <td style={{ padding: '8px', textAlign: 'right', color: '#64748b', fontFamily: 'DM Mono, monospace' }}>{item.unit_price != null ? `R ${item.unit_price.toFixed(2)}` : '—'}</td>
-                          <td style={{ padding: '8px', textAlign: 'right', fontWeight: 700, color: '#0f172a', fontFamily: 'DM Mono, monospace' }}>{item.line_total != null ? `R ${item.line_total.toFixed(2)}` : '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+            {lineItems.length > 0 && (() => {
+              const itemsTotal = lineItems.reduce((s, i) => s + (i.line_total ?? 0), 0);
+              const invoiceTotal = invoice.amount ?? 0;
+              const diff = Math.abs(itemsTotal - invoiceTotal);
+              const matches = invoiceTotal > 0 && diff < 1;
+              const fmt = (n: number) => `R ${Math.round(n).toLocaleString('en-ZA')}`;
+              return (
+                <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>Line Items</div>
+                    {invoiceTotal > 0 && (
+                      <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: matches ? '#f0fdf4' : '#fff7ed', color: matches ? '#15803d' : '#c2410c' }}>
+                        {matches ? '✓ Totals match' : `⚠ ${fmt(diff)} difference`}
+                      </span>
+                    )}
+                  </div>
+                  {lineItems.map((item, i) => (
+                    <div key={i} style={{ paddingBottom: 10, marginBottom: 10, borderBottom: i < lineItems.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#0f172a', marginBottom: 3 }}>{item.description}</div>
+                      <div style={{ display: 'flex', gap: 12, fontSize: 12, color: '#64748b', fontFamily: 'DM Mono, monospace' }}>
+                        {item.quantity != null && <span>×{item.quantity}</span>}
+                        {item.unit_price != null && <span>@ {fmt(item.unit_price)}</span>}
+                        {item.line_total != null && <span style={{ marginLeft: 'auto', fontWeight: 700, color: '#0f172a' }}>{fmt(item.line_total)}</span>}
+                      </div>
+                    </div>
+                  ))}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8, borderTop: '1.5px solid #e2e8f0' }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Items Total</span>
+                    <span style={{ fontSize: 14, fontWeight: 700, fontFamily: 'DM Mono, monospace', color: '#0f172a' }}>{fmt(itemsTotal)}</span>
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
+          {/* Project */}
+            <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: 16, marginTop: 12 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 8 }}>Project</div>
+              {editing ? (
+                <select value={projectId || ''} onChange={e => setProjectId(e.target.value || null)}
+                  style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 14, fontFamily: 'DM Sans, sans-serif', color: '#0f172a', outline: 'none', background: '#fff' }}>
+                  <option value="">No project</option>
+                  {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              ) : (
+                <div style={{ fontSize: 15, fontWeight: 500, color: projectId ? '#0f172a' : '#94a3b8' }}>
+                  {projects.find(p => p.id === projectId)?.name || '—'}
+                </div>
+              )}
+            </div>
           </>
         )}
       </main>
