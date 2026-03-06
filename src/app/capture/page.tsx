@@ -291,44 +291,59 @@ function CapturePageInner() {
           </div>
         </div>
 
-        {/* Line Items */}
-        {lineItems.length > 0 && (
-          <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: 16, marginBottom: 12 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: 12 }}>Line Items</div>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    {['Description','Qty','Unit Price','Total'].map(h => (
-                      <th key={h} style={{ textAlign: h === 'Description' ? 'left' : 'right', padding: '4px 8px', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.3px' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {lineItems.map((item, i) => (
-                    <tr key={i} style={{ borderBottom: '1px solid #f8fafc' }}>
-                      <td style={{ padding: '8px 8px', color: '#0f172a' }}>{item.description}</td>
-                      <td style={{ padding: '8px 8px', textAlign: 'right', color: '#64748b' }}>{item.quantity ?? '—'}</td>
-                      <td style={{ padding: '8px 8px', textAlign: 'right', color: '#64748b', fontFamily: 'DM Mono, monospace' }}>{item.unit_price != null ? `R ${item.unit_price.toFixed(2)}` : '—'}</td>
-                      <td style={{ padding: '8px 8px', textAlign: 'right', fontWeight: 700, color: '#0f172a', fontFamily: 'DM Mono, monospace' }}>{item.line_total != null ? `R ${item.line_total.toFixed(2)}` : '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+        {/* Line Items — editable */}
+        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: 16, marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>Line Items</div>
+            <button onClick={() => setLineItems(prev => [...prev, { description: '', quantity: null, unit_price: null, line_total: null }])}
+              style={{ fontSize: 12, fontWeight: 700, color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 4 }}>
+              + Add row
+            </button>
           </div>
-        )}
+          {lineItems.length === 0 ? (
+            <div style={{ fontSize: 13, color: '#94a3b8', textAlign: 'center', padding: '12px 0' }}>No line items — tap Add row to add one</div>
+          ) : lineItems.map((item, i) => (
+            <div key={i} style={{ marginBottom: 10, paddingBottom: 10, borderBottom: i < lineItems.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
+              <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+                <input
+                  value={item.description}
+                  onChange={e => setLineItems(prev => prev.map((r, j) => j === i ? { ...r, description: e.target.value } : r))}
+                  placeholder="Description"
+                  style={{ flex: 1, padding: '7px 10px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, fontFamily: 'DM Sans, sans-serif', outline: 'none' }}
+                />
+                <button onClick={() => setLineItems(prev => prev.filter((_, j) => j !== i))}
+                  style={{ width: 32, height: 32, borderRadius: 8, border: 'none', background: 'transparent', color: '#e11d48', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  ✕
+                </button>
+              </div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input type="number" value={item.quantity ?? ''} onChange={e => setLineItems(prev => prev.map((r, j) => j === i ? { ...r, quantity: e.target.value ? Number(e.target.value) : null } : r))}
+                  placeholder="Qty" style={{ width: 60, padding: '7px 8px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, fontFamily: 'DM Mono, monospace', outline: 'none', textAlign: 'right' }} />
+                <input type="number" value={item.unit_price ?? ''} onChange={e => {
+                    const up = e.target.value ? Number(e.target.value) : null;
+                    setLineItems(prev => prev.map((r, j) => j === i ? { ...r, unit_price: up, line_total: up != null && r.quantity != null ? up * r.quantity : r.line_total } : r));
+                  }}
+                  placeholder="Unit price" style={{ flex: 1, padding: '7px 8px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, fontFamily: 'DM Mono, monospace', outline: 'none', textAlign: 'right' }} />
+                <input type="number" value={item.line_total ?? ''} onChange={e => setLineItems(prev => prev.map((r, j) => j === i ? { ...r, line_total: e.target.value ? Number(e.target.value) : null } : r))}
+                  placeholder="Total" style={{ flex: 1, padding: '7px 8px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, fontFamily: 'DM Mono, monospace', outline: 'none', textAlign: 'right' }} />
+              </div>
+            </div>
+          ))}
+        </div>
+
         {/* Project */}
-        {projects.length > 0 && (
-          <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: 16, marginBottom: 12 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: 10 }}>Project</div>
+        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: 16, marginBottom: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: 10 }}>Project</div>
+          {projects.length === 0 ? (
+            <div style={{ fontSize: 13, color: '#94a3b8' }}>No projects yet — <span onClick={() => router.push('/projects')} style={{ color: '#2563eb', cursor: 'pointer', fontWeight: 600 }}>create one</span></div>
+          ) : (
             <select value={projectId || ''} onChange={e => setProjectId(e.target.value || null)}
               style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 14, fontFamily: 'DM Sans, sans-serif', color: '#0f172a', outline: 'none', background: '#fff' }}>
               <option value="">No project</option>
               {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Payment */}
         <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: 16, marginBottom: 12 }}>
