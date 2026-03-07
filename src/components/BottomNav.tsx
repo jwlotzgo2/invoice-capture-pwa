@@ -4,6 +4,11 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LayoutDashboard, FileText, Camera, Settings } from 'lucide-react';
 
+const T = {
+  bg: '#0d0d0d', surface: '#1a1a1a', border: '#2a2a2a',
+  yellow: '#facc15', textMuted: '#475569',
+};
+
 const tabs = [
   { href: '/invoices', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/invoices/list', icon: FileText, label: 'Documents' },
@@ -13,67 +18,48 @@ const tabs = [
 
 export default function BottomNav() {
   const pathname = usePathname();
-
-  // Hide on admin, auth, and capture camera pages
-  if (
-    pathname.startsWith('/admin') ||
-    pathname.startsWith('/auth') ||
-    pathname === '/capture'
-  ) return null;
+  if (pathname.startsWith('/admin') || pathname.startsWith('/auth') || pathname === '/capture') return null;
 
   return (
     <>
-      {/* Spacer so content isn't hidden behind nav */}
       <div style={{ height: 72 }} />
-
       <nav style={{
         position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50,
-        background: '#fff', borderTop: '1px solid #e2e8f0',
+        background: T.surface, borderTop: `1px solid ${T.border}`,
         display: 'flex', alignItems: 'center',
         paddingBottom: 'env(safe-area-inset-bottom)',
-        boxShadow: '0 -4px 20px rgba(0,0,0,0.06)',
+        boxShadow: '0 -4px 20px rgba(0,0,0,0.5)',
       }}>
         {tabs.map(({ href, icon: Icon, label, primary }) => {
-          const active = pathname === href || (href === '/invoices' && pathname === '/invoices');
+          const active = pathname === href;
           return (
-            <Link
-              key={href}
-              href={href}
-              style={{
-                flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
-                justifyContent: 'center', gap: 3, padding: '10px 0',
-                textDecoration: 'none', position: 'relative',
-              }}
-            >
+            <Link key={href} href={href} style={{
+              flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
+              justifyContent: 'center', gap: 3, padding: '10px 0',
+              textDecoration: 'none', position: 'relative',
+            }}>
               {primary ? (
                 <div style={{
-                  width: 48, height: 48, borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #1d4ed8, #3b82f6)',
+                  width: 46, height: 46, borderRadius: 6, background: T.yellow,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: '0 4px 14px rgba(37,99,235,0.35)',
-                  marginTop: -20,
+                  boxShadow: '0 0 16px rgba(250,204,21,0.35)', marginTop: -18,
                 }}>
-                  <Icon size={22} color="#fff" />
+                  <Icon size={22} color={T.bg} />
                 </div>
               ) : (
-                <Icon
-                  size={22}
-                  color={active ? '#2563eb' : '#94a3b8'}
-                  strokeWidth={active ? 2.5 : 1.8}
-                />
+                <Icon size={22} color={active ? T.yellow : T.textMuted} strokeWidth={active ? 2.5 : 1.8} />
               )}
               <span style={{
-                fontSize: 10, fontWeight: primary ? 600 : active ? 700 : 500,
-                color: primary ? '#2563eb' : active ? '#2563eb' : '#94a3b8',
-                fontFamily: 'DM Sans, sans-serif',
+                fontSize: 9, letterSpacing: '1px', textTransform: 'uppercase',
+                fontFamily: "'Share Tech Mono', 'Courier New', monospace",
+                color: active || primary ? T.yellow : T.textMuted,
                 marginTop: primary ? 4 : 0,
-              }}>
-                {label}
-              </span>
+              }}>{label}</span>
               {active && !primary && (
                 <div style={{
                   position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
-                  width: 24, height: 3, background: '#2563eb', borderRadius: '0 0 3px 3px',
+                  width: 24, height: 2, background: T.yellow,
+                  boxShadow: '0 0 6px rgba(250,204,21,0.6)',
                 }} />
               )}
             </Link>

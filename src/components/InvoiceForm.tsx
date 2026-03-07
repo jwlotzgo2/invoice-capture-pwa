@@ -13,197 +13,134 @@ interface InvoiceFormProps {
   imagePreview?: string | null;
 }
 
-const label: React.CSSProperties = {
-  display: 'block',
-  fontSize: 13,
-  fontWeight: 600,
-  color: '#0f172a',
-  marginBottom: 6,
+const T = {
+  bg: '#0d0d0d', surface: '#1a1a1a', border: '#2a2a2a',
+  yellow: '#facc15', yellowGlow: 'rgba(250,204,21,0.15)',
+  blue: '#6366f1', blueGlow: 'rgba(99,102,241,0.2)',
+  text: '#e2e8f0', textMuted: '#475569', error: '#f87171',
 };
 
-const input: React.CSSProperties = {
-  width: '100%',
-  padding: '10px 12px',
-  border: '1.5px solid #e2e8f0',
-  borderRadius: 10,
-  fontSize: 14,
-  fontWeight: 500,
-  color: '#0f172a',
-  background: '#fff',
-  outline: 'none',
-  boxSizing: 'border-box',
-  fontFamily: 'inherit',
-  transition: 'border-color 0.15s, box-shadow 0.15s',
+const inp: React.CSSProperties = {
+  width: '100%', padding: '9px 12px',
+  background: T.bg, border: `1px solid ${T.border}`, borderRadius: 4,
+  color: T.text, fontFamily: "'Share Tech Mono', 'Courier New', monospace",
+  fontSize: 14, outline: 'none', boxSizing: 'border-box',
 };
 
-const textarea: React.CSSProperties = {
-  ...input,
-  resize: 'vertical' as const,
-  minHeight: 80,
+const lbl: React.CSSProperties = {
+  display: 'block', fontSize: 10, letterSpacing: '2px',
+  color: T.text, textTransform: 'uppercase', marginBottom: 5,
+  fontFamily: "'Share Tech Mono', 'Courier New', monospace",
 };
 
 export default function InvoiceForm({
-  formData,
-  onChange,
-  onSubmit,
-  onCancel,
-  isLoading = false,
-  submitLabel = 'Save Invoice',
-  imagePreview,
+  formData, onChange, onSubmit, onCancel, isLoading = false,
+  submitLabel = 'Save Invoice', imagePreview,
 }: InvoiceFormProps) {
-  const handleChange = (field: keyof InvoiceFormData, value: string) => {
+  const handleChange = (field: keyof InvoiceFormData, value: string) =>
     onChange({ ...formData, [field]: value });
-  };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit();
+  const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); onSubmit(); };
+
+  const focusStyle = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    e.target.style.borderColor = T.blue;
+    e.target.style.boxShadow = `0 0 0 2px ${T.blueGlow}`;
+  };
+  const blurStyle = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    e.target.style.borderColor = T.border;
+    e.target.style.boxShadow = 'none';
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-      {/* Image Preview */}
       {imagePreview && (
         <div>
-          <span style={label}>Invoice Image</span>
-          <img
-            src={imagePreview}
-            alt="Invoice preview"
-            style={{ width: '100%', maxHeight: 200, objectFit: 'contain', borderRadius: 10, border: '1.5px solid #e2e8f0' }}
-          />
+          <span style={lbl}>Invoice Image</span>
+          <img src={imagePreview} alt="Invoice preview" style={{
+            width: '100%', maxHeight: 200, objectFit: 'contain',
+            borderRadius: 4, border: `1px solid ${T.border}`,
+          }} />
         </div>
       )}
 
-      {/* Business Name */}
-      <div>
-        <label style={label}>Business Name</label>
-        <input
-          type="text"
-          value={formData.business_name}
-          onChange={(e) => handleChange('business_name', e.target.value)}
-          placeholder="Your business name"
-          style={input}
-          onFocus={e => { e.target.style.borderColor = '#2563eb'; e.target.style.boxShadow = '0 0 0 3px rgba(37,99,235,0.1)'; }}
-          onBlur={e => { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = 'none'; }}
-        />
-      </div>
+      {[
+        { label: 'Business Name', key: 'business_name', type: 'text', placeholder: 'Your business name' },
+        { label: 'Supplier', key: 'supplier', type: 'text', placeholder: 'Supplier name' },
+        { label: 'Invoice Date', key: 'invoice_date', type: 'date', placeholder: '' },
+      ].map(({ label, key, type, placeholder }) => (
+        <div key={key}>
+          <label style={lbl}>{label}</label>
+          <input
+            type={type} value={formData[key as keyof InvoiceFormData]}
+            onChange={e => handleChange(key as keyof InvoiceFormData, e.target.value)}
+            placeholder={placeholder} style={inp}
+            onFocus={focusStyle} onBlur={blurStyle}
+          />
+        </div>
+      ))}
 
-      {/* Supplier */}
       <div>
-        <label style={label}>Supplier</label>
-        <input
-          type="text"
-          value={formData.supplier}
-          onChange={(e) => handleChange('supplier', e.target.value)}
-          placeholder="Supplier name"
-          style={input}
-          onFocus={e => { e.target.style.borderColor = '#2563eb'; e.target.style.boxShadow = '0 0 0 3px rgba(37,99,235,0.1)'; }}
-          onBlur={e => { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = 'none'; }}
-        />
-      </div>
-
-      {/* Description */}
-      <div>
-        <label style={label}>Description</label>
+        <label style={lbl}>Description</label>
         <textarea
           value={formData.description}
-          onChange={(e) => handleChange('description', e.target.value)}
+          onChange={e => handleChange('description', e.target.value)}
           placeholder="Invoice description"
-          style={textarea}
-          onFocus={e => { e.target.style.borderColor = '#2563eb'; e.target.style.boxShadow = '0 0 0 3px rgba(37,99,235,0.1)'; }}
-          onBlur={e => { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = 'none'; }}
+          style={{ ...inp, resize: 'vertical', minHeight: 70 } as React.CSSProperties}
+          onFocus={focusStyle} onBlur={blurStyle}
         />
       </div>
 
-      {/* Invoice Date */}
-      <div>
-        <label style={label}>Invoice Date</label>
-        <input
-          type="date"
-          value={formData.invoice_date}
-          onChange={(e) => handleChange('invoice_date', e.target.value)}
-          style={input}
-          onFocus={e => { e.target.style.borderColor = '#2563eb'; e.target.style.boxShadow = '0 0 0 3px rgba(37,99,235,0.1)'; }}
-          onBlur={e => { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = 'none'; }}
-        />
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        {[
+          { label: 'Amount (incl. VAT)', key: 'amount' },
+          { label: 'VAT Amount', key: 'vat_amount' },
+        ].map(({ label, key }) => (
+          <div key={key}>
+            <label style={lbl}>{label}</label>
+            <input
+              type="number" value={formData[key as keyof InvoiceFormData]}
+              onChange={e => handleChange(key as keyof InvoiceFormData, e.target.value)}
+              placeholder="0"
+              style={{ ...inp, color: T.yellow, textAlign: 'right' }}
+              onFocus={e => { e.target.style.borderColor = T.yellow; e.target.style.boxShadow = `0 0 0 2px ${T.yellowGlow}`; }}
+              onBlur={blurStyle}
+            />
+          </div>
+        ))}
       </div>
 
-      {/* Amount + VAT */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <div>
-          <label style={label}>Amount (incl. VAT)</label>
-          <input
-            type="number"
-            value={formData.amount}
-            onChange={(e) => handleChange('amount', e.target.value)}
-            placeholder="0.00"
-            step="0.01"
-            min="0"
-            style={input}
-            onFocus={e => { e.target.style.borderColor = '#2563eb'; e.target.style.boxShadow = '0 0 0 3px rgba(37,99,235,0.1)'; }}
-            onBlur={e => { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = 'none'; }}
-          />
-        </div>
-        <div>
-          <label style={label}>VAT Amount</label>
-          <input
-            type="number"
-            value={formData.vat_amount}
-            onChange={(e) => handleChange('vat_amount', e.target.value)}
-            placeholder="0.00"
-            step="0.01"
-            min="0"
-            style={input}
-            onFocus={e => { e.target.style.borderColor = '#2563eb'; e.target.style.boxShadow = '0 0 0 3px rgba(37,99,235,0.1)'; }}
-            onBlur={e => { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = 'none'; }}
-          />
-        </div>
-      </div>
-
-      {/* Products / Services */}
       <div>
-        <label style={label}>Products / Services</label>
+        <label style={lbl}>Products / Services</label>
         <textarea
           value={formData.products_services}
-          onChange={(e) => handleChange('products_services', e.target.value)}
+          onChange={e => handleChange('products_services', e.target.value)}
           placeholder="List of products or services"
-          style={textarea}
-          onFocus={e => { e.target.style.borderColor = '#2563eb'; e.target.style.boxShadow = '0 0 0 3px rgba(37,99,235,0.1)'; }}
-          onBlur={e => { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = 'none'; }}
+          style={{ ...inp, resize: 'vertical', minHeight: 70 } as React.CSSProperties}
+          onFocus={focusStyle} onBlur={blurStyle}
         />
       </div>
 
-      {/* Buttons */}
       <div style={{ display: 'flex', gap: 10, paddingTop: 4 }}>
         {onCancel && (
-          <button
-            type="button"
-            onClick={onCancel}
-            style={{
-              flex: 1, padding: '12px 16px',
-              border: '1.5px solid #e2e8f0', borderRadius: 12,
-              background: '#fff', color: '#334155',
-              fontSize: 15, fontWeight: 600, cursor: 'pointer',
-              fontFamily: 'inherit',
-            }}
-          >
-            Cancel
-          </button>
+          <button type="button" onClick={onCancel} style={{
+            flex: 1, padding: '11px 16px',
+            border: `1px solid ${T.border}`, borderRadius: 6,
+            background: 'transparent', color: '#94a3b8',
+            fontSize: 13, letterSpacing: '1px', cursor: 'pointer',
+            fontFamily: "'Share Tech Mono', monospace", textTransform: 'uppercase',
+          }}>Cancel</button>
         )}
-        <button
-          type="submit"
-          disabled={isLoading}
-          style={{
-            flex: 1, padding: '12px 16px',
-            border: 'none', borderRadius: 12,
-            background: isLoading ? '#93c5fd' : '#2563eb',
-            color: '#fff', fontSize: 15, fontWeight: 700,
-            cursor: isLoading ? 'not-allowed' : 'pointer',
-            fontFamily: 'inherit',
-          }}
-        >
-          {isLoading ? 'Saving…' : submitLabel}
+        <button type="submit" disabled={isLoading} style={{
+          flex: 1, padding: '14px 16px', border: 'none', borderRadius: 6,
+          background: isLoading ? '#a37e0a' : T.yellow,
+          color: '#0d0d0d',
+          fontFamily: "'VT323', monospace",
+          fontSize: 20, letterSpacing: '3px', cursor: isLoading ? 'not-allowed' : 'pointer',
+          textTransform: 'uppercase',
+          boxShadow: isLoading ? 'none' : '0 0 20px rgba(250,204,21,0.3)',
+        }}>
+          {isLoading ? 'SAVING…' : submitLabel.toUpperCase()}
         </button>
       </div>
     </form>

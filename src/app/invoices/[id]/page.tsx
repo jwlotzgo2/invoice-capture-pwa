@@ -7,13 +7,67 @@ import { Invoice, InvoiceFormData, LineItem, InvoiceCategory, DocumentType, DocS
 import InvoiceForm from '@/components/InvoiceForm';
 import { ArrowLeft, Trash2, Edit2, Loader2, AlertCircle, ScanLine, CheckCircle } from 'lucide-react';
 
+const T = {
+  bg: '#0d0d0d', surface: '#1a1a1a', surfaceHigh: '#242424', border: '#2a2a2a',
+  yellow: '#facc15', yellowGlow: 'rgba(250,204,21,0.15)',
+  blue: '#6366f1', blueGlow: 'rgba(99,102,241,0.2)',
+  text: '#e2e8f0', textDim: '#94a3b8', textMuted: '#475569',
+  error: '#f87171', success: '#4ade80', warning: '#fb923c',
+};
+
 const CATEGORIES: InvoiceCategory[] = [
-  'Travel & Transport', 'Utilities', 'Materials & Supplies', 'Subscriptions & Software',
-  'Professional Services', 'Food & Entertainment', 'Equipment', 'Marketing', 'Other',
+  'Travel & Transport','Utilities','Materials & Supplies','Subscriptions & Software',
+  'Professional Services','Food & Entertainment','Equipment','Marketing','Other',
 ];
 
 const fmtZAR = (n: number | null | undefined) =>
-  n != null ? new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(n).replace('ZAR', 'R') : null;
+  n != null ? `R ${Math.round(n).toLocaleString('en-ZA')}` : null;
+
+const css = `
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap');
+  * { box-sizing:border-box; }
+  body { background:${T.bg};margin:0; }
+  .detail-page { min-height:100svh;background:${T.bg};font-family:'Share Tech Mono','Courier New',monospace;color:${T.text}; }
+  .scanline { position:fixed;top:0;left:0;right:0;bottom:0;
+    background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px);
+    pointer-events:none;z-index:1000; }
+  .detail-header { background:${T.surface};border-bottom:1px solid ${T.border};padding:12px 16px;
+    display:flex;align-items:center;justify-content:space-between;
+    position:sticky;top:0;z-index:40;box-shadow:0 0 20px rgba(99,102,241,0.08); }
+  .btn-icon { width:38px;height:38px;border-radius:6px;border:1px solid ${T.border};
+    background:transparent;color:${T.textDim};cursor:pointer;display:flex;
+    align-items:center;justify-content:center;transition:all 0.2s; }
+  .btn-icon:hover { border-color:${T.blue};color:${T.blue}; }
+  .btn-icon.danger { color:${T.error};border-color:transparent; }
+  .btn-icon.success { border-color:${T.success};color:${T.success}; }
+  .t-card { background:${T.surface};border:1px solid ${T.border};border-radius:8px;
+    padding:16px;margin-bottom:12px;position:relative;overflow:hidden; }
+  .t-card::before { content:'';position:absolute;top:0;left:0;right:0;height:1px;
+    background:linear-gradient(90deg,transparent,${T.blue},transparent);opacity:0.4; }
+  .t-card-title { font-family:'VT323',monospace;font-size:16px;letter-spacing:2px;
+    color:${T.yellow};text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px; }
+  .t-card-title::before { content:'>';color:${T.blue}; }
+  .t-pill { padding:6px 12px;border-radius:4px;border:1px solid ${T.border};background:transparent;
+    color:${T.textDim};font-family:'Share Tech Mono',monospace;font-size:11px;
+    letter-spacing:1px;cursor:pointer;transition:all 0.15s;text-transform:uppercase; }
+  .t-pill:hover { border-color:${T.blue};color:${T.text}; }
+  .t-pill.active { border-color:${T.yellow};background:${T.yellowGlow};color:${T.yellow}; }
+  .detail-label { font-size:10px;letter-spacing:2px;color:${T.text};text-transform:uppercase;margin-bottom:4px; }
+  .detail-value { font-size:14px;color:${T.text};font-family:'Share Tech Mono',monospace; }
+  .badge { display:inline-flex;align-items:center;padding:3px 10px;border-radius:4px;
+    font-size:10px;text-transform:uppercase;letter-spacing:1px;border:1px solid;
+    font-family:'Share Tech Mono',monospace; }
+  .err-bar { display:flex;align-items:center;gap:8px;padding:12px;
+    background:rgba(248,113,113,0.1);border:1px solid ${T.error};border-radius:6px;
+    margin-bottom:16px;color:${T.error};font-size:13px; }
+  .t-select { width:100%;padding:9px 12px;background:${T.bg};border:1px solid ${T.border};
+    border-radius:4px;color:${T.text};font-family:'Share Tech Mono',monospace;font-size:13px;
+    outline:none;appearance:none;cursor:pointer; }
+  .t-select:focus { border-color:${T.blue}; }
+  @keyframes tspin { to{transform:rotate(360deg)} }
+  .t-cursor { animation:tblink 1s step-end infinite;color:${T.yellow}; }
+  @keyframes tblink { 0%,100%{opacity:1} 50%{opacity:0} }
+`;
 
 export default function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -28,11 +82,10 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   const [category, setCategory] = useState<InvoiceCategory | null>(null);
   const [docStatus, setDocStatus] = useState<DocStatus>('open');
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
-  const [projects, setProjects] = useState<{id: string; name: string}[]>([]);
+  const [projects, setProjects] = useState<{id:string;name:string}[]>([]);
   const [projectId, setProjectId] = useState<string | null>(null);
   const [formData, setFormData] = useState<InvoiceFormData>({
-    supplier: '', description: '', invoice_date: '',
-    amount: '', vat_amount: '', products_services: '', business_name: '',
+    supplier:'', description:'', invoice_date:'', amount:'', vat_amount:'', products_services:'', business_name:'',
   });
   const router = useRouter();
   const supabase = createClient();
@@ -47,149 +100,65 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
         setDocStatus((data.doc_status as DocStatus) || 'open');
         setLineItems(Array.isArray(data.line_items) ? data.line_items : []);
         setProjectId(data.project_id || null);
-        setFormData({
-          supplier: data.supplier || '', description: data.description || '',
-          invoice_date: data.invoice_date || '', amount: data.amount?.toString() || '',
-          vat_amount: data.vat_amount?.toString() || '',
-          products_services: data.products_services || '', business_name: data.business_name || '',
-        });
-      } catch {
-        setError('Failed to load invoice');
-      } finally {
-        setLoading(false);
-      }
+        setFormData({ supplier:data.supplier||'', description:data.description||'', invoice_date:data.invoice_date||'', amount:data.amount?.toString()||'', vat_amount:data.vat_amount?.toString()||'', products_services:data.products_services||'', business_name:data.business_name||'' });
+      } catch { setError('Failed to load invoice'); }
+      finally { setLoading(false); }
     };
     fetchInvoice();
     const fetchProjects = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      const { data } = await supabase.from('projects').select('id, name').eq('user_id', user?.id || '').order('name');
+      const { data } = await supabase.from('projects').select('id,name').eq('user_id', user?.id||'').order('name');
       setProjects(data || []);
     };
     fetchProjects();
   }, [id]);
 
-  // ── Update doc status ──────────────────────────────────────────────────────
-  const updateDocStatus = async (status: DocStatus) => {
-    setDocStatus(status);
-    await supabase.from('invoices').update({ doc_status: status, updated_at: new Date().toISOString() }).eq('id', id);
-    setInvoice(prev => prev ? { ...prev, doc_status: status } : prev);
-  };
-
-    // ── Re-scan ────────────────────────────────────────────────────────────────
   const handleRescan = async () => {
-    if (!invoice?.image_path && !invoice?.image_url) { setError('No image available to re-scan'); return; }
+    if (!invoice?.image_path && !invoice?.image_url) { setError('No image to re-scan'); return; }
     setRescanning(true); setRescanDone(false); setError(null);
     try {
       let base64: string;
       if (invoice.image_path) {
-        // Use Supabase storage download to avoid CORS issues
         const { data, error: dlError } = await supabase.storage.from('invoices').download(invoice.image_path);
-        if (dlError || !data) throw new Error('Could not download image from storage');
-        base64 = await new Promise<string>((res, rej) => {
-          const r = new FileReader();
-          r.onloadend = () => res(r.result as string);
-          r.onerror = rej;
-          r.readAsDataURL(data);
-        });
+        if (dlError || !data) throw new Error('Could not download image');
+        base64 = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onloadend = () => res(r.result as string); r.onerror = rej; r.readAsDataURL(data); });
       } else {
         const imgRes = await fetch(invoice.image_url!);
-        if (!imgRes.ok) throw new Error('Could not fetch image');
         const blob = await imgRes.blob();
-        base64 = await new Promise<string>((res, rej) => {
-          const r = new FileReader();
-          r.onloadend = () => res(r.result as string);
-          r.onerror = rej;
-          r.readAsDataURL(blob);
-        });
+        base64 = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onloadend = () => res(r.result as string); r.onerror = rej; r.readAsDataURL(blob); });
       }
-
-      const ocrRes = await fetch('/api/ocr', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: base64 }),
-      });
+      const ocrRes = await fetch('/api/ocr', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ image: base64 }) });
       if (!ocrRes.ok) throw new Error('OCR failed');
       const result = await ocrRes.json();
-
-      const updates = {
-        supplier: result.supplier ?? invoice.supplier,
-        description: result.description ?? invoice.description,
-        invoice_date: result.invoice_date ?? invoice.invoice_date,
-        amount: result.amount ?? invoice.amount,
-        vat_amount: result.vat_amount ?? invoice.vat_amount,
-        products_services: result.products_services ?? invoice.products_services,
-        business_name: result.business_name ?? invoice.business_name,
-        category: result.category || null,
-        line_items: result.line_items?.length > 0 ? result.line_items : null,
-        updated_at: new Date().toISOString(),
-      };
-
+      const updates = { supplier:result.supplier??invoice.supplier, description:result.description??invoice.description, invoice_date:result.invoice_date??invoice.invoice_date, amount:result.amount??invoice.amount, vat_amount:result.vat_amount??invoice.vat_amount, products_services:result.products_services??invoice.products_services, business_name:result.business_name??invoice.business_name, category:result.category||null, line_items:result.line_items?.length>0?result.line_items:null, updated_at:new Date().toISOString() };
       const { error: updateError } = await supabase.from('invoices').update(updates).eq('id', id);
       if (updateError) throw updateError;
-
-      const updated = { ...invoice, ...updates } as Invoice;
-      setInvoice(updated);
-      setCategory(result.category || null);
-      setLineItems(result.line_items || []);
-      setFormData({
-        supplier: updates.supplier || '', description: updates.description || '',
-        invoice_date: updates.invoice_date || '', amount: updates.amount?.toString() || '',
-        vat_amount: updates.vat_amount?.toString() || '',
-        products_services: updates.products_services || '', business_name: updates.business_name || '',
-      });
+      setInvoice({ ...invoice, ...updates } as Invoice);
+      setCategory(result.category||null);
+      setLineItems(result.line_items||[]);
+      setFormData({ supplier:updates.supplier||'', description:updates.description||'', invoice_date:updates.invoice_date||'', amount:updates.amount?.toString()||'', vat_amount:updates.vat_amount?.toString()||'', products_services:updates.products_services||'', business_name:updates.business_name||'' });
       setRescanDone(true);
       setTimeout(() => setRescanDone(false), 3000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Re-scan failed');
-    } finally {
-      setRescanning(false);
-    }
+    } catch (err) { setError(err instanceof Error ? err.message : 'Re-scan failed'); }
+    finally { setRescanning(false); }
   };
 
-  // ── Save edits ─────────────────────────────────────────────────────────────
   const handleSave = async () => {
     setSaving(true); setError(null);
     try {
-      const originalValues = invoice?.original_ocr_values as Record<string, unknown> | null;
-      const ocrEdits: { field_name: string; original_value: string | null; edited_value: string | null; edit_type: 'correction' | 'addition' | 'deletion' }[] = [];
-
-      if (originalValues) {
-        for (const key of ['supplier','description','invoice_date','amount','vat_amount','products_services','business_name']) {
-          const originalVal = originalValues[key]?.toString() || null;
-          const editedVal = formData[key as keyof typeof formData] || null;
-          if (originalVal !== editedVal) {
-            const editType = !originalVal && editedVal ? 'addition' : originalVal && !editedVal ? 'deletion' : 'correction';
-            ocrEdits.push({ field_name: key, original_value: originalVal, edited_value: editedVal, edit_type: editType });
-          }
-        }
-      }
-
       const { error: updateError } = await supabase.from('invoices').update({
-        supplier: formData.supplier || null, description: formData.description || null,
-        invoice_date: formData.invoice_date || null,
-        amount: formData.amount ? parseFloat(formData.amount) : null,
-        vat_amount: formData.vat_amount ? parseFloat(formData.vat_amount) : null,
-        products_services: formData.products_services || null,
-        business_name: formData.business_name || null,
-        category: category || null,
-        line_items: lineItems.length > 0 ? lineItems : null,
-        doc_status: docStatus,
-        project_id: projectId || null,
-        status: 'reviewed', updated_at: new Date().toISOString(),
+        supplier:formData.supplier||null, description:formData.description||null,
+        invoice_date:formData.invoice_date||null,
+        amount:formData.amount?parseFloat(formData.amount):null,
+        vat_amount:formData.vat_amount?parseFloat(formData.vat_amount):null,
+        products_services:formData.products_services||null, business_name:formData.business_name||null,
+        category:category||null, line_items:lineItems.length>0?lineItems:null,
+        doc_status:docStatus, project_id:projectId||null,
+        status:'reviewed', updated_at:new Date().toISOString(),
       }).eq('id', id);
-
       if (updateError) throw updateError;
-
-      if (ocrEdits.length > 0) {
-        await fetch('/api/ocr-edits', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ invoice_id: id, edits: ocrEdits }),
-        });
-      }
       router.push('/invoices');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save invoice');
-      setSaving(false);
-    }
+    } catch (err) { setError(err instanceof Error ? err.message : 'Failed to save'); setSaving(false); }
   };
 
   const handleDelete = async () => {
@@ -200,225 +169,216 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       const { error: deleteError } = await supabase.from('invoices').delete().eq('id', id);
       if (deleteError) throw deleteError;
       router.push('/invoices');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete invoice');
-      setDeleting(false);
-    }
+    } catch (err) { setError(err instanceof Error ? err.message : 'Failed to delete'); setDeleting(false); }
   };
 
   const cancelEdit = () => {
     setEditing(false);
     if (invoice) {
-      setFormData({
-        supplier: invoice.supplier || '', description: invoice.description || '',
-        invoice_date: invoice.invoice_date || '', amount: invoice.amount?.toString() || '',
-        vat_amount: invoice.vat_amount?.toString() || '',
-        products_services: invoice.products_services || '', business_name: invoice.business_name || '',
-      });
-      setCategory(invoice.category || null);
-      setDocStatus((invoice.doc_status as DocStatus) || 'open');
-      setProjectId((invoice as any).project_id || null);
-      setLineItems(Array.isArray(invoice.line_items) ? invoice.line_items : []);
+      setFormData({ supplier:invoice.supplier||'', description:invoice.description||'', invoice_date:invoice.invoice_date||'', amount:invoice.amount?.toString()||'', vat_amount:invoice.vat_amount?.toString()||'', products_services:invoice.products_services||'', business_name:invoice.business_name||'' });
+      setCategory(invoice.category||null);
+      setDocStatus((invoice.doc_status as DocStatus)||'open');
+      setProjectId((invoice as any).project_id||null);
+      setLineItems(Array.isArray(invoice.line_items)?invoice.line_items:[]);
     }
   };
 
-  const statusStyle = (s: string): React.CSSProperties => ({
-    display: 'inline-block', padding: '2px 8px', borderRadius: 6,
-    fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.4px',
-    background: s === 'approved' ? '#f0fdf4' : s === 'rejected' ? '#fff1f2' : s === 'reviewed' ? '#eff6ff' : '#fef9c3',
-    color: s === 'approved' ? '#15803d' : s === 'rejected' ? '#be123c' : s === 'reviewed' ? '#1d4ed8' : '#854d0e',
-  });
+  const getDocStatusBadgeStyle = (s: DocStatus) => {
+    const colors: Record<string, [string,string]> = {
+      open: [T.blueGlow, T.blue], accepted: ['rgba(74,222,128,0.1)', T.success],
+      rejected: ['rgba(248,113,113,0.1)', T.error], converted: [T.yellowGlow, T.yellow],
+      closed: ['transparent', T.textMuted],
+    };
+    return colors[s] || colors.open;
+  };
 
   if (loading) return (
-    <div style={{ minHeight: '100svh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <Loader2 size={32} color="#2563eb" style={{ animation: 'spin 1s linear infinite' }} />
-    </div>
+    <>
+      <style>{css}</style>
+      <div className="detail-page" style={{ display:'flex',alignItems:'center',justifyContent:'center' }}>
+        <Loader2 size={32} color={T.blue} style={{ animation:'tspin 1s linear infinite' }} />
+      </div>
+    </>
   );
 
   if (!invoice) return (
-    <div style={{ minHeight: '100svh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: 'DM Sans, sans-serif' }}>
-      <AlertCircle size={48} color="#e11d48" />
-      <p style={{ fontSize: 17, fontWeight: 700, color: '#0f172a', margin: '16px 0 8px' }}>Invoice not found</p>
-      <button onClick={() => router.push('/invoices')} style={{ color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>Back to invoices</button>
-    </div>
+    <>
+      <style>{css}</style>
+      <div className="detail-page" style={{ display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:24 }}>
+        <AlertCircle size={48} color={T.error} />
+        <p style={{ fontSize:17,color:T.text,margin:'16px 0 8px' }}>Invoice not found</p>
+        <button onClick={() => router.push('/invoices')} style={{ color:T.blue,background:'none',border:'none',cursor:'pointer',fontFamily:'Share Tech Mono,monospace' }}>← Back</button>
+      </div>
+    </>
   );
 
-  const confidence = (invoice.raw_ocr_data as any)?.confidence as number | undefined;
+  const confidence = (invoice.raw_ocr_data as any)?.confidence as number|undefined;
+  const itemsTotal = lineItems.reduce((s, i) => s + (i.line_total ?? 0), 0);
+  const invoiceTotal = invoice.amount ?? 0;
+  const diff = Math.abs(itemsTotal - invoiceTotal);
+  const totalsMatch = invoiceTotal > 0 && diff < 1;
+  const [docStatusBg, docStatusColor] = getDocStatusBadgeStyle(docStatus);
+  const projectName = projects.find(p => p.id === projectId)?.name;
 
   return (
-    <div style={{ minHeight: '100svh', background: '#f8fafc', fontFamily: 'DM Sans, sans-serif' }}>
+    <>
+      <style>{css}</style>
+      <div className="detail-page">
+        <div className="scanline" />
 
-      {/* Header */}
-      <header style={{ position: 'sticky', top: 0, zIndex: 40, background: '#fff', borderBottom: '1px solid #e2e8f0', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button onClick={() => router.push('/invoices')} style={{ width: 36, height: 36, borderRadius: 8, border: 'none', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', cursor: 'pointer' }}>
-            <ArrowLeft size={20} />
-          </button>
-          <div>
-            <div style={{ fontSize: 17, fontWeight: 700, color: '#0f172a', lineHeight: 1.2 }}>{invoice.supplier || 'Invoice Details'}</div>
-            <span style={statusStyle(invoice.status)}>{invoice.status}</span>
+        <header className="detail-header">
+          <div style={{ display:'flex',alignItems:'center',gap:10,flex:1,minWidth:0 }}>
+            <button onClick={() => router.push('/invoices')} className="btn-icon"><ArrowLeft size={18} /></button>
+            <div style={{ minWidth:0 }}>
+              <div style={{ fontFamily:'VT323,monospace',fontSize:20,letterSpacing:2,color:T.yellow,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>
+                {invoice.supplier || 'INVOICE DETAILS'}<span className="t-cursor">_</span>
+              </div>
+              <div style={{ fontSize:11,color:T.textDim,letterSpacing:1 }}>{invoice.status?.toUpperCase()}</div>
+            </div>
           </div>
-        </div>
-
-        {!editing && (
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            {invoice.image_url && (
-              <button onClick={handleRescan} disabled={rescanning} style={{ width: 40, height: 40, borderRadius: 8, border: '1.5px solid #e2e8f0', background: rescanDone ? '#f0fdf4' : '#fff', color: rescanDone ? '#15803d' : '#64748b', cursor: rescanning ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {rescanning ? <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} /> : rescanDone ? <CheckCircle size={20} /> : <ScanLine size={20} />}
-                
+          {!editing && (
+            <div style={{ display:'flex',gap:6,alignItems:'center',flexShrink:0 }}>
+              {(invoice.image_url || invoice.image_path) && (
+                <button onClick={handleRescan} disabled={rescanning} className={`btn-icon${rescanDone?' success':''}`}>
+                  {rescanning ? <Loader2 size={18} style={{ animation:'tspin 1s linear infinite' }} /> : rescanDone ? <CheckCircle size={18} /> : <ScanLine size={18} />}
+                </button>
+              )}
+              <button onClick={() => setEditing(true)} className="btn-icon"><Edit2 size={18} /></button>
+              <button onClick={handleDelete} disabled={deleting} className="btn-icon danger">
+                {deleting ? <Loader2 size={18} style={{ animation:'tspin 1s linear infinite' }} /> : <Trash2 size={18} />}
               </button>
-            )}
-            <button onClick={() => setEditing(true)} style={{ width: 40, height: 40, borderRadius: 8, border: '1.5px solid #e2e8f0', background: '#fff', color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Edit2 size={18} />
-            </button>
-            <button onClick={handleDelete} disabled={deleting} style={{ width: 36, height: 36, borderRadius: 8, border: 'none', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e11d48', cursor: 'pointer' }}>
-              {deleting ? <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} /> : <Trash2 size={18} />}
-            </button>
-          </div>
-        )}
-      </header>
+            </div>
+          )}
+        </header>
 
-      <main style={{ padding: 16, paddingBottom: 60 }}>
-        {error && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 12, background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: 10, marginBottom: 16, color: '#be123c', fontSize: 14 }}>
-            <AlertCircle size={18} />{error}
-          </div>
-        )}
+        <main style={{ padding:16, paddingBottom:80 }}>
+          {error && <div className="err-bar"><AlertCircle size={18} />{error}</div>}
 
-        {/* Invoice image */}
-        {invoice.image_url && (
-          <img src={invoice.image_url} alt="Invoice" style={{ width: '100%', borderRadius: 14, border: '1px solid #e2e8f0', marginBottom: 12 }} />
-        )}
+          {/* Image */}
+          {invoice.image_url && (
+            <div className="t-card" style={{ padding:8, marginBottom:12 }}>
+              <img src={invoice.image_url} alt="Invoice" style={{ width:'100%',borderRadius:4,maxHeight:240,objectFit:'contain' }} />
+            </div>
+          )}
 
-          {/* Doc type + number + status */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-            <span style={{ padding: '4px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700, background: '#f1f5f9', color: '#475569' }}>
-              {DOCUMENT_TYPE_LABELS[(invoice.document_type as DocumentType) || 'invoice']}
+          {/* Badges */}
+          <div style={{ display:'flex',gap:6,marginBottom:12,flexWrap:'wrap',alignItems:'center' }}>
+            <span className="badge" style={{ background:T.surfaceHigh,color:T.textDim,borderColor:T.border }}>
+              {DOCUMENT_TYPE_LABELS[(invoice.document_type as DocumentType)||'invoice']}
             </span>
             {invoice.document_number && (
-              <span style={{ fontSize: 12, color: '#64748b', fontFamily: 'DM Mono, monospace', fontWeight: 600 }}>#{invoice.document_number}</span>
+              <span style={{ fontSize:12,color:T.textMuted,fontFamily:'Share Tech Mono,monospace' }}>#{invoice.document_number}</span>
             )}
-            <span style={{ padding: '4px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700,
-              background: docStatus === 'accepted' ? '#f0fdf4' : docStatus === 'rejected' ? '#fff1f2' : docStatus === 'converted' ? '#f5f3ff' : docStatus === 'closed' ? '#f8fafc' : '#f0f9ff',
-              color: docStatus === 'accepted' ? '#15803d' : docStatus === 'rejected' ? '#be123c' : docStatus === 'converted' ? '#6d28d9' : docStatus === 'closed' ? '#64748b' : '#0369a1' }}>
+            <span className="badge" style={{ background:docStatusBg,color:docStatusColor,borderColor:docStatusColor }}>
               {DOC_STATUS_LABELS[docStatus]}
             </span>
+            {confidence != null && (
+              <span className="badge" style={{
+                background: confidence>=0.85?'rgba(74,222,128,0.1)':confidence>=0.65?T.yellowGlow:'rgba(248,113,113,0.1)',
+                color: confidence>=0.85?T.success:confidence>=0.65?T.yellow:T.error,
+                borderColor: confidence>=0.85?T.success:confidence>=0.65?T.yellow:T.error,
+              }}>OCR {Math.round(confidence*100)}%</span>
+            )}
+            {invoice.is_paid && (
+              <span className="badge" style={{ background:'rgba(74,222,128,0.1)',color:T.success,borderColor:T.success }}>
+                {invoice.payment_method?invoice.payment_method.toUpperCase():'PAID'}
+              </span>
+            )}
+            {category && !editing && (
+              <span className="badge" style={{ background:T.blueGlow,color:T.blue,borderColor:T.blue }}>{category}</span>
+            )}
           </div>
 
-
-
-        {/* OCR + payment badges */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-          {confidence != null && (
-            <span style={{ padding: '4px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700, background: confidence >= 0.85 ? '#f0fdf4' : confidence >= 0.65 ? '#fffbeb' : '#fff1f2', color: confidence >= 0.85 ? '#15803d' : confidence >= 0.65 ? '#854d0e' : '#be123c' }}>
-              OCR {Math.round(confidence * 100)}%
-            </span>
-          )}
-          {invoice.is_paid && (
-            <span style={{ padding: '4px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700, background: '#f0fdf4', color: '#15803d' }}>
-              {invoice.payment_method ? invoice.payment_method.toUpperCase() : 'PAID'}
-            </span>
-          )}
-          {category && !editing && (
-            <span style={{ padding: '4px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700, background: '#eff6ff', color: '#2563eb' }}>
-              {category}
-            </span>
-          )}
-        </div>
-
-        {editing ? (
-          <>
-            {/* Category picker */}
-            <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: 16, marginBottom: 12 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: 10 }}>Category</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {CATEGORIES.map(cat => (
-                  <button key={cat} onClick={() => setCategory(cat)} style={{ padding: '6px 12px', borderRadius: 20, border: '1.5px solid', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', borderColor: category === cat ? '#2563eb' : '#e2e8f0', background: category === cat ? '#eff6ff' : '#fff', color: category === cat ? '#2563eb' : '#64748b' }}>
-                    {cat}
-                  </button>
+          {editing ? (
+            <>
+              {/* Category picker */}
+              <div className="t-card">
+                <div className="t-card-title">Category</div>
+                <div style={{ display:'flex',flexWrap:'wrap',gap:6 }}>
+                  {CATEGORIES.map(cat => (
+                    <button key={cat} className={`t-pill${category===cat?' active':''}`} onClick={() => setCategory(cat)}>{cat}</button>
+                  ))}
+                </div>
+              </div>
+              {/* Project picker */}
+              <div className="t-card">
+                <div className="t-card-title">Project</div>
+                <div style={{ position:'relative' }}>
+                  <select className="t-select" value={projectId||''} onChange={e => setProjectId(e.target.value||null)}>
+                    <option value="">-- No project --</option>
+                    {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                  <span style={{ position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',color:T.blue,pointerEvents:'none',fontSize:12 }}>▼</span>
+                </div>
+              </div>
+              {/* Edit form */}
+              <div className="t-card">
+                <div className="t-card-title">Document Details</div>
+                <InvoiceForm formData={formData} onChange={setFormData} onSubmit={handleSave} onCancel={cancelEdit} isLoading={saving} submitLabel="Save Changes" />
+              </div>
+            </>
+          ) : (
+            <>
+              {/* View details */}
+              <div className="t-card">
+                <div className="t-card-title">Document Details</div>
+                {[
+                  { label:'Business Name', value:invoice.business_name },
+                  { label:'Supplier', value:invoice.supplier },
+                  { label:'Description', value:invoice.description },
+                  { label:'Invoice Date', value:invoice.invoice_date },
+                  { label:'Amount', value:fmtZAR(invoice.amount) },
+                  { label:'VAT Amount', value:fmtZAR(invoice.vat_amount) },
+                  { label:'Products / Services', value:invoice.products_services },
+                ].map(({ label, value }, idx, arr) => (
+                  <div key={label} style={{ paddingBottom: idx<arr.length-1?14:0, borderBottom: idx<arr.length-1?`1px solid ${T.border}`:'none', marginBottom: idx<arr.length-1?14:0 }}>
+                    <div className="detail-label">{label}</div>
+                    <div className="detail-value" style={{ color: value ? T.text : T.textMuted }}>{value || '—'}</div>
+                  </div>
                 ))}
               </div>
-            </div>
 
-            {/* Edit form */}
-            <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: 16 }}>
-              <InvoiceForm formData={formData} onChange={setFormData} onSubmit={handleSave} onCancel={cancelEdit} isLoading={saving} submitLabel="Save Changes" />
-            </div>
-          </>
-        ) : (
-          <>
-            {/* Invoice fields */}
-            <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: 16, marginBottom: 12 }}>
-              <DetailRow label="Business Name" value={invoice.business_name} />
-              <DetailRow label="Supplier" value={invoice.supplier} />
-              <DetailRow label="Description" value={invoice.description} />
-              <DetailRow label="Invoice Date" value={invoice.invoice_date} />
-              <DetailRow label="Amount" value={fmtZAR(invoice.amount)} />
-              <DetailRow label="VAT Amount" value={fmtZAR(invoice.vat_amount)} />
-              <DetailRow label="Products / Services" value={invoice.products_services} last />
-            </div>
-
-            {/* Line items */}
-            {lineItems.length > 0 && (() => {
-              const itemsTotal = lineItems.reduce((s, i) => s + (i.line_total ?? 0), 0);
-              const invoiceTotal = invoice.amount ?? 0;
-              const diff = Math.abs(itemsTotal - invoiceTotal);
-              const matches = invoiceTotal > 0 && diff < 1;
-              const fmt = (n: number) => `R ${Math.round(n).toLocaleString('en-ZA')}`;
-              return (
-                <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: 16 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>Line Items</div>
+              {/* Line items */}
+              {lineItems.length > 0 && (
+                <div className="t-card">
+                  <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12 }}>
+                    <div className="t-card-title" style={{ margin:0 }}>Line Items</div>
                     {invoiceTotal > 0 && (
-                      <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: matches ? '#f0fdf4' : '#fff7ed', color: matches ? '#15803d' : '#c2410c' }}>
-                        {matches ? '✓ Totals match' : `⚠ ${fmt(diff)} difference`}
+                      <span style={{ fontSize:10,letterSpacing:1,padding:'3px 8px',borderRadius:4,fontFamily:'Share Tech Mono,monospace',textTransform:'uppercase',
+                        background: totalsMatch?'rgba(74,222,128,0.1)':'rgba(248,113,113,0.1)',
+                        color: totalsMatch?T.success:T.error,
+                        border:`1px solid ${totalsMatch?T.success:T.error}`,
+                      }}>
+                        {totalsMatch?'✓ MATCH':`⚠ ${fmtZAR(diff)} OFF`}
                       </span>
                     )}
                   </div>
                   {lineItems.map((item, i) => (
-                    <div key={i} style={{ paddingBottom: 10, marginBottom: 10, borderBottom: i < lineItems.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: '#0f172a', marginBottom: 3 }}>{item.description}</div>
-                      <div style={{ display: 'flex', gap: 12, fontSize: 12, color: '#64748b', fontFamily: 'DM Mono, monospace' }}>
-                        {item.quantity != null && <span>×{item.quantity}</span>}
-                        {item.unit_price != null && <span>@ {fmt(item.unit_price)}</span>}
-                        {item.line_total != null && <span style={{ marginLeft: 'auto', fontWeight: 700, color: '#0f172a' }}>{fmt(item.line_total)}</span>}
+                    <div key={i} style={{ paddingBottom:10,marginBottom:10,borderBottom:i<lineItems.length-1?`1px solid ${T.border}`:'none' }}>
+                      <div style={{ fontSize:13,color:T.text,marginBottom:3 }}>{item.description}</div>
+                      <div style={{ display:'flex',gap:12,fontSize:12,color:T.textDim,fontFamily:'Share Tech Mono,monospace' }}>
+                        {item.quantity!=null && <span>×{item.quantity}</span>}
+                        {item.unit_price!=null && <span>@ {fmtZAR(item.unit_price)}</span>}
+                        {item.line_total!=null && <span style={{ marginLeft:'auto',color:T.yellow }}>{fmtZAR(item.line_total)}</span>}
                       </div>
                     </div>
                   ))}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8, borderTop: '1.5px solid #e2e8f0' }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Items Total</span>
-                    <span style={{ fontSize: 14, fontWeight: 700, fontFamily: 'DM Mono, monospace', color: '#0f172a' }}>{fmt(itemsTotal)}</span>
+                  <div style={{ display:'flex',justifyContent:'space-between',paddingTop:8,borderTop:`1px solid ${T.border}` }}>
+                    <span style={{ fontSize:11,color:T.textMuted,letterSpacing:2,textTransform:'uppercase' }}>Items Total</span>
+                    <span style={{ fontFamily:'Share Tech Mono,monospace',color:T.yellow,fontSize:14 }}>{fmtZAR(itemsTotal)}</span>
                   </div>
                 </div>
-              );
-            })()}
-          {/* Project */}
-            <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: 16, marginTop: 12 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 8 }}>Project</div>
-              {editing ? (
-                <select value={projectId || ''} onChange={e => setProjectId(e.target.value || null)}
-                  style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 14, fontFamily: 'DM Sans, sans-serif', color: '#0f172a', outline: 'none', background: '#fff' }}>
-                  <option value="">No project</option>
-                  {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
-              ) : (
-                <div style={{ fontSize: 15, fontWeight: 500, color: projectId ? '#0f172a' : '#94a3b8' }}>
-                  {projects.find(p => p.id === projectId)?.name || '—'}
-                </div>
               )}
-            </div>
-          </>
-        )}
-      </main>
-    </div>
-  );
-}
 
-function DetailRow({ label, value, last }: { label: string; value: string | null | undefined; last?: boolean }) {
-  return (
-    <div style={{ paddingBottom: last ? 0 : 14, borderBottom: last ? 'none' : '1px solid #f1f5f9', marginBottom: last ? 0 : 14 }}>
-      <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 3 }}>{label}</div>
-      <div style={{ fontSize: 15, fontWeight: 500, color: value ? '#0f172a' : '#94a3b8' }}>{value || '—'}</div>
-    </div>
+              {/* Project */}
+              <div className="t-card">
+                <div className="t-card-title">Project</div>
+                <div style={{ fontSize:14,color: projectName ? T.text : T.textMuted }}>{projectName || '—'}</div>
+              </div>
+            </>
+          )}
+        </main>
+      </div>
+    </>
   );
 }
