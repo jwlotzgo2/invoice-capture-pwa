@@ -8,6 +8,7 @@ import { User, Building2, Phone, Mail, LogOut, Shield, ChevronRight, Loader2, Ch
 interface Profile {
   full_name: string; email: string; phone: string | null;
   organisation_name: string | null; role: string; created_at: string;
+  org_id: string | null; org_name: string | null;
 }
 
 const T = {
