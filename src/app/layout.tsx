@@ -1,44 +1,59 @@
 import type { Metadata, Viewport } from 'next';
-import { DM_Sans, DM_Mono } from 'next/font/google';
+import { Inter } from 'next/font/google';
 import './globals.css';
-import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 import BottomNav from '@/components/BottomNav';
+import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 
-const dmSans = DM_Sans({ subsets: ['latin'], weight: ['400', '500', '600', '700'] });
-const dmMono = DM_Mono({ subsets: ['latin'], weight: ['500'], variable: '--font-mono' });
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Invoice Capture PWA',
-  description: 'Capture and manage invoices with AI-powered OCR',
+  title: 'Go Capture',
+  description: 'Capture and manage documents with AI-powered OCR',
   manifest: '/manifest.json',
-  appleWebApp: { capable: true, statusBarStyle: 'default', title: 'Invoice Capture' },
-  formatDetection: { telephone: false },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Go Capture',
+  },
+  formatDetection: {
+    telephone: false,
+  },
 };
 
 export const viewport: Viewport = {
-  width: 'device-width', initialScale: 1, maximumScale: 1,
-  userScalable: false, themeColor: '#3b82f6',
+  width: 'device-width',
+  initialScale: 1,
+  // removed maximumScale and userScalable — allows pinch-zoom and landscape rotation
+  themeColor: '#0d0d0d',
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <html lang="en">
       <head>
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
-      <body className={`${dmSans.className} ${dmMono.variable} antialiased bg-gray-50`}>
+      <body className={`${inter.className} antialiased`} style={{ background: '#0d0d0d' }}>
         {children}
         <BottomNav />
         <PWAInstallPrompt />
-        <script dangerouslySetInnerHTML={{ __html: `
-          if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-              navigator.serviceWorker.register('/sw.js');
-            });
-          }
-        `}} />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js');
+                });
+              }
+            `,
+          }}
+        />
       </body>
     </html>
   );
