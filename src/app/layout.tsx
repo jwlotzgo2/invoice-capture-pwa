@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
-// Inter loaded via globals.css
+import BottomNav from '@/components/BottomNav';
+import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 
 export const metadata: Metadata = {
   title: 'Go Capture',
