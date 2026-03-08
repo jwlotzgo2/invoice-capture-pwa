@@ -72,8 +72,20 @@ function CapturePageInner() {
 
   const handleCapture = async (imageData: string) => {
     setCapturedImage(imageData);
-    setStep('processing');
     setError(null);
+
+    // Offline — skip OCR and review entirely, queue image immediately
+    if (!navigator.onLine) {
+      const uid = cachedUserId;
+      if (!uid) { setError('Cannot save offline — open the app while connected first.'); return; }
+      await queueInvoice({ image: imageData, userId: uid, formData: { document_type: 'invoice', doc_status: 'open', needs_ocr: true } });
+      requestSync();
+      setToast('Image saved offline — OCR will run when reconnected');
+      setTimeout(() => router.push('/'), 1500);
+      return;
+    }
+
+    setStep('processing');
     try {
       const response = await fetch('/api/ocr', {
         method: 'POST',
@@ -107,13 +119,23 @@ function CapturePageInner() {
     const type = file.type || 'image/jpeg';
     setFileType(type);
     const reader = new FileReader();
-    reader.onloadend = () => {
+    reader.onloadend = async () => {
+      const data = reader.result as string;
+      // Offline — queue immediately, no OCR
+      if (!navigator.onLine) {
+        const uid = cachedUserId;
+        if (!uid) { setError('Cannot save offline — open the app while connected first.'); return; }
+        await queueInvoice({ image: data, userId: uid, formData: { document_type: type === 'application/pdf' ? 'invoice' : 'invoice', doc_status: 'open', needs_ocr: true } });
+        requestSync();
+        setToast('File saved offline — OCR will run when reconnected');
+        setTimeout(() => router.push('/'), 1500);
+        return;
+      }
       if (type === 'application/pdf') {
-        // For PDFs, store base64 and skip OCR preview — go straight to review
-        setCapturedImage(reader.result as string);
+        setCapturedImage(data);
         setStep('review');
       } else {
-        handleCapture(reader.result as string);
+        handleCapture(data);
       }
     };
     reader.readAsDataURL(file);
