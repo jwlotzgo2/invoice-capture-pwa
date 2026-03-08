@@ -142,24 +142,17 @@ export default function DocumentsPage() {
     if (!selectedDocs.length) return;
     setZipping(true);
     try {
-      // Dynamic import JSZip
-      const JSZip = (await import('jszip')).default;
-      const zip = new JSZip();
-      await Promise.all(selectedDocs.map(async (doc) => {
-        const res = await fetch(doc.image_url!);
-        const blob = await res.blob();
+      // Download files individually with a small delay between each
+      for (const doc of selectedDocs) {
         const ext = doc.image_url!.split('.').pop()?.split('?')[0] || 'pdf';
         const name = `${doc.supplier || 'doc'}-${doc.document_number || doc.id.slice(0, 8)}.${ext}`.replace(/[^a-zA-Z0-9._-]/g, '_');
-        zip.file(name, blob);
-      }));
-      const content = await zip.generateAsync({ type: 'blob' });
-      const url = URL.createObjectURL(content);
-      const a = document.createElement('a');
-      a.href = url; a.download = `go-capture-documents-${Date.now()}.zip`; a.click();
-      URL.revokeObjectURL(url);
-      showToast(`Downloaded ${selectedDocs.length} files`);
+        const a = document.createElement('a');
+        a.href = doc.image_url!; a.download = name; a.target = '_blank'; a.click();
+        await new Promise(r => setTimeout(r, 300));
+      }
+      showToast(`Downloading ${selectedDocs.length} files`);
     } catch (e) {
-      showToast('ZIP download failed — try downloading individually');
+      showToast('Download failed — try downloading individually');
     } finally { setZipping(false); }
   };
 
