@@ -182,8 +182,11 @@ If a field cannot be determined, set it to null. Return ONLY the JSON, no markdo
             document_number: ocrData.document_number || null,
             image_path: fileName,
             image_url: publicUrl,
-            // email metadata — only included if migration has been run
-            // source, email_message_id, email_from, email_subject, status
+            source: 'email',
+            status: 'pending_review',
+            email_from: senderEmail,
+            email_subject: payload.Subject || null,
+            email_message_id: payload.MessageID || null,
           })
           .select()
           .single();
