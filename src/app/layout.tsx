@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 import SyncManager from '@/components/SyncManager';
+import BottomNav from '@/components/BottomNav';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -42,6 +43,7 @@ export default function RootLayout({
       </head>
       <body className={`${inter.className} antialiased`} style={{ background: '#1c1c1c' }}>
         {children}
+        <BottomNav />
         <PWAInstallPrompt />
         <SyncManager />
         <script

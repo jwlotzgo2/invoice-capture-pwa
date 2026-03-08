@@ -11,7 +11,7 @@ const T = {
 
 const tabs = [
   { href: '/',              icon: LayoutDashboard, label: 'Dashboard', exact: true },
-  { href: '/invoices/list', icon: FileText,         label: 'Documents', exact: false },
+  { href: '/documents',     icon: FileText,         label: 'Documents', exact: false },
   { href: '/capture',       icon: Camera,           label: 'Capture',   exact: true, primary: true },
   { href: '/review',        icon: Monitor,          label: 'Review',    exact: false },
   { href: '/reports',       icon: BarChart2,        label: 'Reports',   exact: false },
