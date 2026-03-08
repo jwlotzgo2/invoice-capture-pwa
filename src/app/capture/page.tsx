@@ -34,15 +34,17 @@ function CapturePageInner() {
   const [projects, setProjects] = useState<{id:string;name:string}[]>([]);
   const [projectId, setProjectId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
 
   useEffect(() => {
     const loadProjects = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) setCachedUserId(user.id);
-      const { data } = await supabase.from('projects').select('id, name').eq('user_id', user?.id || '').order('name');
+      // getSession reads from local storage — works offline
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) setCachedUserId(session.user.id);
+      const { data } = await supabase.from('projects').select('id, name').eq('user_id', session?.user?.id || '').order('name');
       setProjects(data || []);
     };
     loadProjects();
@@ -217,56 +219,62 @@ function CapturePageInner() {
 
   if (step === 'choose') {
     return (
-      <div style={{ minHeight: '100svh', background: '#f8fafc', fontFamily: 'DM Sans, sans-serif', display: 'flex', flexDirection: 'column' }}>
-        <header style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: '#fff', borderBottom: '1px solid #e2e8f0' }}>
-          <button onClick={() => router.push('/invoices')} style={{ width: 36, height: 36, borderRadius: 8, border: 'none', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', cursor: 'pointer' }}>
+      <div style={{ minHeight: '100svh', background: '#1c1c1c', fontFamily: 'Inter, system-ui, sans-serif', display: 'flex', flexDirection: 'column' }}>
+        <header style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: '#282828', borderBottom: '1px solid #383838' }}>
+          <button onClick={() => router.push('/')} style={{ width: 36, height: 36, borderRadius: 8, border: 'none', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8a8a8a', cursor: 'pointer' }}>
             <ArrowLeft size={20} />
           </button>
-          <span style={{ fontSize: 17, fontWeight: 700, color: '#0f172a' }}>Add Invoice</span>
+          <span style={{ fontSize: 17, fontWeight: 600, color: '#f0f0f0' }}>Add Document</span>
         </header>
 
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 24px' }}>
-          <h2 style={{ fontSize: 22, fontWeight: 700, color: '#0f172a', textAlign: 'center', margin: '0 0 8px' }}>
-            How would you like<br />to add an invoice?
+          <h2 style={{ fontSize: 20, fontWeight: 600, color: '#f0f0f0', textAlign: 'center', margin: '0 0 8px' }}>
+            How would you like<br />to add a document?
           </h2>
-          <p style={{ fontSize: 14, color: '#64748b', textAlign: 'center', margin: '0 0 28px' }}>
-            Take a photo or upload an image or PDF
+          <p style={{ fontSize: 14, color: '#8a8a8a', textAlign: 'center', margin: '0 0 28px' }}>
+            Camera, gallery or file
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', maxWidth: 360 }}>
-            <div onClick={() => setStep('capture')} style={{ background: 'linear-gradient(135deg,#1d4ed8,#3b82f6)', borderRadius: 16, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer', boxShadow: '0 4px 20px rgba(37,99,235,0.25)' }}>
-              <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Camera size={24} color="#fff" />
+            {/* Camera */}
+            <div onClick={() => setStep('capture')} style={{ background: '#282828', border: '1px solid #383838', borderRadius: 12, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer' }}>
+              <div style={{ width: 46, height: 46, borderRadius: 10, background: '#e5e5e5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Camera size={22} color="#1c1c1c" />
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 2 }}>Use Camera</div>
-                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)' }}>Take a photo of your invoice</div>
+                <div style={{ fontSize: 15, fontWeight: 600, color: '#f0f0f0', marginBottom: 2 }}>Camera</div>
+                <div style={{ fontSize: 12, color: '#8a8a8a' }}>Take a photo of your document</div>
               </div>
             </div>
 
-            <div onClick={() => fileInputRef.current?.click()} style={{ background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 16, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer' }}>
-              <div style={{ width: 48, height: 48, borderRadius: 12, background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Upload size={24} color="#2563eb" />
+            {/* Gallery — images only */}
+            <div onClick={() => imageInputRef.current?.click()} style={{ background: '#282828', border: '1px solid #383838', borderRadius: 12, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer' }}>
+              <div style={{ width: 46, height: 46, borderRadius: 10, background: '#323232', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <FileImage size={22} color="#e5e5e5" />
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 2 }}>Upload File</div>
-                <div style={{ fontSize: 13, color: '#64748b' }}>Choose a file from your device</div>
+                <div style={{ fontSize: 15, fontWeight: 600, color: '#f0f0f0', marginBottom: 2 }}>Gallery</div>
+                <div style={{ fontSize: 12, color: '#8a8a8a' }}>Pick an image from your gallery</div>
               </div>
             </div>
 
-            <div onClick={() => fileInputRef.current?.click()} style={{ background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 16, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer' }}>
-              <div style={{ width: 48, height: 48, borderRadius: 12, background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <FileImage size={24} color="#2563eb" />
+            {/* Files — PDF + docs */}
+            <div onClick={() => fileInputRef.current?.click()} style={{ background: '#282828', border: '1px solid #383838', borderRadius: 12, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer' }}>
+              <div style={{ width: 46, height: 46, borderRadius: 10, background: '#323232', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Upload size={22} color="#e5e5e5" />
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 2 }}>From Gallery</div>
-                <div style={{ fontSize: 13, color: '#64748b' }}>Pick a photo from your gallery</div>
+                <div style={{ fontSize: 15, fontWeight: 600, color: '#f0f0f0', marginBottom: 2 }}>Upload File</div>
+                <div style={{ fontSize: 12, color: '#8a8a8a' }}>PDF or document from your files</div>
               </div>
             </div>
           </div>
         </div>
 
-        <input ref={fileInputRef} type="file" accept="image/*,application/pdf,.pdf,.heic,.heif" onChange={handleFileUpload} style={{ display: 'none' }} />
+        {/* Images only — opens gallery */}
+        <input ref={imageInputRef} type="file" accept="image/*" onChange={handleFileUpload} style={{ display: 'none' }} />
+        {/* Files — PDF and docs */}
+        <input ref={fileInputRef} type="file" accept="application/pdf,.pdf,.heic,.heif" onChange={handleFileUpload} style={{ display: 'none' }} />
       </div>
     );
   }
@@ -277,13 +285,13 @@ function CapturePageInner() {
 
   if (step === 'processing') {
     return (
-      <div style={{ minHeight: '100svh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', fontFamily: 'DM Sans, sans-serif' }}>
+      <div style={{ minHeight: '100svh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#1c1c1c', fontFamily: 'Inter, system-ui, sans-serif' }}>
         <div style={{ textAlign: 'center', padding: '0 24px' }}>
-          <div style={{ width: 80, height: 80, borderRadius: '50%', background: '#eff6ff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24 }}>
+          <div style={{ width: 80, height: 80, borderRadius: '50%', background: '#323232', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24 }}>
             <Sparkles size={36} color="#2563eb" />
           </div>
-          <h2 style={{ fontSize: 20, fontWeight: 700, color: '#0f172a', margin: '0 0 8px' }}>Processing Invoice</h2>
-          <p style={{ fontSize: 14, color: '#64748b', margin: '0 0 24px' }}>AI is extracting your invoice data…</p>
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: '#f0f0f0', margin: '0 0 8px' }}>Processing Invoice</h2>
+          <p style={{ fontSize: 14, color: '#8a8a8a', margin: '0 0 24px' }}>AI is extracting your invoice data…</p>
           <Loader2 size={28} color="#2563eb" style={{ animation: 'spin 1s linear infinite' }} />
         </div>
       </div>
@@ -291,7 +299,7 @@ function CapturePageInner() {
   }
 
   return (
-    <div style={{ minHeight: '100svh', background: '#f8fafc', fontFamily: 'DM Sans, sans-serif' }}>
+    <div style={{ minHeight: '100svh', background: '#1c1c1c', fontFamily: 'Inter, system-ui, sans-serif' }}>
       {/* Toast */}
       {toast && (
         <div style={{ position: 'fixed', bottom: 90, left: 16, right: 16, zIndex: 999, background: '#282828', border: '1px solid #383838', borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 4px 24px rgba(0,0,0,0.4)' }}>
@@ -306,14 +314,14 @@ function CapturePageInner() {
           <span style={{ fontSize: 12, color: '#fdba74' }}>You're offline — invoice will be saved locally and uploaded when reconnected</span>
         </div>
       )}
-      <header style={{ position: 'sticky', top: 0, zIndex: 40, background: '#fff', borderBottom: '1px solid #e2e8f0', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button onClick={handleBack} style={{ width: 36, height: 36, borderRadius: 8, border: 'none', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', cursor: 'pointer' }}>
+      <header style={{ position: 'sticky', top: 0, zIndex: 40, background: '#282828', borderBottom: '1px solid #383838', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+        <button onClick={handleBack} style={{ width: 36, height: 36, borderRadius: 8, border: 'none', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8a8a8a', cursor: 'pointer' }}>
           <ArrowLeft size={20} />
         </button>
         <div>
-          <div style={{ fontSize: 17, fontWeight: 700, color: '#0f172a' }}>Review Document</div>
+          <div style={{ fontSize: 17, fontWeight: 700, color: '#f0f0f0' }}>Review Document</div>
           {ocrConfidence !== null && (
-            <div style={{ fontSize: 12, color: '#64748b' }}>AI Confidence: {Math.round(ocrConfidence * 100)}%</div>
+            <div style={{ fontSize: 12, color: '#8a8a8a' }}>AI Confidence: {Math.round(ocrConfidence * 100)}%</div>
           )}
         </div>
       </header>
@@ -326,8 +334,8 @@ function CapturePageInner() {
 
 
         {/* Document Type + Number */}
-        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: 16, marginBottom: 12 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: 10 }}>Document Type</div>
+        <div style={{ background: '#282828', borderRadius: 14, border: '1px solid #383838', padding: 16, marginBottom: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#f0f0f0', marginBottom: 10 }}>Document Type</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
             {[['invoice','Tax Invoice'],['quote','Quote'],['purchase_order','Purchase Order'],['credit_note','Credit Note'],['delivery_note','Delivery Note'],['receipt','Receipt']].map(([val, label]) => (
               <button key={val} onClick={() => setDocumentType(val)}
@@ -340,19 +348,19 @@ function CapturePageInner() {
             ))}
           </div>
           <div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 6 }}>Document / Reference Number</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: '#8a8a8a', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 6 }}>Document / Reference Number</div>
             <input
               value={documentNumber || ''}
               onChange={e => setDocumentNumber(e.target.value || null)}
               placeholder="e.g. INV-0042"
-              style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 14, fontFamily: 'DM Mono, monospace', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#fff' }}
+              style={{ width: '100%', padding: '9px 12px', border: '1px solid #383838', borderRadius: 10, fontSize: 14, fontFamily: 'Inter, system-ui, sans-serif', color: '#f0f0f0', outline: 'none', boxSizing: 'border-box', background: '#282828' }}
             />
           </div>
         </div>
 
         {/* Category */}
-        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: 16, marginBottom: 12 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: 10 }}>Category</div>
+        <div style={{ background: '#282828', borderRadius: 14, border: '1px solid #383838', padding: 16, marginBottom: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#f0f0f0', marginBottom: 10 }}>Category</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {['Travel & Transport','Utilities','Materials & Supplies','Subscriptions & Software','Professional Services','Food & Entertainment','Equipment','Marketing','Other'].map(cat => (
               <button key={cat} onClick={() => setCategory(cat)}
@@ -367,16 +375,16 @@ function CapturePageInner() {
         </div>
 
         {/* Line Items — editable */}
-        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: 16, marginBottom: 12 }}>
+        <div style={{ background: '#282828', borderRadius: 14, border: '1px solid #383838', padding: 16, marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>Line Items</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#f0f0f0' }}>Line Items</div>
             <button onClick={() => setLineItems(prev => [...prev, { description: '', quantity: null, unit_price: null, line_total: null }])}
               style={{ fontSize: 12, fontWeight: 700, color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 4 }}>
               + Add row
             </button>
           </div>
           {lineItems.length === 0 ? (
-            <div style={{ fontSize: 13, color: '#94a3b8', textAlign: 'center', padding: '12px 0' }}>No line items — tap Add row to add one</div>
+            <div style={{ fontSize: 13, color: '#6b6b6b', textAlign: 'center', padding: '12px 0' }}>No line items — tap Add row to add one</div>
           ) : lineItems.map((item, i) => (
             <div key={i} style={{ marginBottom: 10, paddingBottom: 10, borderBottom: i < lineItems.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
               <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
@@ -384,7 +392,7 @@ function CapturePageInner() {
                   value={item.description}
                   onChange={e => setLineItems(prev => prev.map((r, j) => j === i ? { ...r, description: e.target.value } : r))}
                   placeholder="Description"
-                  style={{ flex: 1, padding: '7px 10px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, fontFamily: 'DM Sans, sans-serif', outline: 'none' }}
+                  style={{ flex: 1, padding: '7px 10px', border: '1px solid #383838', borderRadius: 8, fontSize: 13, fontFamily: 'Inter, system-ui, sans-serif', outline: 'none' }}
                 />
                 <button onClick={() => setLineItems(prev => prev.filter((_, j) => j !== i))}
                   style={{ width: 32, height: 32, borderRadius: 8, border: 'none', background: 'transparent', color: '#e11d48', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -393,27 +401,27 @@ function CapturePageInner() {
               </div>
               <div style={{ display: 'flex', gap: 6 }}>
                 <input type="number" value={item.quantity ?? ''} onChange={e => setLineItems(prev => prev.map((r, j) => j === i ? { ...r, quantity: e.target.value ? Number(e.target.value) : null } : r))}
-                  placeholder="Qty" style={{ width: 60, padding: '7px 8px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, fontFamily: 'DM Mono, monospace', outline: 'none', textAlign: 'right' }} />
+                  placeholder="Qty" style={{ width: 60, padding: '7px 8px', border: '1px solid #383838', borderRadius: 8, fontSize: 13, fontFamily: 'Inter, system-ui, sans-serif', outline: 'none', textAlign: 'right' }} />
                 <input type="number" value={item.unit_price ?? ''} onChange={e => {
                     const up = e.target.value ? Number(e.target.value) : null;
                     setLineItems(prev => prev.map((r, j) => j === i ? { ...r, unit_price: up, line_total: up != null && r.quantity != null ? up * r.quantity : r.line_total } : r));
                   }}
-                  placeholder="Unit price" style={{ flex: 1, padding: '7px 8px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, fontFamily: 'DM Mono, monospace', outline: 'none', textAlign: 'right' }} />
+                  placeholder="Unit price" style={{ flex: 1, padding: '7px 8px', border: '1px solid #383838', borderRadius: 8, fontSize: 13, fontFamily: 'Inter, system-ui, sans-serif', outline: 'none', textAlign: 'right' }} />
                 <input type="number" value={item.line_total ?? ''} onChange={e => setLineItems(prev => prev.map((r, j) => j === i ? { ...r, line_total: e.target.value ? Number(e.target.value) : null } : r))}
-                  placeholder="Total" style={{ flex: 1, padding: '7px 8px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, fontFamily: 'DM Mono, monospace', outline: 'none', textAlign: 'right' }} />
+                  placeholder="Total" style={{ flex: 1, padding: '7px 8px', border: '1px solid #383838', borderRadius: 8, fontSize: 13, fontFamily: 'Inter, system-ui, sans-serif', outline: 'none', textAlign: 'right' }} />
               </div>
             </div>
           ))}
         </div>
 
         {/* Project */}
-        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: 16, marginBottom: 12 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: 10 }}>Project</div>
+        <div style={{ background: '#282828', borderRadius: 14, border: '1px solid #383838', padding: 16, marginBottom: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#f0f0f0', marginBottom: 10 }}>Project</div>
           {projects.length === 0 ? (
-            <div style={{ fontSize: 13, color: '#94a3b8' }}>No projects yet — <span onClick={() => router.push('/projects')} style={{ color: '#2563eb', cursor: 'pointer', fontWeight: 600 }}>create one</span></div>
+            <div style={{ fontSize: 13, color: '#6b6b6b' }}>No projects yet — <span onClick={() => router.push('/projects')} style={{ color: '#2563eb', cursor: 'pointer', fontWeight: 600 }}>create one</span></div>
           ) : (
             <select value={projectId || ''} onChange={e => setProjectId(e.target.value || null)}
-              style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 14, fontFamily: 'DM Sans, sans-serif', color: '#0f172a', outline: 'none', background: '#fff' }}>
+              style={{ width: '100%', padding: '9px 12px', border: '1px solid #383838', borderRadius: 10, fontSize: 14, fontFamily: 'Inter, system-ui, sans-serif', color: '#f0f0f0', outline: 'none', background: '#282828' }}>
               <option value="">No project</option>
               {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
@@ -421,17 +429,17 @@ function CapturePageInner() {
         </div>
 
         {/* Payment */}
-        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: 16, marginBottom: 12 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: 12 }}>Payment</div>
+        <div style={{ background: '#282828', borderRadius: 14, border: '1px solid #383838', padding: 16, marginBottom: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#f0f0f0', marginBottom: 12 }}>Payment</div>
           
           {/* Paid toggle */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: isPaid ? 12 : 0 }}>
-            <span style={{ fontSize: 14, fontWeight: 500, color: '#334155' }}>Paid?</span>
+            <span style={{ fontSize: 14, fontWeight: 500, color: '#e5e5e5' }}>Paid?</span>
             <button
               onClick={() => { setIsPaid(!isPaid); if (isPaid) setPaymentMethod(''); }}
               style={{ width: 48, height: 26, borderRadius: 13, border: 'none', cursor: 'pointer', position: 'relative', background: isPaid ? '#16a34a' : '#e2e8f0', transition: 'background 0.2s' }}
             >
-              <span style={{ position: 'absolute', top: 3, left: isPaid ? 25 : 3, width: 20, height: 20, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s' }} />
+              <span style={{ position: 'absolute', top: 3, left: isPaid ? 25 : 3, width: 20, height: 20, borderRadius: '50%', background: '#282828', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s' }} />
             </button>
           </div>
 
@@ -450,7 +458,7 @@ function CapturePageInner() {
             </div>
           )}
         </div>
-        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: 16 }}>
+        <div style={{ background: '#282828', borderRadius: 14, border: '1px solid #383838', padding: 16 }}>
           <InvoiceForm
             formData={formData}
             onChange={setFormData}
