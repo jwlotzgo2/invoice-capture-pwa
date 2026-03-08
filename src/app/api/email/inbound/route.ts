@@ -27,23 +27,17 @@ const SUPPORTED_PDF_TYPE = 'application/pdf';
 
 export async function POST(request: NextRequest) {
   try {
-    // ── 1. Verify HTTP Basic Auth (set in Postmark inbound settings) ──
-    const webhookPassword = process.env.POSTMARK_WEBHOOK_SECRET;
-    if (webhookPassword) {
-      const authHeader = request.headers.get('authorization') || '';
-      console.log('Auth header present:', !!authHeader, '| starts with Basic:', authHeader.startsWith('Basic '));
-      const base64 = authHeader.replace('Basic ', '');
-      const decoded = Buffer.from(base64, 'base64').toString('utf-8');
-      const parts = decoded.split(':');
-      const username = parts[0];
-      const password = parts.slice(1).join(':'); // handles colons in password
-      console.log('Decoded username:', username, '| password length:', password.length, '| expected length:', webhookPassword.length);
-      if (password !== webhookPassword) {
-        console.warn('Postmark webhook auth failed — password mismatch');
+    // ── 1. Verify secret token in URL query param ────────────────────
+    // Set webhook URL in Postmark as:
+    // https://invoice-capture-pwa.vercel.app/api/email/inbound?secret=YOUR_SECRET
+    const webhookSecret = process.env.POSTMARK_WEBHOOK_SECRET;
+    if (webhookSecret) {
+      const { searchParams } = new URL(request.url);
+      const incoming = searchParams.get('secret');
+      if (incoming !== webhookSecret) {
+        console.warn('Postmark webhook secret mismatch — got:', incoming ? 'wrong value' : 'nothing');
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
-    } else {
-      console.log('No POSTMARK_WEBHOOK_SECRET set — skipping auth');
     }
 
     // ── 2. Parse payload ──────────────────────────────────────────────
