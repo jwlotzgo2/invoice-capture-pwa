@@ -9,11 +9,11 @@ import { Search, X, Download, ChevronUp, ChevronDown, SlidersHorizontal } from '
 type SortField = 'created_at' | 'invoice_date' | 'amount' | 'supplier';
 
 const T = {
-  bg: '#0d0d0d', surface: '#1a1a1a', surfaceHigh: '#242424', border: '#2a2a2a',
-  yellow: '#facc15', yellowGlow: 'rgba(250,204,21,0.15)',
-  blue: '#6366f1', blueGlow: 'rgba(99,102,241,0.2)',
-  text: '#e2e8f0', textDim: '#94a3b8', textMuted: '#475569',
-  error: '#f87171', success: '#4ade80', warning: '#fb923c',
+  bg: '#1c1c1c', surface: '#282828', surfaceHigh: '#323232', border: '#383838',
+  yellow: '#e5e5e5', yellowGlow: 'rgba(229,229,229,0.1)',
+  blue: '#8a8a8a', blueGlow: 'rgba(138,138,138,0.15)',
+  text: '#f0f0f0', textDim: '#8a8a8a', textMuted: '#6b6b6b',
+  error: '#fca5a5', success: '#86efac', warning: '#fdba74',
 };
 
 function findDuplicate(inv: Invoice, all: Invoice[]): Invoice | null {
@@ -45,35 +45,35 @@ function getMatchStatus(inv: Invoice): 'match' | 'off' | 'none' {
 const css = `
   * { box-sizing:border-box; }
   body { background:${T.bg};margin:0; }
-  .list-page { font-family:var(--font-share-tech-mono),'Courier New',monospace;min-height:100svh;background:${T.bg};color:${T.text}; }
+  .list-page { font-family:Inter, system-ui, sans-serif,Inter, system-ui, sans-serif;min-height:100svh;background:${T.bg};color:${T.text}; }
   .scanline { position:fixed;top:0;left:0;right:0;bottom:0;
     background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px);
     pointer-events:none;z-index:1000; }
-  .list-header { background:${T.surface};border-bottom:1px solid ${T.border};position:sticky;top:0;z-index:40;box-shadow:0 0 20px rgba(99,102,241,0.08); }
+  .list-header { background:${T.surface};border-bottom:1px solid ${T.border};position:sticky;top:0;z-index:40;box-shadow:0 0 20px rgba(138,138,138,0.08); }
   .list-header-top { padding:12px 16px;display:flex;align-items:center;gap:10px; }
   .list-search { flex:1;display:flex;align-items:center;gap:8px;background:${T.bg};border:1px solid ${T.border};border-radius:6px;padding:8px 12px; }
-  .list-search input { flex:1;border:none;background:transparent;outline:none;font-size:13px;font-family:var(--font-share-tech-mono),monospace;color:${T.text};letter-spacing:0.5px; }
+  .list-search input { flex:1;border:none;background:transparent;outline:none;font-size:13px;font-family:Inter, system-ui, sans-serif;color:${T.text};letter-spacing:0.5px; }
   .list-search input::placeholder { color:${T.textMuted}; }
   .icon-btn { width:38px;height:38px;border-radius:6px;border:1px solid ${T.border};background:transparent;display:flex;align-items:center;justify-content:center;color:${T.textDim};cursor:pointer;flex-shrink:0;transition:border-color 0.2s,color 0.2s; }
   .icon-btn:hover { border-color:${T.blue};color:${T.blue}; }
   .icon-btn.active { border-color:${T.yellow};background:${T.yellowGlow};color:${T.yellow}; }
   .filter-panel { padding:12px 16px;background:${T.surface};border-top:1px solid ${T.border};display:flex;flex-wrap:wrap;gap:8px;align-items:center; }
-  .f-select,.f-input { padding:7px 10px;border:1px solid ${T.border};border-radius:4px;font-size:12px;font-family:var(--font-share-tech-mono),monospace;color:${T.text};background:${T.bg};outline:none; }
+  .f-select,.f-input { padding:7px 10px;border:1px solid ${T.border};border-radius:4px;font-size:12px;font-family:Inter, system-ui, sans-serif;color:${T.text};background:${T.bg};outline:none; }
   .f-input { width:130px; }
   .summary-bar { padding:8px 16px;background:${T.surface};border-bottom:1px solid ${T.border};display:flex;align-items:center;justify-content:space-between;font-size:12px;color:${T.textDim};letter-spacing:0.5px; }
   .sort-bar { display:flex;gap:6px;padding:10px 16px;overflow-x:auto;scrollbar-width:none; }
   .sort-bar::-webkit-scrollbar { display:none; }
-  .sort-pill { padding:5px 12px;border-radius:4px;border:1px solid ${T.border};background:transparent;font-size:11px;color:${T.textDim};cursor:pointer;font-family:var(--font-share-tech-mono),monospace;display:flex;align-items:center;gap:4px;white-space:nowrap;letter-spacing:1px;text-transform:uppercase; }
+  .sort-pill { padding:5px 12px;border-radius:4px;border:1px solid ${T.border};background:transparent;font-size:11px;color:${T.textDim};cursor:pointer;font-family:Inter, system-ui, sans-serif;display:flex;align-items:center;gap:4px;white-space:nowrap;letter-spacing:0.2px;text-transform:none; }
   .sort-pill.active { border-color:${T.yellow};background:${T.yellowGlow};color:${T.yellow}; }
   .card-list { padding:0 16px 100px;display:flex;flex-direction:column;gap:10px; }
   .inv-card { background:${T.surface};border-radius:8px;border:1px solid ${T.border};padding:14px;cursor:pointer;transition:border-color 0.15s,box-shadow 0.15s;position:relative;overflow:hidden; }
   .inv-card::before { content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,${T.blue},transparent);opacity:0.3; }
-  .inv-card:hover { border-color:${T.blue};box-shadow:0 0 16px rgba(99,102,241,0.15); }
+  .inv-card:hover { border-color:${T.blue};box-shadow:0 0 16px rgba(138,138,138,0.12); }
   .inv-card.duplicate { border-color:rgba(251,146,60,0.4); }
   .inv-card.duplicate::before { background:linear-gradient(90deg,transparent,${T.warning},transparent); }
-  .badge { display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:10px;text-transform:uppercase;letter-spacing:1px;border:1px solid;font-family:var(--font-share-tech-mono),monospace; }
-  .empty-state { text-align:center;padding:60px 24px;color:${T.textMuted};font-size:13px;letter-spacing:1px; }
-  .filter-chip { padding:4px 10px;border-radius:4px;border:1px solid ${T.border};background:transparent;font-size:11px;color:${T.textDim};cursor:pointer;font-family:var(--font-share-tech-mono),monospace;letter-spacing:1px;text-transform:uppercase;transition:all 0.15s;white-space:nowrap; }
+  .badge { display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:10px;text-transform:none;letter-spacing:0.2px;border:1px solid;font-family:Inter, system-ui, sans-serif; }
+  .empty-state { text-align:center;padding:60px 24px;color:${T.textMuted};font-size:13px;letter-spacing:0.2px; }
+  .filter-chip { padding:4px 10px;border-radius:4px;border:1px solid ${T.border};background:transparent;font-size:11px;color:${T.textDim};cursor:pointer;font-family:Inter, system-ui, sans-serif;letter-spacing:0.2px;text-transform:none;transition:all 0.15s;white-space:nowrap; }
   .filter-chip.active { border-color:${T.yellow};background:${T.yellowGlow};color:${T.yellow}; }
 `;
 
@@ -176,7 +176,7 @@ export default function InvoiceListPage() {
           <div style={{ display:'flex',gap:6,padding:'8px 16px',overflowX:'auto',scrollbarWidth:'none' }}>
             <button className={`filter-chip${filterMatched==='match'?' active':''}`} onClick={()=>setFilterMatched(v=>v==='match'?'all':'match')}>✓ Matched</button>
             <button className={`filter-chip${filterMatched==='off'?' active':''}`} onClick={()=>setFilterMatched(v=>v==='off'?'all':'off')}>⚠ Off</button>
-            <button className={`filter-chip${filterDuplicates==='dupes'?' active':''}`} style={{ borderColor: filterDuplicates==='dupes'?T.warning:T.border, color: filterDuplicates==='dupes'?T.warning:T.textDim, background: filterDuplicates==='dupes'?'rgba(251,146,60,0.1)':'transparent' }} onClick={()=>setFilterDuplicates(v=>v==='dupes'?'all':'dupes')}>
+            <button className={`filter-chip${filterDuplicates==='dupes'?' active':''}`} style={{ borderColor: filterDuplicates==='dupes'?T.warning:T.border, color: filterDuplicates==='dupes'?T.warning:T.textDim, background: filterDuplicates==='dupes'?'rgba(253,186,116,0.12)':'transparent' }} onClick={()=>setFilterDuplicates(v=>v==='dupes'?'all':'dupes')}>
               ⚡ Dupes{dupeCount>0?` (${dupeCount})`:''}
             </button>
           </div>
@@ -197,7 +197,7 @@ export default function InvoiceListPage() {
               <input type="date" className="f-input" value={filterDateTo} onChange={e=>setFilterDateTo(e.target.value)} />
               {(filterSupplier||filterProject||filterDateFrom||filterDateTo) && (
                 <button onClick={()=>{setFilterSupplier('');setFilterProject('');setFilterDateFrom('');setFilterDateTo('');}}
-                  style={{fontSize:12,color:T.error,background:'none',border:'none',cursor:'pointer',fontFamily:'var(--font-share-tech-mono),monospace',letterSpacing:1}}>CLEAR</button>
+                  style={{fontSize:12,color:T.error,background:'none',border:'none',cursor:'pointer',fontFamily:'Inter, system-ui, sans-serif',letterSpacing:1}}>CLEAR</button>
               )}
             </div>
           )}
@@ -205,7 +205,7 @@ export default function InvoiceListPage() {
 
         <div className="summary-bar">
           <span>{filtered.length} of {invoices.length} documents</span>
-          <span style={{color:T.yellow,fontFamily:'var(--font-share-tech-mono),monospace'}}>{fmtZAR(total)}</span>
+          <span style={{color:T.yellow,fontFamily:'Inter, system-ui, sans-serif'}}>{fmtZAR(total)}</span>
         </div>
 
         <div className="sort-bar">
@@ -229,19 +229,19 @@ export default function InvoiceListPage() {
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:6}}>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontSize:14,color:T.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{inv.supplier||'Unknown Supplier'}</div>
-                    {inv.document_number && <div style={{fontSize:11,color:T.textMuted,fontFamily:'var(--font-share-tech-mono),monospace',marginTop:2}}>#{inv.document_number}</div>}
+                    {inv.document_number && <div style={{fontSize:11,color:T.textMuted,fontFamily:'Inter, system-ui, sans-serif',marginTop:2}}>#{inv.document_number}</div>}
                     {inv.description && <div style={{fontSize:12,color:T.textMuted,marginTop:2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{inv.description}</div>}
                   </div>
                   <div style={{textAlign:'right',flexShrink:0,marginLeft:12}}>
-                    <div style={{fontSize:16,color:T.yellow,fontFamily:'var(--font-share-tech-mono),monospace'}}>{inv.amount?fmtZAR(inv.amount):'—'}</div>
+                    <div style={{fontSize:16,color:T.yellow,fontFamily:'Inter, system-ui, sans-serif'}}>{inv.amount?fmtZAR(inv.amount):'—'}</div>
                     {inv.invoice_date && <div style={{fontSize:11,color:T.textMuted,marginTop:2}}>{new Date(inv.invoice_date).toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'})}</div>}
                   </div>
                 </div>
                 <div style={{display:'flex',gap:6,flexWrap:'wrap',marginTop:6}}>
-                  {matchStatus==='match' && <span className="badge" style={{background:'rgba(74,222,128,0.1)',color:T.success,borderColor:T.success}}>✓ Match</span>}
-                  {matchStatus==='off' && <span className="badge" style={{background:'rgba(248,113,113,0.1)',color:T.error,borderColor:T.error}}>⚠ Off</span>}
+                  {matchStatus==='match' && <span className="badge" style={{background:'rgba(134,239,172,0.12)',color:T.success,borderColor:T.success}}>✓ Match</span>}
+                  {matchStatus==='off' && <span className="badge" style={{background:'rgba(252,165,165,0.12)',color:T.error,borderColor:T.error}}>⚠ Off</span>}
                   {dupedDoc && (
-                    <span className="badge" style={{background:'rgba(251,146,60,0.1)',color:T.warning,borderColor:T.warning}}>
+                    <span className="badge" style={{background:'rgba(253,186,116,0.12)',color:T.warning,borderColor:T.warning}}>
                       ⚡ Dup of: {dupedDoc.supplier||'Unknown'}{dupedDoc.document_number?` #${dupedDoc.document_number}`:''}{dupedDoc.invoice_date?` · ${new Date(dupedDoc.invoice_date).toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'})}` :''}
                     </span>
                   )}

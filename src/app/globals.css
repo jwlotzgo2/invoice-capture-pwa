@@ -1,29 +1,19 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-:root {
-  --font-vt323: 'VT323', monospace;
-  --font-share-tech-mono: 'Share Tech Mono', monospace;
-}
 
 * {
   box-sizing: border-box;
 }
 
 body {
-  background: #0d0d0d;
+  background: #1c1c1c;
   margin: 0;
   padding: 0;
-  font-family: var(--font-share-tech-mono), 'Courier New', monospace;
-  color: #e2e8f0;
-}
-
-/* Make font variables available globally so inline styles can reference them */
-.font-display {
-  font-family: var(--font-vt323), monospace;
-}
-
-.font-mono {
-  font-family: var(--font-share-tech-mono), monospace;
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  color: #f0f0f0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }

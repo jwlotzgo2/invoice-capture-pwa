@@ -11,42 +11,42 @@ interface Profile {
 }
 
 const T = {
-  bg: '#0d0d0d', surface: '#1a1a1a', surfaceHigh: '#242424', border: '#2a2a2a',
-  yellow: '#facc15', yellowGlow: 'rgba(250,204,21,0.15)',
-  blue: '#6366f1', blueGlow: 'rgba(99,102,241,0.2)',
-  text: '#e2e8f0', textDim: '#94a3b8', textMuted: '#475569',
-  error: '#f87171', success: '#4ade80',
+  bg: '#1c1c1c', surface: '#282828', surfaceHigh: '#323232', border: '#383838',
+  yellow: '#e5e5e5', yellowGlow: 'rgba(229,229,229,0.1)',
+  blue: '#8a8a8a', blueGlow: 'rgba(138,138,138,0.15)',
+  text: '#f0f0f0', textDim: '#8a8a8a', textMuted: '#6b6b6b',
+  error: '#fca5a5', success: '#86efac',
 };
 
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap');
   * { box-sizing:border-box; }
   body { background:${T.bg};margin:0; }
-  .settings-page { min-height:100svh;background:${T.bg};font-family:'Share Tech Mono','Courier New',monospace;color:${T.text}; }
+  .settings-page { min-height:100svh;background:${T.bg};font-family:'Share Tech Mono',Inter, system-ui, sans-serif;color:${T.text}; }
   .scanline { position:fixed;top:0;left:0;right:0;bottom:0;
     background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px);
     pointer-events:none;z-index:1000; }
   .settings-header { background:${T.surface};border-bottom:1px solid ${T.border};padding:14px 16px;
-    position:sticky;top:0;z-index:40;box-shadow:0 0 20px rgba(99,102,241,0.08); }
-  .settings-title { font-family:'VT323',monospace;font-size:22px;letter-spacing:2px;
-    color:${T.yellow};text-shadow:0 0 10px rgba(250,204,21,0.3); }
+    position:sticky;top:0;z-index:40;box-shadow:0 0 20px rgba(138,138,138,0.08); }
+  .settings-title { font-family:Inter, system-ui, sans-serif;font-size:22px;letter-spacing:0.3px;
+    color:${T.yellow};text-shadow:0 0 10px rgba(229,229,229,0.12); }
   .t-card { background:${T.surface};border:1px solid ${T.border};border-radius:8px;
     margin-bottom:12px;overflow:hidden;position:relative; }
   .t-card::before { content:'';position:absolute;top:0;left:0;right:0;height:1px;
     background:linear-gradient(90deg,transparent,${T.blue},transparent);opacity:0.4; }
   .t-card-header { display:flex;align-items:center;justify-content:space-between;
     padding:12px 16px;border-bottom:1px solid ${T.border}; }
-  .t-card-title { font-family:'VT323',monospace;font-size:16px;letter-spacing:2px;color:${T.yellow}; }
+  .t-card-title { font-family:Inter, system-ui, sans-serif;font-size:16px;letter-spacing:0.3px;color:${T.yellow}; }
   .t-row { display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid ${T.border}; }
   .t-row.last { border-bottom:none; }
-  .t-row-label { font-size:10px;letter-spacing:2px;color:${T.text};text-transform:uppercase;margin-bottom:3px; }
-  .t-row-value { font-size:14px;color:${T.text};font-family:'Share Tech Mono',monospace; }
+  .t-row-label { font-size:10px;letter-spacing:0.3px;color:${T.text};text-transform:none;margin-bottom:3px; }
+  .t-row-value { font-size:14px;color:${T.text};font-family:Inter, system-ui, sans-serif; }
   .t-input { width:100%;padding:9px 12px;background:${T.bg};border:1px solid ${T.border};
-    border-radius:4px;color:${T.text};font-family:'Share Tech Mono',monospace;font-size:14px;
+    border-radius:4px;color:${T.text};font-family:Inter, system-ui, sans-serif;font-size:14px;
     outline:none;transition:border-color 0.2s,box-shadow 0.2s;box-sizing:border-box; }
   .t-input:focus { border-color:${T.blue};box-shadow:0 0 0 2px ${T.blueGlow}; }
   .t-input::placeholder { color:${T.textMuted}; }
-  .t-label { font-size:10px;letter-spacing:2px;color:${T.text};text-transform:uppercase;margin-bottom:5px;display:block; }
+  .t-label { font-size:10px;letter-spacing:0.3px;color:${T.text};text-transform:none;margin-bottom:5px;display:block; }
   @keyframes tspin { to{transform:rotate(360deg)} }
   .t-cursor { animation:tblink 1s step-end infinite;color:${T.yellow}; }
   @keyframes tblink { 0%,100%{opacity:1} 50%{opacity:0} }
@@ -118,12 +118,12 @@ export default function SettingsPage() {
             <div style={{ width:72,height:72,borderRadius:6,background:T.yellow,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'VT323,monospace',fontSize:30,color:T.bg,marginBottom:12,boxShadow:'0 0 20px rgba(250,204,21,0.25)' }}>
               {initials}
             </div>
-            <div style={{ fontFamily:'VT323,monospace',fontSize:22,letterSpacing:2,color:T.text }}>{profile?.full_name || 'NO NAME'}</div>
+            <div style={{ fontFamily:'VT323,monospace',fontSize:22,letterSpacing:0.5,color:T.text }}>{profile?.full_name || 'NO NAME'}</div>
             <div style={{ fontSize:12,color:T.textDim,marginTop:2,letterSpacing:0.5 }}>{profile?.email}</div>
             {profile?.role === 'admin' && (
               <div style={{ display:'flex',alignItems:'center',gap:4,marginTop:8,background:T.blueGlow,padding:'3px 10px',borderRadius:4,border:`1px solid ${T.blue}` }}>
                 <Shield size={12} color={T.blue} />
-                <span style={{ fontSize:10,color:T.blue,textTransform:'uppercase',letterSpacing:2,fontFamily:'Share Tech Mono,monospace' }}>Admin</span>
+                <span style={{ fontSize:10,color:T.blue,textTransform:'none',letterSpacing:0.5,fontFamily:'Share Tech Mono,monospace' }}>Admin</span>
               </div>
             )}
           </div>
@@ -133,7 +133,7 @@ export default function SettingsPage() {
             <div className="t-card-header">
               <span className="t-card-title">PROFILE</span>
               {!editing ? (
-                <button onClick={() => setEditing(true)} style={{ fontSize:12,color:T.blue,background:'none',border:'none',cursor:'pointer',fontFamily:'Share Tech Mono,monospace',letterSpacing:1,textTransform:'uppercase' }}>Edit</button>
+                <button onClick={() => setEditing(true)} style={{ fontSize:12,color:T.blue,background:'none',border:'none',cursor:'pointer',fontFamily:'Share Tech Mono,monospace',letterSpacing:1,textTransform:'none' }}>Edit</button>
               ) : (
                 <div style={{ display:'flex',gap:12 }}>
                   <button onClick={() => setEditing(false)} style={{ fontSize:12,color:T.textDim,background:'none',border:'none',cursor:'pointer',fontFamily:'Share Tech Mono,monospace' }}>Cancel</button>
@@ -206,9 +206,9 @@ export default function SettingsPage() {
           {/* Sign out */}
           <button onClick={handleSignOut} style={{
             width:'100%',padding:14,borderRadius:6,
-            border:`1px solid rgba(248,113,113,0.3)`,background:'rgba(248,113,113,0.08)',
-            color:T.error,fontFamily:'VT323,monospace',fontSize:18,letterSpacing:3,
-            cursor:'pointer',textTransform:'uppercase',
+            border:`1px solid rgba(248,113,113,0.3)`,background:'rgba(252,165,165,0.1)',
+            color:T.error,fontFamily:'VT323,monospace',fontSize:18,letterSpacing:0.5,
+            cursor:'pointer',textTransform:'none',
             display:'flex',alignItems:'center',justifyContent:'center',gap:8,
             transition:'box-shadow 0.2s',
           }}>

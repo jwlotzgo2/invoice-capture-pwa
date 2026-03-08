@@ -5,8 +5,8 @@ import { usePathname } from 'next/navigation';
 import { LayoutDashboard, FileText, Camera, Settings, Monitor, BarChart2 } from 'lucide-react';
 
 const T = {
-  bg: '#0d0d0d', surface: '#1a1a1a', border: '#2a2a2a',
-  yellow: '#facc15', textMuted: '#475569',
+  bg: '#1c1c1c', surface: '#282828', border: '#383838',
+  yellow: '#e5e5e5', textMuted: '#6b6b6b',
 };
 
 const tabs = [
@@ -57,7 +57,7 @@ export default function BottomNav() {
               )}
               <span style={{
                 fontSize: 8, letterSpacing: '1px', textTransform: 'uppercase',
-                fontFamily: "'Share Tech Mono', 'Courier New', monospace",
+                fontFamily: "Inter, system-ui, sans-serif",
                 color: active || primary ? T.yellow : T.textMuted,
                 marginTop: primary ? 4 : 0,
                 whiteSpace: 'nowrap',

@@ -10,44 +10,44 @@ import { ArrowLeft, Loader2, Sparkles, AlertCircle, Camera, Upload, FileImage, Z
 type Step = 'choose' | 'capture' | 'processing' | 'review';
 
 const T = {
-  bg: '#0d0d0d', surface: '#1a1a1a', surfaceHigh: '#242424', border: '#2a2a2a',
-  yellow: '#facc15', yellowGlow: 'rgba(250,204,21,0.15)',
-  blue: '#6366f1', blueGlow: 'rgba(99,102,241,0.2)',
-  text: '#e2e8f0', textDim: '#94a3b8', textMuted: '#475569',
-  error: '#f87171', success: '#4ade80', warning: '#fb923c',
+  bg: '#1c1c1c', surface: '#282828', surfaceHigh: '#323232', border: '#383838',
+  yellow: '#e5e5e5', yellowGlow: 'rgba(229,229,229,0.1)',
+  blue: '#8a8a8a', blueGlow: 'rgba(138,138,138,0.15)',
+  text: '#f0f0f0', textDim: '#8a8a8a', textMuted: '#6b6b6b',
+  error: '#fca5a5', success: '#86efac', warning: '#fdba74',
 };
 
 const css = `
   * { box-sizing:border-box; }
   body { background:${T.bg};margin:0; }
-  .cap-page { min-height:100svh;background:${T.bg};font-family:var(--font-share-tech-mono),'Courier New',monospace;color:${T.text}; }
+  .cap-page { min-height:100svh;background:${T.bg};font-family:Inter, system-ui, sans-serif,Inter, system-ui, sans-serif;color:${T.text}; }
   .scanline { position:fixed;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px);pointer-events:none;z-index:1000; }
-  .cap-header { background:${T.surface};border-bottom:1px solid ${T.border};padding:12px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:40;box-shadow:0 0 20px rgba(99,102,241,0.08); }
-  .cap-title { font-family:var(--font-vt323),monospace;font-size:22px;letter-spacing:2px;color:${T.yellow};text-shadow:0 0 10px rgba(250,204,21,0.3);flex:1; }
-  .cap-sub { font-size:11px;color:${T.text};letter-spacing:1px; }
+  .cap-header { background:${T.surface};border-bottom:1px solid ${T.border};padding:12px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:40;box-shadow:0 0 20px rgba(138,138,138,0.08); }
+  .cap-title { font-family:Inter, system-ui, sans-serif;font-size:22px;letter-spacing:0.3px;color:${T.yellow};text-shadow:0 0 10px rgba(229,229,229,0.12);flex:1; }
+  .cap-sub { font-size:11px;color:${T.text};letter-spacing:0.2px; }
   .btn-icon { width:38px;height:38px;border-radius:6px;border:1px solid ${T.border};background:transparent;color:${T.textDim};cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s; }
   .btn-icon:hover { border-color:${T.blue};color:${T.blue}; }
   .t-card { background:${T.surface};border:1px solid ${T.border};border-radius:8px;padding:16px;margin-bottom:12px;position:relative;overflow:hidden; }
   .t-card::before { content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,${T.blue},transparent);opacity:0.4; }
-  .t-card-title { font-family:var(--font-vt323),monospace;font-size:16px;letter-spacing:2px;color:${T.yellow};text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px; }
+  .t-card-title { font-family:Inter, system-ui, sans-serif;font-size:16px;letter-spacing:0.3px;color:${T.yellow};text-transform:none;margin-bottom:12px;display:flex;align-items:center;gap:6px; }
   .t-card-title::before { content:'>';color:${T.blue}; }
-  .t-label { font-size:10px;letter-spacing:2px;color:${T.text};text-transform:uppercase;margin-bottom:5px;display:block; }
-  .t-input { width:100%;padding:9px 12px;background:${T.bg};border:1px solid ${T.border};border-radius:4px;color:${T.text};font-family:var(--font-share-tech-mono),monospace;font-size:14px;outline:none;transition:border-color 0.2s,box-shadow 0.2s; }
+  .t-label { font-size:10px;letter-spacing:0.3px;color:${T.text};text-transform:none;margin-bottom:5px;display:block; }
+  .t-input { width:100%;padding:9px 12px;background:${T.bg};border:1px solid ${T.border};border-radius:4px;color:${T.text};font-family:Inter, system-ui, sans-serif;font-size:14px;outline:none;transition:border-color 0.2s,box-shadow 0.2s; }
   .t-input:focus { border-color:${T.blue};box-shadow:0 0 0 2px ${T.blueGlow}; }
   .t-input::placeholder { color:${T.textMuted}; }
   .t-input.mono { color:${T.yellow}; }
-  .t-select { width:100%;padding:9px 12px;background:${T.bg};border:1px solid ${T.border};border-radius:4px;color:${T.text};font-family:var(--font-share-tech-mono),monospace;font-size:13px;outline:none;appearance:none;cursor:pointer; }
+  .t-select { width:100%;padding:9px 12px;background:${T.bg};border:1px solid ${T.border};border-radius:4px;color:${T.text};font-family:Inter, system-ui, sans-serif;font-size:13px;outline:none;appearance:none;cursor:pointer; }
   .t-select:focus { border-color:${T.blue}; }
-  .t-textarea { width:100%;padding:9px 12px;background:${T.bg};border:1px solid ${T.border};border-radius:4px;color:${T.text};font-family:var(--font-share-tech-mono),monospace;font-size:14px;outline:none;resize:vertical;min-height:70px; }
+  .t-textarea { width:100%;padding:9px 12px;background:${T.bg};border:1px solid ${T.border};border-radius:4px;color:${T.text};font-family:Inter, system-ui, sans-serif;font-size:14px;outline:none;resize:vertical;min-height:70px; }
   .t-textarea:focus { border-color:${T.blue};box-shadow:0 0 0 2px ${T.blueGlow}; }
   .t-textarea::placeholder { color:${T.textMuted}; }
-  .save-btn { width:100%;padding:14px;background:${T.yellow};border:none;border-radius:6px;color:${T.bg};font-family:var(--font-vt323),monospace;font-size:20px;letter-spacing:3px;cursor:pointer;text-transform:uppercase;box-shadow:0 0 20px rgba(250,204,21,0.3);transition:box-shadow 0.2s,transform 0.1s; }
+  .save-btn { width:100%;padding:14px;background:${T.yellow};border:none;border-radius:6px;color:${T.bg};font-family:Inter, system-ui, sans-serif;font-size:20px;letter-spacing:0.3px;cursor:pointer;text-transform:none;box-shadow:0 0 20px rgba(229,229,229,0.12);transition:box-shadow 0.2s,transform 0.1s; }
   .save-btn:hover { box-shadow:0 0 30px rgba(250,204,21,0.5);transform:translateY(-1px); }
   .save-btn:disabled { opacity:0.5;cursor:default;transform:none; }
-  .cancel-btn { width:100%;padding:11px;background:transparent;border:1px solid ${T.border};border-radius:6px;color:${T.textDim};font-family:var(--font-share-tech-mono),monospace;font-size:13px;letter-spacing:1px;cursor:pointer;margin-top:8px; }
+  .cancel-btn { width:100%;padding:11px;background:transparent;border:1px solid ${T.border};border-radius:6px;color:${T.textDim};font-family:Inter, system-ui, sans-serif;font-size:13px;letter-spacing:0.2px;cursor:pointer;margin-top:8px; }
   .cancel-btn:hover { border-color:${T.textDim};color:${T.text}; }
-  .err-bar { display:flex;align-items:center;gap:8px;padding:12px;background:rgba(248,113,113,0.1);border:1px solid ${T.error};border-radius:6px;margin-bottom:16px;color:${T.error};font-size:13px; }
-  .dupe-bar { display:flex;align-items:center;gap:8px;padding:12px;background:rgba(251,146,60,0.1);border:1px solid ${T.warning};border-radius:6px;margin-bottom:16px;color:${T.warning};font-size:13px; }
+  .err-bar { display:flex;align-items:center;gap:8px;padding:12px;background:rgba(252,165,165,0.12);border:1px solid ${T.error};border-radius:6px;margin-bottom:16px;color:${T.error};font-size:13px; }
+  .dupe-bar { display:flex;align-items:center;gap:8px;padding:12px;background:rgba(253,186,116,0.12);border:1px solid ${T.warning};border-radius:6px;margin-bottom:16px;color:${T.warning};font-size:13px; }
   .img-wrap { position:relative;cursor:pointer; }
   .img-zoom-btn { position:absolute;bottom:8px;right:8px;width:32px;height:32px;border-radius:6px;background:rgba(0,0,0,0.6);border:1px solid ${T.border};display:flex;align-items:center;justify-content:center;color:${T.text};cursor:pointer;transition:background 0.2s; }
   .img-zoom-btn:hover { background:rgba(99,102,241,0.4); }
@@ -205,7 +205,7 @@ function CapturePageInner() {
           <span className="cap-title">GO CAPTURE<span className="t-cursor">_</span></span>
         </header>
         <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'40px 24px'}}>
-          <div style={{fontFamily:'var(--font-vt323),monospace',fontSize:16,letterSpacing:3,color:T.textMuted,marginBottom:24,textTransform:'uppercase'}}>Select Capture Method</div>
+          <div style={{fontFamily:'Inter, system-ui, sans-serif',fontSize:16,letterSpacing:0.5,color:T.textMuted,marginBottom:24,textTransform:'none'}}>Select Capture Method</div>
           <div style={{display:'flex',flexDirection:'column',gap:10,width:'100%',maxWidth:360}}>
             {[
               { icon:<Camera size={22} color={T.bg}/>, label:'Use Camera', sub:'Take a photo', action:()=>setStep('capture'), primary:true },
@@ -215,7 +215,7 @@ function CapturePageInner() {
               <div key={label} onClick={action} style={{background:primary?T.yellow:T.surface,border:primary?'none':`1px solid ${T.border}`,borderRadius:8,padding:'18px 20px',display:'flex',alignItems:'center',gap:16,cursor:'pointer',boxShadow:primary?'0 0 20px rgba(250,204,21,0.25)':'none'}}>
                 <div style={{width:48,height:48,borderRadius:6,background:primary?'rgba(0,0,0,0.15)':T.blueGlow,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{icon}</div>
                 <div>
-                  <div style={{fontSize:15,fontFamily:'var(--font-vt323),monospace',letterSpacing:2,color:primary?T.bg:T.text,marginBottom:2}}>{label.toUpperCase()}</div>
+                  <div style={{fontSize:15,fontFamily:'Inter, system-ui, sans-serif',letterSpacing:0.5,color:primary?T.bg:T.text,marginBottom:2}}>{label.toUpperCase()}</div>
                   <div style={{fontSize:12,color:primary?'rgba(0,0,0,0.5)':T.textMuted}}>{sub}</div>
                 </div>
               </div>
@@ -239,7 +239,7 @@ function CapturePageInner() {
           <div style={{width:80,height:80,borderRadius:8,border:`1px solid ${T.blue}`,background:`rgba(99,102,241,0.1)`,display:'inline-flex',alignItems:'center',justifyContent:'center',marginBottom:24}}>
             <Sparkles size={36} color={T.blue}/>
           </div>
-          <div style={{fontFamily:'var(--font-vt323),monospace',fontSize:24,letterSpacing:3,color:T.yellow,marginBottom:8}}>PROCESSING…</div>
+          <div style={{fontFamily:'Inter, system-ui, sans-serif',fontSize:24,letterSpacing:0.5,color:T.yellow,marginBottom:8}}>PROCESSING…</div>
           <div style={{fontSize:12,color:T.textDim,letterSpacing:1,marginBottom:24}}>AI IS EXTRACTING DATA</div>
           <Loader2 size={28} color={T.blue} style={{animation:'tspin 1s linear infinite'}}/>
         </div>
@@ -287,7 +287,7 @@ function CapturePageInner() {
 
             <div style={{marginBottom:12}}>
               <label className="t-label">Doc / Reference No.</label>
-              <input className="t-input" style={{fontFamily:'var(--font-share-tech-mono),monospace'}} value={documentNumber||''} onChange={e=>setDocumentNumber(e.target.value||null)} placeholder="e.g. INV-0042" onFocus={focusBlue} onBlur={blurReset}/>
+              <input className="t-input" style={{fontFamily:'Inter, system-ui, sans-serif'}} value={documentNumber||''} onChange={e=>setDocumentNumber(e.target.value||null)} placeholder="e.g. INV-0042" onFocus={focusBlue} onBlur={blurReset}/>
             </div>
 
             {[

@@ -10,14 +10,14 @@ type Period = 'this_month' | 'last_month' | 'this_year' | 'all';
 type View = 'category' | 'supplier' | 'project' | 'trend';
 
 const T = {
-  bg: '#0d0d0d', surface: '#1a1a1a', surfaceHigh: '#242424', border: '#2a2a2a',
-  yellow: '#facc15', yellowGlow: 'rgba(250,204,21,0.15)',
-  blue: '#6366f1', blueGlow: 'rgba(99,102,241,0.2)',
-  text: '#e2e8f0', textDim: '#94a3b8', textMuted: '#475569',
-  error: '#f87171', success: '#4ade80', warning: '#fb923c',
+  bg: '#1c1c1c', surface: '#282828', surfaceHigh: '#323232', border: '#383838',
+  yellow: '#e5e5e5', yellowGlow: 'rgba(229,229,229,0.1)',
+  blue: '#8a8a8a', blueGlow: 'rgba(138,138,138,0.15)',
+  text: '#f0f0f0', textDim: '#8a8a8a', textMuted: '#6b6b6b',
+  error: '#fca5a5', success: '#86efac', warning: '#fdba74',
 };
 
-const CAT_COLORS = ['#6366f1','#facc15','#4ade80','#f87171','#fb923c','#06b6d4','#8b5cf6','#ec4899','#10b981','#94a3b8'];
+const CAT_COLORS = ['#8a8a8a','#e5e5e5','#86efac','#fca5a5','#fdba74','#06b6d4','#8b5cf6','#ec4899','#10b981','#8a8a8a'];
 
 const PERIODS: {key:Period;label:string}[] = [
   {key:'this_month',label:'This Month'},
@@ -48,26 +48,26 @@ const fmtZAR = (n:number)=>`R ${Math.round(n).toLocaleString('en-ZA')}`;
 const css = `
   * { box-sizing:border-box; }
   body { background:${T.bg};margin:0; }
-  .rep-page { min-height:100svh;background:${T.bg};font-family:var(--font-share-tech-mono),'Courier New',monospace;color:${T.text};
+  .rep-page { min-height:100svh;background:${T.bg};font-family:Inter, system-ui, sans-serif,Inter, system-ui, sans-serif;color:${T.text};
     background-image:radial-gradient(ellipse at 20% 20%,rgba(99,102,241,0.06) 0%,transparent 50%),radial-gradient(ellipse at 80% 80%,rgba(250,204,21,0.04) 0%,transparent 50%); }
   .scanline { position:fixed;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px);pointer-events:none;z-index:1000; }
-  .rep-header { background:${T.surface};border-bottom:1px solid ${T.border};padding:14px 16px;position:sticky;top:0;z-index:40;box-shadow:0 0 20px rgba(99,102,241,0.08); }
-  .rep-title { font-family:var(--font-vt323),monospace;font-size:22px;letter-spacing:2px;color:${T.yellow};text-shadow:0 0 10px rgba(250,204,21,0.3); }
+  .rep-header { background:${T.surface};border-bottom:1px solid ${T.border};padding:14px 16px;position:sticky;top:0;z-index:40;box-shadow:0 0 20px rgba(138,138,138,0.08); }
+  .rep-title { font-family:Inter, system-ui, sans-serif;font-size:22px;letter-spacing:0.3px;color:${T.yellow};text-shadow:0 0 10px rgba(229,229,229,0.12); }
   .period-strip { display:flex;gap:6px;padding:12px 16px 0;overflow-x:auto;scrollbar-width:none; }
   .period-strip::-webkit-scrollbar { display:none; }
-  .period-btn { flex-shrink:0;padding:6px 14px;border-radius:4px;font-size:11px;letter-spacing:1px;border:1px solid ${T.border};background:transparent;color:${T.textDim};cursor:pointer;font-family:var(--font-share-tech-mono),monospace;text-transform:uppercase;transition:all 0.15s; }
-  .period-btn.active { background:${T.yellowGlow};border-color:${T.yellow};color:${T.yellow};box-shadow:0 0 8px rgba(250,204,21,0.2); }
+  .period-btn { flex-shrink:0;padding:6px 14px;border-radius:4px;font-size:11px;letter-spacing:0.2px;border:1px solid ${T.border};background:transparent;color:${T.textDim};cursor:pointer;font-family:Inter, system-ui, sans-serif;text-transform:none;transition:all 0.15s; }
+  .period-btn.active { background:${T.yellowGlow};border-color:${T.yellow};color:${T.yellow};box-shadow:0 0 8px rgba(229,229,229,0.1); }
   .view-tabs { display:flex;gap:0;overflow-x:auto;scrollbar-width:none;border-top:1px solid ${T.border};padding:0 4px;background:${T.surface}; }
   .view-tabs::-webkit-scrollbar { display:none; }
-  .view-tab { padding:10px 14px;font-size:11px;letter-spacing:1px;color:${T.textDim};border:none;background:transparent;cursor:pointer;font-family:var(--font-share-tech-mono),monospace;white-space:nowrap;border-bottom:2px solid transparent;text-transform:uppercase;transition:color 0.15s; }
+  .view-tab { padding:10px 14px;font-size:11px;letter-spacing:0.2px;color:${T.textDim};border:none;background:transparent;cursor:pointer;font-family:Inter, system-ui, sans-serif;white-space:nowrap;border-bottom:2px solid transparent;text-transform:none;transition:color 0.15s; }
   .view-tab.active { color:${T.yellow};border-bottom-color:${T.yellow}; }
   .t-card { background:${T.surface};border:1px solid ${T.border};border-radius:8px;padding:16px;margin-bottom:12px;position:relative;overflow:hidden; }
   .t-card::before { content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,${T.blue},transparent);opacity:0.4; }
-  .t-card-title { font-family:var(--font-vt323),monospace;font-size:16px;letter-spacing:2px;color:${T.yellow};text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:6px; }
+  .t-card-title { font-family:Inter, system-ui, sans-serif;font-size:16px;letter-spacing:0.3px;color:${T.yellow};text-transform:none;margin-bottom:16px;display:flex;align-items:center;gap:6px; }
   .t-card-title::before { content:'>';color:${T.blue}; }
   .rank-row { display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid ${T.border}; }
   .rank-row:last-child { border-bottom:none; }
-  .rank-num { width:24px;height:24px;border-radius:4px;background:${T.surfaceHigh};display:flex;align-items:center;justify-content:center;font-family:var(--font-vt323),monospace;font-size:18px;color:${T.textDim};flex-shrink:0; }
+  .rank-num { width:24px;height:24px;border-radius:4px;background:${T.surfaceHigh};display:flex;align-items:center;justify-content:center;font-family:Inter, system-ui, sans-serif;font-size:18px;color:${T.textDim};flex-shrink:0; }
   .rank-bar-track { height:4px;background:${T.border};border-radius:2px;overflow:hidden;margin-top:4px; }
   .rank-bar-fill { height:100%;border-radius:2px;transition:width 0.6s; }
   .kpi-row { display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px; }
@@ -76,8 +76,8 @@ const css = `
   .kpi-small.yellow::before { background:${T.yellow}; }
   .kpi-small.blue::before { background:${T.blue}; }
   .kpi-small.green::before { background:${T.success}; }
-  .kpi-small-label { font-size:9px;letter-spacing:2px;color:${T.textDim};text-transform:uppercase;margin-bottom:4px; }
-  .kpi-small-value { font-family:var(--font-vt323),monospace;font-size:20px;color:${T.text};line-height:1; }
+  .kpi-small-label { font-size:9px;letter-spacing:0.3px;color:${T.textDim};text-transform:none;margin-bottom:4px; }
+  .kpi-small-value { font-family:Inter, system-ui, sans-serif;font-size:20px;color:${T.text};line-height:1; }
   .trend-bar-row { display:flex;align-items:flex-end;gap:4px;height:120px;margin-bottom:8px; }
   .trend-bar { flex:1;border-radius:3px 3px 0 0;transition:height 0.4s;cursor:default;position:relative; }
   .trend-bar:hover { opacity:0.8; }
@@ -174,8 +174,8 @@ export default function ReportsPage() {
           return seg;
         })}
         <circle cx={cx} cy={cy} r={r-7} fill={T.surface}/>
-        <text x={cx} y={cy-6} textAnchor="middle" fill={T.textMuted} fontSize="9" fontFamily="var(--font-share-tech-mono),monospace" letterSpacing="1">TOTAL</text>
-        <text x={cx} y={cy+12} textAnchor="middle" fill={T.yellow} fontSize="12" fontFamily="var(--font-vt323),monospace">{fmtZAR(catTotal)}</text>
+        <text x={cx} y={cy-6} textAnchor="middle" fill={T.textMuted} fontSize="9" fontFamily="Inter, system-ui, sans-serif" letterSpacing="1">TOTAL</text>
+        <text x={cx} y={cy+12} textAnchor="middle" fill={T.yellow} fontSize="12" fontFamily="Inter, system-ui, sans-serif">{fmtZAR(catTotal)}</text>
       </svg>
     );
   };
@@ -223,9 +223,9 @@ export default function ReportsPage() {
 
         <div style={{padding:'12px 16px 100px'}}>
           {loading ? (
-            <div style={{textAlign:'center',padding:40,color:T.textMuted,letterSpacing:2}}>LOADING…</div>
+            <div style={{textAlign:'center',padding:40,color:T.textMuted,letterSpacing:0.5}}>LOADING…</div>
           ) : periodInvoices.length === 0 ? (
-            <div style={{textAlign:'center',padding:40,color:T.textMuted,letterSpacing:2}}>[ NO DATA FOR THIS PERIOD ]</div>
+            <div style={{textAlign:'center',padding:40,color:T.textMuted,letterSpacing:0.5}}>[ NO DATA FOR THIS PERIOD ]</div>
           ) : (
 
             <>
@@ -255,7 +255,7 @@ export default function ReportsPage() {
                       <div key={cat} style={{marginBottom:10}}>
                         <div style={{display:'flex',justifyContent:'space-between',fontSize:11,marginBottom:4}}>
                           <span style={{color:T.textDim,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'60%'}}>{cat}</span>
-                          <span style={{color:T.yellow,fontFamily:'var(--font-share-tech-mono),monospace',flexShrink:0}}>{fmtZAR(val)}</span>
+                          <span style={{color:T.yellow,fontFamily:'Inter, system-ui, sans-serif',flexShrink:0}}>{fmtZAR(val)}</span>
                         </div>
                         <div style={{height:4,background:T.border,borderRadius:2,overflow:'hidden'}}>
                           <div style={{height:'100%',width:`${val/catTotal*100}%`,background:CAT_COLORS[i%CAT_COLORS.length],borderRadius:2,transition:'width 0.6s'}}/>
@@ -276,7 +276,7 @@ export default function ReportsPage() {
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
                           <span style={{fontSize:13,color:T.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{name}</span>
-                          <span style={{fontSize:13,color:T.yellow,fontFamily:'var(--font-share-tech-mono),monospace',flexShrink:0,marginLeft:8}}>{fmtZAR(stats.total)}</span>
+                          <span style={{fontSize:13,color:T.yellow,fontFamily:'Inter, system-ui, sans-serif',flexShrink:0,marginLeft:8}}>{fmtZAR(stats.total)}</span>
                         </div>
                         <div style={{display:'flex',alignItems:'center',gap:8}}>
                           <div className="rank-bar-track" style={{flex:1}}>
@@ -302,7 +302,7 @@ export default function ReportsPage() {
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
                           <span style={{fontSize:13,color:name==='No Project'?T.textMuted:T.text}}>{name}</span>
-                          <span style={{fontSize:13,color:T.yellow,fontFamily:'var(--font-share-tech-mono),monospace'}}>{fmtZAR(total)}</span>
+                          <span style={{fontSize:13,color:T.yellow,fontFamily:'Inter, system-ui, sans-serif'}}>{fmtZAR(total)}</span>
                         </div>
                         <div className="rank-bar-track">
                           <div className="rank-bar-fill" style={{width:`${total/projMax*100}%`,background:CAT_COLORS[i%CAT_COLORS.length]}}/>
@@ -341,7 +341,7 @@ export default function ReportsPage() {
                     {months.filter(m=>m.total>0).reverse().slice(0,6).map(({label,total},i)=>(
                       <div key={i} style={{display:'flex',justifyContent:'space-between',padding:'6px 0',borderBottom:`1px solid ${T.border}`}}>
                         <span style={{fontSize:12,color:T.textDim}}>{label}</span>
-                        <span style={{fontSize:12,color:T.yellow,fontFamily:'var(--font-share-tech-mono),monospace'}}>{fmtZAR(total)}</span>
+                        <span style={{fontSize:12,color:T.yellow,fontFamily:'Inter, system-ui, sans-serif'}}>{fmtZAR(total)}</span>
                       </div>
                     ))}
                   </div>

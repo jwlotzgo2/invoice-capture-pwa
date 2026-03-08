@@ -1,22 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { VT323, Share_Tech_Mono } from 'next/font/google';
-import './globals.css';
-import BottomNav from '@/components/BottomNav';
-import PWAInstallPrompt from '@/components/PWAInstallPrompt';
-
-const vt323 = VT323({
-  weight: '400',
-  subsets: ['latin'],
-  variable: '--font-vt323',
-  display: 'swap',
-});
-
-const shareTechMono = Share_Tech_Mono({
-  weight: '400',
-  subsets: ['latin'],
-  variable: '--font-share-tech-mono',
-  display: 'swap',
-});
+// Inter loaded via globals.css
 
 export const metadata: Metadata = {
   title: 'Go Capture',
@@ -35,7 +18,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#0d0d0d',
+  themeColor: '#1c1c1c',
 };
 
 export default function RootLayout({
@@ -44,13 +27,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${vt323.variable} ${shareTechMono.variable}`}>
+    <html lang="en" className="">
       <head>
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
-      <body style={{ background: '#0d0d0d', margin: 0 }}>
+      <body style={{ background: '#1c1c1c', margin: 0 }}>
         {children}
         <BottomNav />
         <PWAInstallPrompt />
