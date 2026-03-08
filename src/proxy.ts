@@ -52,7 +52,7 @@ async function updateSession(request: NextRequest) {
 
     if (profile?.role !== 'admin') {
       const url = request.nextUrl.clone();
-      url.pathname = '/invoices';
+      url.pathname = '/';
       return NextResponse.redirect(url);
     }
   }
