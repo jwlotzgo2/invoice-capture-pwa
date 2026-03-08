@@ -21,8 +21,8 @@ const CATEGORIES: InvoiceCategory[] = [
 
 const fmtZAR = (n:number|null|undefined)=>n!=null?`R ${Math.round(n).toLocaleString('en-ZA')}`:null;
 
-function isDuplicate(inv: Invoice, all: Invoice[]): boolean {
-  return all.some(other => {
+function findDuplicate(inv: Invoice, all: Invoice[]): Invoice | null {
+  return all.find(other => {
     if (other.id === inv.id) return false;
     const aRef = inv.document_number?.trim().toLowerCase() || '';
     const bRef = other.document_number?.trim().toLowerCase() || '';
@@ -35,7 +35,7 @@ function isDuplicate(inv: Invoice, all: Invoice[]): boolean {
       inv.amount != null && other.amount != null && inv.amount === other.amount &&
       inv.invoice_date && other.invoice_date && inv.invoice_date === other.invoice_date;
     return !!(sameRef || sameCombo);
-  });
+  }) ?? null;
 }
 
 function getMatchStatus(inv: Invoice): 'match' | 'off' | 'none' {
@@ -178,8 +178,12 @@ export default function ReviewPage() {
     setDocumentNumber(inv.document_number||null);
     // Check duplicate
     setDuplicateWarning(null);
-    const dupes = isDuplicate(inv, invoices);
-    if (dupes) setDuplicateWarning('⚡ Possible duplicate detected');
+    const dupedDoc = findDuplicate(inv, invoices);
+    if (dupedDoc) {
+      const ref = dupedDoc.document_number ? ' #' + dupedDoc.document_number : '';
+      const dt = dupedDoc.invoice_date ? ' · ' + new Date(dupedDoc.invoice_date).toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'}) : '';
+      setDuplicateWarning('⚡ Duplicate of: ' + (dupedDoc.supplier||'Unknown') + ref + dt);
+    }
   };
 
   const handleSave = async () => {
@@ -235,8 +239,7 @@ export default function ReviewPage() {
 
   const filtered = invoices.filter(inv => {
     if (filterMatched !== 'all' && getMatchStatus(inv) !== filterMatched) return false;
-    if (filterDupes === 'dupes' && !isDuplicate(inv, invoices)) return false;
-    if (filterDupes === 'clean' && isDuplicate(inv, invoices)) return false;
+    if (filterDupes === 'dupes' && !findDuplicate(inv, invoices) !== null) return false;
     if (search) {
       const q = search.toLowerCase();
       if (!(inv.supplier||'').toLowerCase().includes(q) && !(inv.document_number||'').toLowerCase().includes(q) && !(inv.description||'').toLowerCase().includes(q)) return false;
@@ -244,7 +247,7 @@ export default function ReviewPage() {
     return true;
   });
 
-  const dupeCount = invoices.filter(i => isDuplicate(i, invoices)).length;
+  const dupeCount = invoices.filter(i => findDuplicate(i, invoices) !== null).length;
 
   return (
     <>
@@ -271,9 +274,7 @@ export default function ReviewPage() {
             <div className="filter-chips">
               <button className={`fchip${filterMatched==='match'?' active':''}`} onClick={()=>setFilterMatched(v=>v==='match'?'all':'match')}>✓ Matched</button>
               <button className={`fchip${filterMatched==='off'?' active':''}`} onClick={()=>setFilterMatched(v=>v==='off'?'all':'off')}>⚠ Off</button>
-              <button className={`fchip${filterMatched==='none'?' active':''}`} onClick={()=>setFilterMatched(v=>v==='none'?'all':'none')}>No Lines</button>
               <button className={`fchip orange${filterDupes==='dupes'?' active':''}`} onClick={()=>setFilterDupes(v=>v==='dupes'?'all':'dupes')}>⚡ Dupes{dupeCount>0?` (${dupeCount})`:''}</button>
-              <button className={`fchip${filterDupes==='clean'?' active':''}`} onClick={()=>setFilterDupes(v=>v==='clean'?'all':'clean')}>Clean</button>
             </div>
             <div className="left-count">{filtered.length} result{filtered.length!==1?'s':''}</div>
             <div className="left-list">
@@ -283,7 +284,7 @@ export default function ReviewPage() {
                 <div style={{padding:20,textAlign:'center',color:T.textMuted,fontSize:11,letterSpacing:2}}>[ NO RESULTS ]</div>
               ) : filtered.map(inv => {
                 const match = getMatchStatus(inv);
-                const duped = isDuplicate(inv, invoices);
+                const duped = findDuplicate(inv, invoices) !== null;
                 const isActive = selected?.id === inv.id;
                 return (
                   <div key={inv.id} className={`inv-row${isActive?' active':''}`} onClick={()=>selectInvoice(inv)}>

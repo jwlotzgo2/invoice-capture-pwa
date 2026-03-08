@@ -16,14 +16,12 @@ const T = {
   error: '#f87171', success: '#4ade80', warning: '#fb923c',
 };
 
-function isDuplicate(inv: Invoice, all: Invoice[]): boolean {
-  return all.some(other => {
+function findDuplicate(inv: Invoice, all: Invoice[]): Invoice | null {
+  return all.find(other => {
     if (other.id === inv.id) return false;
-    // Doc ref match: both must be non-empty and at least 3 chars to avoid generic refs colliding
     const aRef = inv.document_number?.trim().toLowerCase() || '';
     const bRef = other.document_number?.trim().toLowerCase() || '';
     const sameRef = aRef.length >= 3 && bRef.length >= 3 && aRef === bRef;
-    // Combo match: supplier + amount + date all must be present
     const aSupplier = inv.supplier?.trim().toLowerCase() || '';
     const bSupplier = other.supplier?.trim().toLowerCase() || '';
     const sameCombo =
@@ -32,7 +30,7 @@ function isDuplicate(inv: Invoice, all: Invoice[]): boolean {
       inv.amount != null && other.amount != null && inv.amount === other.amount &&
       inv.invoice_date && other.invoice_date && inv.invoice_date === other.invoice_date;
     return !!(sameRef || sameCombo);
-  });
+  }) ?? null;
 }
 
 function getMatchStatus(inv: Invoice): 'match' | 'off' | 'none' {
@@ -122,8 +120,7 @@ export default function InvoiceListPage() {
     if (filterDateFrom && inv.invoice_date && inv.invoice_date < filterDateFrom) return false;
     if (filterDateTo && inv.invoice_date && inv.invoice_date > filterDateTo) return false;
     if (filterMatched !== 'all' && getMatchStatus(inv) !== filterMatched) return false;
-    if (filterDuplicates === 'dupes' && !isDuplicate(inv, invoices)) return false;
-    if (filterDuplicates === 'clean' && isDuplicate(inv, invoices)) return false;
+    if (filterDuplicates === 'dupes' && !findDuplicate(inv, invoices) !== null) return false;
     if (search) {
       const q = search.toLowerCase();
       if (!(inv.supplier||'').toLowerCase().includes(q) && !(inv.description||'').toLowerCase().includes(q) && !(inv.document_number||'').toLowerCase().includes(q)) return false;
@@ -133,7 +130,7 @@ export default function InvoiceListPage() {
 
   const total = filtered.reduce((s, i) => s + (i.amount || 0), 0);
   const suppliers = [...new Set(invoices.map(i => i.supplier).filter(Boolean))];
-  const dupeCount = invoices.filter(i => isDuplicate(i, invoices)).length;
+  const dupeCount = invoices.filter(i => findDuplicate(i, invoices) !== null).length;
 
   const toggleSort = (field: SortField) => {
     if (sortBy === field) setSortDir(d => d === 'desc' ? 'asc' : 'desc');
@@ -146,7 +143,7 @@ export default function InvoiceListPage() {
       ...filtered.map(i => [
         i.invoice_date||'', i.document_number||'', i.supplier||'', i.business_name||'',
         i.description||'', i.amount||'', i.vat_amount||'', i.category||'',
-        isDuplicate(i, invoices)?'Yes':'No', getMatchStatus(i),
+        findDuplicate(i, invoices) !== null?'Yes':'No', getMatchStatus(i),
       ])
     ];
     const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
@@ -180,11 +177,9 @@ export default function InvoiceListPage() {
           <div style={{ display:'flex',gap:6,padding:'8px 16px',overflowX:'auto',scrollbarWidth:'none' }}>
             <button className={`filter-chip${filterMatched==='match'?' active':''}`} onClick={()=>setFilterMatched(v=>v==='match'?'all':'match')}>✓ Matched</button>
             <button className={`filter-chip${filterMatched==='off'?' active':''}`} onClick={()=>setFilterMatched(v=>v==='off'?'all':'off')}>⚠ Off</button>
-            <button className={`filter-chip${filterMatched==='none'?' active':''}`} onClick={()=>setFilterMatched(v=>v==='none'?'all':'none')}>No Lines</button>
             <button className={`filter-chip${filterDuplicates==='dupes'?' active':''}`} style={{ borderColor: filterDuplicates==='dupes'?T.warning:T.border, color: filterDuplicates==='dupes'?T.warning:T.textDim, background: filterDuplicates==='dupes'?'rgba(251,146,60,0.1)':'transparent' }} onClick={()=>setFilterDuplicates(v=>v==='dupes'?'all':'dupes')}>
               ⚡ Dupes{dupeCount>0?` (${dupeCount})`:''}
             </button>
-            <button className={`filter-chip${filterDuplicates==='clean'?' active':''}`} onClick={()=>setFilterDuplicates(v=>v==='clean'?'all':'clean')}>Clean</button>
           </div>
 
           {showFilters && (
@@ -229,9 +224,9 @@ export default function InvoiceListPage() {
             <div className="empty-state">[ NO DOCUMENTS FOUND ]</div>
           ) : filtered.map(inv => {
             const matchStatus = getMatchStatus(inv);
-            const duped = isDuplicate(inv, invoices);
+            const duped = findDuplicate(inv, invoices) !== null;
             return (
-              <div key={inv.id} className={`inv-card${duped?' duplicate':''}`} onClick={()=>router.push(`/invoices/${inv.id}`)}>
+              <div key={inv.id} className={`inv-card${dupedDoc?' duplicate':''}`} onClick={()=>router.push(`/invoices/${inv.id}`)}>
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:6}}>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontSize:14,color:T.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{inv.supplier||'Unknown Supplier'}</div>
@@ -244,13 +239,13 @@ export default function InvoiceListPage() {
                   </div>
                 </div>
                 <div style={{display:'flex',gap:6,flexWrap:'wrap',marginTop:6}}>
-                  {/* Match status badge */}
                   {matchStatus==='match' && <span className="badge" style={{background:'rgba(74,222,128,0.1)',color:T.success,borderColor:T.success}}>✓ Match</span>}
                   {matchStatus==='off' && <span className="badge" style={{background:'rgba(248,113,113,0.1)',color:T.error,borderColor:T.error}}>⚠ Off</span>}
-                  {matchStatus==='none' && <span className="badge" style={{background:'transparent',color:T.textMuted,borderColor:T.border}}>No Lines</span>}
-                  {/* Duplicate badge */}
-                  {duped && <span className="badge" style={{background:'rgba(251,146,60,0.1)',color:T.warning,borderColor:T.warning}}>⚡ Duplicate</span>}
-                  {/* Category */}
+                  {dupedDoc && (
+                    <span className="badge" style={{background:'rgba(251,146,60,0.1)',color:T.warning,borderColor:T.warning}}>
+                      ⚡ Dup of: {dupedDoc.supplier||'Unknown'}{dupedDoc.document_number?` #${dupedDoc.document_number}`:''}{dupedDoc.invoice_date?` · ${new Date(dupedDoc.invoice_date).toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'})}` :''}
+                    </span>
+                  )}
                   {inv.category && <span className="badge" style={{background:T.blueGlow,color:T.blue,borderColor:T.blue}}>{inv.category}</span>}
                 </div>
               </div>
