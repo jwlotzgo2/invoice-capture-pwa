@@ -56,7 +56,7 @@ const css = `
   .review-body { flex:1;display:flex;overflow:hidden; }
 
   /* LEFT PANEL — fixed 240px */
-  .left-panel { width:240px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid ${T.border};background:${T.surface};overflow:hidden; }
+  .left-panel { width:360px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid ${T.border};background:${T.surface};overflow:hidden; }
   .left-search { padding:10px;border-bottom:1px solid ${T.border}; }
   .left-search-inner { display:flex;align-items:center;gap:8px;background:${T.bg};border:1px solid ${T.border};border-radius:6px;padding:8px 10px; }
   .left-search-inner input { flex:1;border:none;background:transparent;outline:none;font-size:12px;font-family:var(--font-share-tech-mono),monospace;color:${T.text}; }
@@ -82,7 +82,7 @@ const css = `
 
   /* RIGHT PANEL — image flex:1 (fills remaining), edit fixed 360px */
   .right-panel { flex:1;display:flex;gap:0;overflow:hidden;min-width:0; }
-  .img-panel { flex:1;min-width:0;max-width:calc(100% - 360px);display:flex;flex-direction:column;overflow:hidden;border-right:1px solid ${T.border};background:${T.bg}; }
+  .img-panel { flex:1;min-width:0;max-width:calc(100% - 720px);display:flex;flex-direction:column;overflow:hidden;border-right:1px solid ${T.border};background:${T.bg}; }
   .img-toolbar { padding:8px 12px;border-bottom:1px solid ${T.border};display:flex;align-items:center;gap:8px;background:${T.surface};flex-shrink:0; }
   .img-toolbar-btn { width:32px;height:32px;border-radius:4px;border:1px solid ${T.border};background:transparent;color:${T.textDim};cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s; }
   .img-toolbar-btn:hover { border-color:${T.blue};color:${T.blue}; }
@@ -94,7 +94,7 @@ const css = `
   .no-image { flex:1;display:flex;align-items:center;justify-content:center;color:${T.textMuted};font-size:13px;letter-spacing:2px;flex-direction:column;gap:12px; }
 
   /* EDIT PANEL — fixed 360px */
-  .edit-panel { width:360px;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden;background:${T.surface}; }
+  .edit-panel { width:720px;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden;background:${T.surface}; }
   .edit-scroll { flex:1;overflow-y:auto;padding:14px;scrollbar-width:thin;scrollbar-color:${T.border} transparent; }
   .edit-scroll::-webkit-scrollbar { width:4px; }
   .edit-scroll::-webkit-scrollbar-thumb { background:${T.border};border-radius:2px; }
