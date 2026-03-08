@@ -191,6 +191,43 @@ export default function SettingsPage() {
             </button>
           </div>
 
+          {/* Org code */}
+          <div className="t-card">
+            <div className="t-row" style={{ flexDirection:'column', alignItems:'flex-start', gap:10 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8, width:'100%' }}>
+                <Building2 size={16} color={T.textDim} />
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:13, color:T.text }}>Organisation</div>
+                  <div style={{ fontSize:11, color:T.textMuted, marginTop:1 }}>
+                    {profile?.org_name ? profile.org_name : 'Not linked to an org'}
+                  </div>
+                </div>
+              </div>
+              {!profile?.org_id && (
+                <div style={{ width:'100%' }}>
+                  {orgError && <div style={{ fontSize:11, color:T.error, marginBottom:6 }}>{orgError}</div>}
+                  {orgSuccess && <div style={{ fontSize:11, color:T.success, marginBottom:6 }}>✓ {orgSuccess}</div>}
+                  <div style={{ display:'flex', gap:8 }}>
+                    <input
+                      value={orgCode}
+                      onChange={e => setOrgCode(e.target.value.toUpperCase())}
+                      onKeyDown={e => e.key === 'Enter' && handleJoinOrg()}
+                      placeholder="Enter org code e.g. ABC-1234"
+                      maxLength={8}
+                      style={{ flex:1, padding:'8px 10px', background:T.bg, border:`1px solid ${T.border}`, borderRadius:8, color:T.text, fontSize:13, fontFamily:'inherit', letterSpacing:1 }}
+                    />
+                    <button
+                      onClick={handleJoinOrg}
+                      disabled={orgJoining || !orgCode.trim()}
+                      style={{ padding:'8px 14px', borderRadius:8, border:'none', background:T.primary, color:T.bg, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', display:'flex', alignItems:'center', gap:6 }}>
+                      {orgJoining ? <Loader2 size={13} style={{ animation:'tspin 1s linear infinite' }} /> : 'Join'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Admin link */}
           {profile?.role === 'admin' && (
             <div className="t-card">

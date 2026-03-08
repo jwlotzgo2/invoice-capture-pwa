@@ -85,27 +85,14 @@ export default function InvoicesPage() {
       if (user) {
         const { data: profile } = await supabase.from('user_profiles').select('role').eq('id', user.id).single();
         setIsAdmin(profile?.role === 'admin');
-        // Count invoices from email pending review
-        // Falls back to total unreviewed count if migration columns not yet added
-        try {
-          const { count, error } = await supabase
-            .from('invoices')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user.id)
-            .eq('source', 'email')
-            .eq('status', 'pending_review');
-          if (error) throw error;
-          setPendingCount(count || 0);
-        } catch {
-          // Migration not run yet — fall back to counting all invoices created today via any means
-          // that have no supplier set (likely unreviewed email captures)
-          const { count: fallback } = await supabase
-            .from('invoices')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user.id)
-            .is('supplier', null);
-          setPendingCount(fallback || 0);
-        }
+        // Count email invoices pending review
+        const { count } = await supabase
+          .from('invoices')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('source', 'email')
+          .eq('status', 'pending_review');
+        setPendingCount(count || 0);
       }
     };
     checkAdmin();

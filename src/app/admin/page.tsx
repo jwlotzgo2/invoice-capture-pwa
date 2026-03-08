@@ -297,6 +297,7 @@ export default function AdminDashboardPage() {
           <div className="adm-grid-3">
             {[
               { href: '/admin/users', icon: <Users size={18} color="#2563eb" />, bg: '#eff6ff', title: 'User Management', desc: 'Manage users, roles, organisations' },
+              { href: '/admin/orgs', icon: <Shield size={18} color="#9333ea" />, bg: '#faf5ff', title: 'Organisations', desc: 'Org codes, member assignment' },
               { href: '/admin/analytics', icon: <TrendingUp size={18} color="#16a34a" />, bg: '#f0fdf4', title: 'OCR Analytics', desc: 'Field accuracy and correction patterns' },
               { href: '/invoices/list', icon: <FileText size={18} color="#7c3aed" />, bg: '#f5f3ff', title: 'All Invoices', desc: 'Browse and export all invoices' },
             ].map((q) => (
