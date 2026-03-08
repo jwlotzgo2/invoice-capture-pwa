@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { Invoice, InvoiceFilters } from '@/types/invoice';
 import { Camera, Shield, TrendingUp, FileText, Receipt, Building2, ChevronRight, Upload, Bell } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, startOfYear, endOfYear, subMonths } from 'date-fns';
+import { getPendingCount } from '@/lib/offlineQueue';
 
 type Period = 'this_month' | 'last_month' | 'this_year' | 'last_year' | 'all';
 
@@ -92,7 +93,9 @@ export default function InvoicesPage() {
           .eq('user_id', user.id)
           .eq('source', 'email')
           .eq('status', 'pending_review');
-        setPendingCount(count || 0);
+        // Also count offline queued docs
+        const offlineCount = await getPendingCount().catch(() => 0);
+        setPendingCount((count || 0) + offlineCount);
       }
     };
     checkAdmin();
@@ -280,7 +283,7 @@ export default function InvoicesPage() {
             <div className="header-actions">
               <button
                 className="icon-btn bell-wrap"
-                onClick={() => router.push('/review')}
+                onClick={() => router.push(navigator.onLine ? '/review' : '/offline')}
                 title="Pending review"
                 style={{ position: 'relative' }}
               >

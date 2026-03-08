@@ -23,16 +23,15 @@ export default function SyncManager() {
       }
     };
 
-    const handleOnline = async () => {
-      // Only handle if we came from offline page or were offline
-      const { synced } = await syncPendingInvoices();
-      if (synced > 0) {
-        showToast(`${synced} document${synced > 1 ? 's' : ''} uploaded and processed`, 'online');
-      }
-      // Navigate to dashboard if currently on offline page
+    const handleOnline = () => {
+      // Redirect immediately — don't wait for sync
       if (window.location.pathname === '/offline') {
         router.push('/');
       }
+      // Sync in background
+      syncPendingInvoices().then(({ synced }) => {
+        if (synced > 0) showToast(`${synced} document${synced > 1 ? 's' : ''} uploaded and processed`, 'online');
+      });
     };
 
     const handleMessage = async (e: MessageEvent) => {
