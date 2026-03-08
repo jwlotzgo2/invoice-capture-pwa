@@ -1,265 +1,197 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 
 const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
 
-// Lazy initialization of Supabase admin client
-let supabaseAdmin: SupabaseClient | null = null;
-
-function getSupabaseAdmin(): SupabaseClient {
-  if (!supabaseAdmin) {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    
-    if (!url || !serviceKey) {
-      throw new Error('Supabase configuration missing. Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.');
-    }
-    
-    supabaseAdmin = createClient(url, serviceKey);
-  }
-  return supabaseAdmin;
+// Postmark inbound webhook payload shape (relevant fields only)
+interface PostmarkAttachment {
+  Name: string;
+  Content: string; // base64
+  ContentType: string;
+  ContentLength: number;
 }
 
-// Postmark Inbound Webhook Payload Interface
-interface PostmarkInboundEmail {
+interface PostmarkInbound {
+  From: string;
   FromFull: { Email: string; Name: string };
-  ToFull: { Email: string; Name: string }[];
   Subject: string;
   TextBody: string;
   HtmlBody: string;
+  Attachments: PostmarkAttachment[];
   MessageID: string;
   Date: string;
-  Attachments: {
-    Name: string;
-    Content: string; // Base64 encoded
-    ContentType: string;
-    ContentLength: number;
-  }[];
-  Headers: { Name: string; Value: string }[];
 }
 
-// Supported image types for OCR
-const SUPPORTED_IMAGE_TYPES = [
-  'image/jpeg',
-  'image/png',
-  'image/gif',
-  'image/webp',
-  'application/pdf', // We'll handle PDF separately if needed
-];
+const SUPPORTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+const SUPPORTED_PDF_TYPE = 'application/pdf';
 
 export async function POST(request: NextRequest) {
-  console.log('[Email Webhook] Received inbound email');
-
   try {
-    // Verify webhook secret (optional but recommended)
-    const webhookSecret = process.env.POSTMARK_WEBHOOK_SECRET;
-    if (webhookSecret) {
-      const providedSecret = request.headers.get('X-Postmark-Webhook-Secret');
-      if (providedSecret !== webhookSecret) {
-        console.error('[Email Webhook] Invalid webhook secret');
+    // ── 1. Verify webhook secret ──────────────────────────────────────
+    const secret = process.env.POSTMARK_WEBHOOK_SECRET;
+    if (secret) {
+      const incoming = request.headers.get('x-postmark-webhook-secret');
+      if (incoming !== secret) {
+        console.warn('Postmark webhook secret mismatch');
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
     }
 
-    const payload: PostmarkInboundEmail = await request.json();
-    console.log('[Email Webhook] From:', payload.FromFull.Email);
-    console.log('[Email Webhook] Subject:', payload.Subject);
-    console.log('[Email Webhook] Attachments:', payload.Attachments?.length || 0);
+    // ── 2. Parse payload ──────────────────────────────────────────────
+    const payload: PostmarkInbound = await request.json();
+    const senderEmail = payload.FromFull?.Email || payload.From;
 
-    // Find user by email (the sender must be a registered user)
-    const { data: userProfile, error: userError } = await getSupabaseAdmin()
-      .from('user_profiles')
-      .select('id, email, is_active')
-      .eq('email', payload.FromFull.Email.toLowerCase())
-      .single();
-
-    if (userError || !userProfile) {
-      console.log('[Email Webhook] Unknown sender:', payload.FromFull.Email);
-      // Create email record for unregistered user tracking
-      await getSupabaseAdmin().from('email_invoices').insert({
-        message_id: payload.MessageID,
-        from_email: payload.FromFull.Email,
-        from_name: payload.FromFull.Name,
-        subject: payload.Subject,
-        text_body: payload.TextBody,
-        html_body: payload.HtmlBody,
-        received_at: payload.Date,
-        status: 'failed',
-        error_message: 'Sender email not registered in system',
-        attachment_count: payload.Attachments?.length || 0,
-      });
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Sender not registered' 
-      });
+    if (!senderEmail) {
+      return NextResponse.json({ error: 'No sender email' }, { status: 400 });
     }
 
-    if (!userProfile.is_active) {
-      console.log('[Email Webhook] Inactive user:', payload.FromFull.Email);
-      return NextResponse.json({ 
-        success: false, 
-        message: 'User account is inactive' 
-      });
+    // ── 3. Service-role Supabase client (bypasses RLS) ────────────────
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    );
+
+    // ── 4. Look up user by email ──────────────────────────────────────
+    const { data: { users }, error: userErr } = await supabase.auth.admin.listUsers();
+    if (userErr) throw userErr;
+
+    const user = users.find(u => u.email?.toLowerCase() === senderEmail.toLowerCase());
+    if (!user) {
+      console.log(`Email from unregistered sender: ${senderEmail}`);
+      // Silently accept — don't reveal registration status to sender
+      return NextResponse.json({ message: 'OK' });
     }
 
-    // Filter for image attachments
-    const imageAttachments = payload.Attachments?.filter(
-      (att) => SUPPORTED_IMAGE_TYPES.includes(att.ContentType)
-    ) || [];
+    // ── 5. Find processable attachments ───────────────────────────────
+    const attachments = (payload.Attachments || []).filter(a =>
+      SUPPORTED_IMAGE_TYPES.includes(a.ContentType) ||
+      a.ContentType === SUPPORTED_PDF_TYPE
+    );
 
-    if (imageAttachments.length === 0) {
-      console.log('[Email Webhook] No image attachments found');
-      // Record email without images
-      await getSupabaseAdmin().from('email_invoices').insert({
-        user_id: userProfile.id,
-        message_id: payload.MessageID,
-        from_email: payload.FromFull.Email,
-        from_name: payload.FromFull.Name,
-        subject: payload.Subject,
-        text_body: payload.TextBody,
-        received_at: payload.Date,
-        status: 'completed',
-        error_message: 'No image attachments found',
-        attachment_count: 0,
-      });
-      return NextResponse.json({ 
-        success: true, 
-        message: 'No images to process' 
-      });
+    if (attachments.length === 0) {
+      console.log(`Email from ${senderEmail} had no supported attachments`);
+      return NextResponse.json({ message: 'No supported attachments' });
     }
 
-    // Process each image attachment
-    const processedInvoices = [];
-    for (const attachment of imageAttachments) {
+    const anthropicKey = process.env.ANTHROPIC_API_KEY;
+    const results = [];
+
+    // ── 6. Process each attachment ────────────────────────────────────
+    for (const attachment of attachments) {
       try {
-        console.log('[Email Webhook] Processing:', attachment.Name);
+        const isImage = SUPPORTED_IMAGE_TYPES.includes(attachment.ContentType);
+        const mediaType = attachment.ContentType as
+          'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp' | 'application/pdf';
 
-        // Create email invoice record
-        const { data: emailRecord, error: emailError } = await getSupabaseAdmin()
-          .from('email_invoices')
-          .insert({
-            user_id: userProfile.id,
-            message_id: payload.MessageID,
-            from_email: payload.FromFull.Email,
-            from_name: payload.FromFull.Name,
-            subject: payload.Subject,
-            text_body: payload.TextBody,
-            received_at: payload.Date,
-            status: 'processing',
-            attachment_count: 1,
-          })
-          .select()
-          .single();
+        // ── 6a. Upload to Supabase Storage ────────────────────────────
+        const fileExt = attachment.Name.split('.').pop() || (isImage ? 'jpg' : 'pdf');
+        const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+        const fileBytes = Buffer.from(attachment.Content, 'base64');
 
-        if (emailError) {
-          console.error('[Email Webhook] Error creating email record:', emailError);
-          continue;
-        }
-
-        // Upload image to storage
-        const fileName = `${userProfile.id}/${Date.now()}-${attachment.Name}`;
-        const binaryData = Buffer.from(attachment.Content, 'base64');
-
-        const { data: uploadData, error: uploadError } = await getSupabaseAdmin().storage
+        const { error: uploadErr } = await supabase.storage
           .from('invoices')
-          .upload(fileName, binaryData, {
-            contentType: attachment.ContentType,
-            upsert: false,
+          .upload(fileName, fileBytes, { contentType: attachment.ContentType, upsert: false });
+
+        if (uploadErr) throw uploadErr;
+
+        const { data: { publicUrl } } = supabase.storage.from('invoices').getPublicUrl(fileName);
+
+        // ── 6b. OCR with Claude ───────────────────────────────────────
+        let ocrData: any = {};
+
+        if (anthropicKey) {
+          const contentBlock = isImage
+            ? { type: 'image', source: { type: 'base64', media_type: mediaType, data: attachment.Content } }
+            : { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: attachment.Content } };
+
+          const ocrResponse = await fetch(CLAUDE_API_URL, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': anthropicKey,
+              'anthropic-version': '2023-06-01',
+              ...(mediaType === 'application/pdf' ? { 'anthropic-beta': 'pdfs-2024-09-25' } : {}),
+            },
+            body: JSON.stringify({
+              model: 'claude-haiku-4-5-20251001',
+              max_tokens: 1024,
+              messages: [{
+                role: 'user',
+                content: [
+                  contentBlock,
+                  {
+                    type: 'text',
+                    text: `Extract invoice data. Return ONLY a JSON object with these fields:
+- supplier: company/person who issued this
+- description: brief description of what this invoice is for
+- invoice_date: date in YYYY-MM-DD format
+- amount: total amount as number (no currency symbols)
+- vat_amount: VAT/tax amount as number, or null
+- products_services: comma-separated list of products/services
+- business_name: name of the receiving business if visible
+- document_number: invoice/receipt number if visible
+- confidence: 0-1 confidence score
+If a field cannot be determined, set it to null. Return ONLY the JSON, no markdown.`,
+                  },
+                ],
+              }],
+            }),
           });
 
-        if (uploadError) {
-          console.error('[Email Webhook] Storage upload error:', uploadError);
-          await getSupabaseAdmin()
-            .from('email_invoices')
-            .update({ status: 'failed', error_message: 'Failed to upload image' })
-            .eq('id', emailRecord.id);
-          continue;
+          if (ocrResponse.ok) {
+            const claudeData = await ocrResponse.json();
+            const text = claudeData.content?.find((c: any) => c.type === 'text')?.text || '';
+            try {
+              const clean = text.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
+              ocrData = JSON.parse(clean);
+            } catch {
+              console.error('Failed to parse OCR response for attachment:', attachment.Name);
+            }
+          }
         }
 
-        // Get public URL
-        const { data: urlData } = getSupabaseAdmin().storage
-          .from('invoices')
-          .getPublicUrl(uploadData.path);
-
-        // Perform OCR
-        const ocrResult = await performOCR(attachment.Content, attachment.ContentType);
-
-        // Create invoice record
-        const { data: invoice, error: invoiceError } = await getSupabaseAdmin()
+        // ── 6c. Create invoice record ─────────────────────────────────
+        const { data: invoice, error: insertErr } = await supabase
           .from('invoices')
           .insert({
-            user_id: userProfile.id,
-            supplier: ocrResult.supplier,
-            description: ocrResult.description || `Invoice from email: ${payload.Subject}`,
-            invoice_date: ocrResult.invoice_date,
-            amount: ocrResult.amount,
-            vat_amount: ocrResult.vat_amount,
-            products_services: ocrResult.products_services,
-            business_name: ocrResult.business_name,
-            image_url: urlData.publicUrl,
-            image_path: uploadData.path,
-            raw_ocr_data: ocrResult,
-            original_ocr_values: {
-              supplier: ocrResult.supplier,
-              description: ocrResult.description,
-              invoice_date: ocrResult.invoice_date,
-              amount: ocrResult.amount,
-              vat_amount: ocrResult.vat_amount,
-              products_services: ocrResult.products_services,
-              business_name: ocrResult.business_name,
-            },
-            status: 'pending',
+            user_id: user.id,
+            supplier: ocrData.supplier || null,
+            description: ocrData.description || (payload.Subject ? `Email: ${payload.Subject}` : null),
+            invoice_date: ocrData.invoice_date || null,
+            amount: ocrData.amount ? parseFloat(ocrData.amount) : null,
+            vat_amount: ocrData.vat_amount ? parseFloat(ocrData.vat_amount) : null,
+            products_services: ocrData.products_services || null,
+            business_name: ocrData.business_name || null,
+            document_number: ocrData.document_number || null,
+            image_path: fileName,
+            image_url: publicUrl,
+            ocr_confidence: ocrData.confidence || null,
+            ocr_raw: ocrData,
             source: 'email',
+            email_message_id: payload.MessageID || null,
+            email_from: senderEmail,
+            email_subject: payload.Subject || null,
+            status: 'pending_review',
           })
           .select()
           .single();
 
-        if (invoiceError) {
-          console.error('[Email Webhook] Invoice creation error:', invoiceError);
-          await getSupabaseAdmin()
-            .from('email_invoices')
-            .update({ status: 'failed', error_message: 'Failed to create invoice' })
-            .eq('id', emailRecord.id);
-          continue;
-        }
+        if (insertErr) throw insertErr;
 
-        // Update email record with invoice reference
-        await getSupabaseAdmin()
-          .from('email_invoices')
-          .update({
-            invoice_id: invoice.id,
-            status: 'completed',
-            processed_at: new Date().toISOString(),
-          })
-          .eq('id', emailRecord.id);
+        results.push({ attachment: attachment.Name, invoice_id: invoice.id, status: 'created' });
+        console.log(`Created invoice ${invoice.id} from email attachment: ${attachment.Name}`);
 
-        // Log activity
-        await getSupabaseAdmin().from('user_activity').insert({
-          user_id: userProfile.id,
-          action: 'invoice_created_from_email',
-          entity_type: 'invoice',
-          entity_id: invoice.id,
-          metadata: {
-            email_id: emailRecord.id,
-            subject: payload.Subject,
-            attachment_name: attachment.Name,
-          },
-        });
-
-        processedInvoices.push(invoice);
-        console.log('[Email Webhook] Created invoice:', invoice.id);
-      } catch (attachmentError) {
-        console.error('[Email Webhook] Error processing attachment:', attachmentError);
+      } catch (attachErr) {
+        console.error(`Failed to process attachment ${attachment.Name}:`, attachErr);
+        results.push({ attachment: attachment.Name, status: 'failed', error: String(attachErr) });
       }
     }
 
-    return NextResponse.json({
-      success: true,
-      invoicesCreated: processedInvoices.length,
-      invoiceIds: processedInvoices.map((i) => i.id),
-    });
+    return NextResponse.json({ message: 'Processed', results });
+
   } catch (error) {
-    console.error('[Email Webhook] Error:', error);
+    console.error('Email webhook error:', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }
@@ -267,111 +199,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// OCR function using Claude
-async function performOCR(base64Image: string, contentType: string) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-
-  if (!apiKey) {
-    console.error('[OCR] No API key configured');
-    return {
-      supplier: null,
-      description: null,
-      invoice_date: null,
-      amount: null,
-      vat_amount: null,
-      products_services: null,
-      business_name: null,
-      confidence: 0,
-    };
-  }
-
-  try {
-    const mediaType = contentType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp';
-
-    const response = await fetch(CLAUDE_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1024,
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'image',
-                source: {
-                  type: 'base64',
-                  media_type: mediaType,
-                  data: base64Image,
-                },
-              },
-              {
-                type: 'text',
-                text: `Analyze this invoice image and extract the following information. Return a JSON object with these exact fields:
-
-- supplier: The name of the company or person who issued this invoice
-- description: A brief description of what this invoice is for
-- invoice_date: The date on the invoice in YYYY-MM-DD format
-- amount: The total amount as a number (without currency symbols)
-- vat_amount: The VAT/tax amount as a number (without currency symbols), or null if not specified
-- products_services: A comma-separated list of products or services on the invoice
-- business_name: The name of the business receiving the invoice (the customer), if visible
-- confidence: A number between 0 and 1 indicating how confident you are in the extraction
-
-If any field cannot be determined, set it to null.
-
-Return ONLY the JSON object, no additional text or markdown formatting.`,
-              },
-            ],
-          },
-        ],
-      }),
-    });
-
-    if (!response.ok) {
-      console.error('[OCR] Claude API error:', response.status);
-      throw new Error('OCR processing failed');
-    }
-
-    const claudeResponse = await response.json();
-    const textContent = claudeResponse.content.find((c: { type: string }) => c.type === 'text');
-
-    if (!textContent) {
-      throw new Error('No text response from OCR');
-    }
-
-    // Parse the JSON response
-    let jsonText = textContent.text.trim();
-    if (jsonText.startsWith('```')) {
-      jsonText = jsonText.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
-    }
-
-    return JSON.parse(jsonText);
-  } catch (error) {
-    console.error('[OCR] Error:', error);
-    return {
-      supplier: null,
-      description: null,
-      invoice_date: null,
-      amount: null,
-      vat_amount: null,
-      products_services: null,
-      business_name: null,
-      confidence: 0,
-    };
-  }
-}
-
-// GET endpoint for testing webhook connectivity
+// Postmark sends a HEAD request to verify the webhook URL
 export async function GET() {
-  return NextResponse.json({
-    status: 'active',
-    message: 'Postmark inbound webhook endpoint is active',
-    timestamp: new Date().toISOString(),
-  });
+  return NextResponse.json({ ok: true });
 }
