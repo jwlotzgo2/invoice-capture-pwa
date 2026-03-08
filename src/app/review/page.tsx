@@ -455,13 +455,13 @@ export default function ReviewPage() {
                   {lineItems.map((item, i) => (
                     <div key={i} className="li-row">
                       <input className="li-input" value={item.description||''} onChange={e=>{const n=[...lineItems];n[i]={...n[i],description:e.target.value};setLineItems(n);}} placeholder="Description"/>
-                      <input className="li-input" type="number" value={item.quantity??''} onChange={e=>{const n=[...lineItems];n[i]={...n[i],quantity:e.target.value?parseFloat(e.target.value):undefined};setLineItems(n);}} placeholder="1"/>
-                      <input className="li-input amt" type="number" value={item.unit_price??''} onChange={e=>{const n=[...lineItems];n[i]={...n[i],unit_price:e.target.value?parseFloat(e.target.value):undefined,line_total:e.target.value&&n[i].quantity?(parseFloat(e.target.value)*n[i].quantity!):n[i].line_total};setLineItems(n);}} placeholder="0.00"/>
-                      <input className="li-input amt" type="number" value={item.line_total??''} onChange={e=>{const n=[...lineItems];n[i]={...n[i],line_total:e.target.value?parseFloat(e.target.value):undefined};setLineItems(n);}} placeholder="0.00"/>
+                      <input className="li-input" type="number" value={item.quantity??''} onChange={e=>{const n=[...lineItems];n[i]={...n[i],quantity:e.target.value?parseFloat(e.target.value):null};setLineItems(n);}} placeholder="1"/>
+                      <input className="li-input amt" type="number" value={item.unit_price??''} onChange={e=>{const n=[...lineItems];n[i]={...n[i],unit_price:e.target.value?parseFloat(e.target.value):null,line_total:e.target.value&&n[i].quantity?(parseFloat(e.target.value)*n[i].quantity!):n[i].line_total};setLineItems(n);}} placeholder="0.00"/>
+                      <input className="li-input amt" type="number" value={item.line_total??''} onChange={e=>{const n=[...lineItems];n[i]={...n[i],line_total:e.target.value?parseFloat(e.target.value):null};setLineItems(n);}} placeholder="0.00"/>
                       <button className="li-del" onClick={()=>setLineItems(lineItems.filter((_,j)=>j!==i))}>×</button>
                     </div>
                   ))}
-                  <button className="li-add-btn" onClick={()=>setLineItems([...lineItems,{description:'',quantity:1,unit_price:undefined,line_total:undefined}])}>+ Add Line</button>
+                  <button className="li-add-btn" onClick={()=>setLineItems([...lineItems,{description:'',quantity:1,unit_price:null,line_total:null}])}>+ Add Line</button>
                   {(() => {
                     const itemsTotal = lineItems.reduce((s,i)=>s+(i.line_total??0),0);
                     const invTotal = formData.amount ? parseFloat(formData.amount) : 0;
