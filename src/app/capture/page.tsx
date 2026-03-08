@@ -22,7 +22,8 @@ function CapturePageInner() {
   const [error, setError] = useState<string | null>(null);
   const [fileType, setFileType] = useState<string>('image/jpeg');
   const [isOnline, setIsOnline] = useState(true);
-  const [queuedOffline, setQueuedOffline] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const [cachedUserId, setCachedUserId] = useState<string | null>(null);
   const [ocrConfidence, setOcrConfidence] = useState<number | null>(null);
   const [isPaid, setIsPaid] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<string>('');
@@ -40,6 +41,7 @@ function CapturePageInner() {
   useEffect(() => {
     const loadProjects = async () => {
       const { data: { user } } = await supabase.auth.getUser();
+      if (user) setCachedUserId(user.id);
       const { data } = await supabase.from('projects').select('id, name').eq('user_id', user?.id || '').order('name');
       setProjects(data || []);
     };
@@ -121,41 +123,35 @@ function CapturePageInner() {
 
     // ── Offline: queue locally and return ────────────────────────────
     if (!navigator.onLine) {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('Not authenticated');
-        await queueInvoice({
-          image: capturedImage,
-          userId: user.id,
-          formData: {
-            supplier: formData.supplier || null,
-            description: formData.description || null,
-            invoice_date: formData.invoice_date || null,
-            amount: formData.amount ? parseFloat(formData.amount) : null,
-            vat_amount: formData.vat_amount ? parseFloat(formData.vat_amount) : null,
-            products_services: formData.products_services || null,
-            business_name: formData.business_name || null,
-            original_ocr_values: { ...formData },
-            is_paid: isPaid,
-            payment_method: isPaid && paymentMethod ? paymentMethod : null,
-            document_type: documentType || 'invoice',
-            doc_status: 'open',
-            document_number: documentNumber || null,
-            project_id: projectId || null,
-            category: category || null,
-            line_items: lineItems.length > 0 ? lineItems : null,
-          },
-        });
-        requestSync();
-        setQueuedOffline(true);
-        setSaving(false);
-        setTimeout(() => router.push('/'), 2000);
-        return;
-      } catch (err) {
-        setError('Failed to save offline. Please try again.');
-        setSaving(false);
-        return;
-      }
+      const uid = cachedUserId;
+      if (!uid) { setError('Cannot save offline — please reload the app while connected first.'); setSaving(false); return; }
+      await queueInvoice({
+        image: capturedImage,
+        userId: uid,
+        formData: {
+          supplier: formData.supplier || null,
+          description: formData.description || null,
+          invoice_date: formData.invoice_date || null,
+          amount: formData.amount ? parseFloat(formData.amount) : null,
+          vat_amount: formData.vat_amount ? parseFloat(formData.vat_amount) : null,
+          products_services: formData.products_services || null,
+          business_name: formData.business_name || null,
+          original_ocr_values: { ...formData },
+          is_paid: isPaid,
+          payment_method: isPaid && paymentMethod ? paymentMethod : null,
+          document_type: documentType || 'invoice',
+          doc_status: 'open',
+          document_number: documentNumber || null,
+          project_id: projectId || null,
+          category: category || null,
+          line_items: lineItems.length > 0 ? lineItems : null,
+        },
+      });
+      requestSync();
+      setSaving(false);
+      setToast('Saved offline — will upload when reconnected');
+      setTimeout(() => router.push('/'), 2000);
+      return;
     }
 
     try {
@@ -294,18 +290,16 @@ function CapturePageInner() {
     );
   }
 
-  if (queuedOffline) return (
-    <div style={{ minHeight: '100svh', background: '#1c1c1c', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 24, textAlign: 'center' }}>
-      <WifiOff size={40} color="#fdba74" />
-      <div style={{ fontSize: 18, fontWeight: 600, color: '#f0f0f0' }}>Saved offline</div>
-      <div style={{ fontSize: 13, color: '#8a8a8a', maxWidth: 260, lineHeight: 1.6 }}>
-        Invoice queued locally. It will upload automatically when you're back online.
-      </div>
-    </div>
-  );
-
   return (
     <div style={{ minHeight: '100svh', background: '#f8fafc', fontFamily: 'DM Sans, sans-serif' }}>
+      {/* Toast */}
+      {toast && (
+        <div style={{ position: 'fixed', bottom: 90, left: 16, right: 16, zIndex: 999, background: '#282828', border: '1px solid #383838', borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 4px 24px rgba(0,0,0,0.4)' }}>
+          <WifiOff size={16} color="#fdba74" />
+          <span style={{ fontSize: 13, color: '#f0f0f0', flex: 1 }}>{toast}</span>
+          <button onClick={() => setToast(null)} style={{ background: 'none', border: 'none', color: '#6b6b6b', cursor: 'pointer', padding: 0 }}>✕</button>
+        </div>
+      )}
       {!isOnline && (
         <div style={{ background: '#1c1c1c', borderBottom: '1px solid #383838', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
           <WifiOff size={13} color="#fdba74" />
