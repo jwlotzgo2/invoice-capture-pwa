@@ -24,12 +24,16 @@ const fmtZAR = (n:number|null|undefined)=>n!=null?`R ${Math.round(n).toLocaleStr
 function isDuplicate(inv: Invoice, all: Invoice[]): boolean {
   return all.some(other => {
     if (other.id === inv.id) return false;
-    const sameRef = inv.document_number && other.document_number &&
-      inv.document_number.trim().toLowerCase() === other.document_number.trim().toLowerCase();
-    const sameCombo = inv.supplier && other.supplier && inv.amount && other.amount &&
-      inv.supplier.toLowerCase() === other.supplier.toLowerCase() &&
-      inv.amount === other.amount && inv.invoice_date && other.invoice_date &&
-      inv.invoice_date === other.invoice_date;
+    const aRef = inv.document_number?.trim().toLowerCase() || '';
+    const bRef = other.document_number?.trim().toLowerCase() || '';
+    const sameRef = aRef.length >= 3 && bRef.length >= 3 && aRef === bRef;
+    const aSupplier = inv.supplier?.trim().toLowerCase() || '';
+    const bSupplier = other.supplier?.trim().toLowerCase() || '';
+    const sameCombo =
+      aSupplier.length > 0 && bSupplier.length > 0 &&
+      aSupplier === bSupplier &&
+      inv.amount != null && other.amount != null && inv.amount === other.amount &&
+      inv.invoice_date && other.invoice_date && inv.invoice_date === other.invoice_date;
     return !!(sameRef || sameCombo);
   });
 }

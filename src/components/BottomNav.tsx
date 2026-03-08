@@ -10,11 +10,12 @@ const T = {
 };
 
 const tabs = [
-  { href: '/invoices',      icon: LayoutDashboard, label: 'Dashboard' },
-  { href: '/invoices/list', icon: FileText,         label: 'Documents' },
-  { href: '/capture',       icon: Camera,           label: 'Capture', primary: true },
-  { href: '/reports',       icon: BarChart2,        label: 'Reports' },
-  { href: '/settings',      icon: Settings,         label: 'Settings' },
+  { href: '/invoices',      icon: LayoutDashboard, label: 'Dashboard', exact: true },
+  { href: '/invoices/list', icon: FileText,         label: 'Documents', exact: false },
+  { href: '/capture',       icon: Camera,           label: 'Capture',   exact: true, primary: true },
+  { href: '/review',        icon: Monitor,          label: 'Review',    exact: false },
+  { href: '/reports',       icon: BarChart2,        label: 'Reports',   exact: false },
+  { href: '/settings',      icon: Settings,         label: 'Settings',  exact: false },
 ];
 
 export default function BottomNav() {
@@ -30,13 +31,17 @@ export default function BottomNav() {
         display: 'flex', alignItems: 'center',
         paddingBottom: 'env(safe-area-inset-bottom)',
         boxShadow: '0 -4px 20px rgba(0,0,0,0.5)',
+        overflowX: 'auto', scrollbarWidth: 'none',
       }}>
-        {tabs.map(({ href, icon: Icon, label, primary }) => {
-          const active = pathname === href || pathname.startsWith(href + '/');
+        {tabs.map(({ href, icon: Icon, label, primary, exact }) => {
+          const active = exact
+            ? pathname === href
+            : pathname === href || pathname.startsWith(href + '/');
           return (
             <Link key={href} href={href} style={{
-              flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
-              justifyContent: 'center', gap: 3, padding: '10px 0',
+              flex: '1 1 0',
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              justifyContent: 'center', gap: 3, padding: '10px 4px',
               textDecoration: 'none', position: 'relative',
             }}>
               {primary ? (
@@ -55,6 +60,7 @@ export default function BottomNav() {
                 fontFamily: "'Share Tech Mono', 'Courier New', monospace",
                 color: active || primary ? T.yellow : T.textMuted,
                 marginTop: primary ? 4 : 0,
+                whiteSpace: 'nowrap',
               }}>{label}</span>
               {active && !primary && (
                 <div style={{

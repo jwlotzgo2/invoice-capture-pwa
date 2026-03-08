@@ -19,13 +19,18 @@ const T = {
 function isDuplicate(inv: Invoice, all: Invoice[]): boolean {
   return all.some(other => {
     if (other.id === inv.id) return false;
-    const sameRef = inv.document_number && other.document_number &&
-      inv.document_number.trim().toLowerCase() === other.document_number.trim().toLowerCase();
-    const sameCombo = inv.supplier && other.supplier && inv.amount && other.amount &&
-      inv.supplier.toLowerCase() === other.supplier.toLowerCase() &&
-      inv.amount === other.amount &&
-      inv.invoice_date && other.invoice_date &&
-      inv.invoice_date === other.invoice_date;
+    // Doc ref match: both must be non-empty and at least 3 chars to avoid generic refs colliding
+    const aRef = inv.document_number?.trim().toLowerCase() || '';
+    const bRef = other.document_number?.trim().toLowerCase() || '';
+    const sameRef = aRef.length >= 3 && bRef.length >= 3 && aRef === bRef;
+    // Combo match: supplier + amount + date all must be present
+    const aSupplier = inv.supplier?.trim().toLowerCase() || '';
+    const bSupplier = other.supplier?.trim().toLowerCase() || '';
+    const sameCombo =
+      aSupplier.length > 0 && bSupplier.length > 0 &&
+      aSupplier === bSupplier &&
+      inv.amount != null && other.amount != null && inv.amount === other.amount &&
+      inv.invoice_date && other.invoice_date && inv.invoice_date === other.invoice_date;
     return !!(sameRef || sameCombo);
   });
 }
