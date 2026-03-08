@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import {
   ArrowLeft, Search, Grid, List, Download, FileText, Image as ImageIcon,
-  X, Link2, Check, ChevronDown, SlidersHorizontal, FolderOpen, ZipIcon,
+  X, Link2, Check, ChevronDown, SlidersHorizontal, FolderOpen, Archive,
   Eye, Calendar, Building2, Tag, Loader2,
 } from 'lucide-react';
 
