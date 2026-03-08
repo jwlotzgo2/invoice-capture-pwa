@@ -55,8 +55,8 @@ const css = `
   .review-title { font-family:var(--font-vt323),monospace;font-size:22px;letter-spacing:2px;color:${T.yellow};text-shadow:0 0 10px rgba(250,204,21,0.3);flex:1; }
   .review-body { flex:1;display:flex;overflow:hidden; }
 
-  /* LEFT PANEL */
-  .left-panel { width:340px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid ${T.border};background:${T.surface};overflow:hidden; }
+  /* LEFT PANEL — fixed 240px */
+  .left-panel { width:240px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid ${T.border};background:${T.surface};overflow:hidden; }
   .left-search { padding:10px;border-bottom:1px solid ${T.border}; }
   .left-search-inner { display:flex;align-items:center;gap:8px;background:${T.bg};border:1px solid ${T.border};border-radius:6px;padding:8px 10px; }
   .left-search-inner input { flex:1;border:none;background:transparent;outline:none;font-size:12px;font-family:var(--font-share-tech-mono),monospace;color:${T.text}; }
@@ -80,9 +80,9 @@ const css = `
   .badge-row { display:flex;gap:4px;flex-wrap:wrap; }
   .badge { display:inline-flex;align-items:center;padding:1px 6px;border-radius:3px;font-size:9px;text-transform:uppercase;letter-spacing:1px;border:1px solid;font-family:var(--font-share-tech-mono),monospace; }
 
-  /* RIGHT PANEL */
-  .right-panel { flex:1;display:flex;gap:0;overflow:hidden; }
-  .img-panel { flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;border-right:1px solid ${T.border};background:${T.bg}; }
+  /* RIGHT PANEL — image flex:1 (fills remaining), edit fixed 360px */
+  .right-panel { flex:1;display:flex;gap:0;overflow:hidden;min-width:0; }
+  .img-panel { flex:1;min-width:0;max-width:calc(100% - 360px);display:flex;flex-direction:column;overflow:hidden;border-right:1px solid ${T.border};background:${T.bg}; }
   .img-toolbar { padding:8px 12px;border-bottom:1px solid ${T.border};display:flex;align-items:center;gap:8px;background:${T.surface};flex-shrink:0; }
   .img-toolbar-btn { width:32px;height:32px;border-radius:4px;border:1px solid ${T.border};background:transparent;color:${T.textDim};cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s; }
   .img-toolbar-btn:hover { border-color:${T.blue};color:${T.blue}; }
@@ -93,8 +93,8 @@ const css = `
   .img-canvas img { display:block;transform-origin:top center;transition:transform 0.15s;cursor:zoom-in;touch-action:pinch-zoom; }
   .no-image { flex:1;display:flex;align-items:center;justify-content:center;color:${T.textMuted};font-size:13px;letter-spacing:2px;flex-direction:column;gap:12px; }
 
-  /* EDIT PANEL */
-  .edit-panel { width:340px;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden;background:${T.surface}; }
+  /* EDIT PANEL — fixed 360px */
+  .edit-panel { width:360px;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden;background:${T.surface}; }
   .edit-scroll { flex:1;overflow-y:auto;padding:14px;scrollbar-width:thin;scrollbar-color:${T.border} transparent; }
   .edit-scroll::-webkit-scrollbar { width:4px; }
   .edit-scroll::-webkit-scrollbar-thumb { background:${T.border};border-radius:2px; }
@@ -145,6 +145,24 @@ const css = `
   .match-bar.ok { background:rgba(74,222,128,0.08);border:1px solid ${T.success};color:${T.success}; }
   .match-bar.off { background:rgba(248,113,113,0.08);border:1px solid ${T.error};color:${T.error}; }
   .match-bar.empty { background:${T.surfaceHigh};border:1px solid ${T.border};color:${T.textMuted}; }
+  /* ── MOBILE (≤768px) ── */
+  @media (max-width:768px) {
+    .left-panel { width:100% !important;border-right:none; }
+    .right-panel { flex-direction:column; }
+    .img-panel { max-width:100% !important;height:45svh;flex:none;border-right:none;border-bottom:1px solid ${T.border}; }
+    .edit-panel { width:100% !important;flex:1; }
+    .mob-hidden { display:none !important; }
+    .mob-back { display:flex !important; }
+    .mob-only { display:flex !important; }
+    .review-body.mob-list .left-panel { display:flex; }
+    .review-body.mob-list .right-panel-wrap { display:none; }
+    .review-body.mob-detail .left-panel { display:none; }
+    .review-body.mob-detail .right-panel-wrap { display:flex;flex:1;flex-direction:column;overflow:hidden;min-width:0; }
+  }
+  @media (min-width:769px) {
+    .mob-back { display:none !important; }
+    .right-panel-wrap { display:flex;flex:1;overflow:hidden;min-width:0; }
+  }
 `;
 
 export default function ReviewPage() {
@@ -167,6 +185,7 @@ export default function ReviewPage() {
   const [duplicateWarning, setDuplicateWarning] = useState<string|null>(null);
   const [rescanning, setRescanning] = useState(false);
   const [rescanDone, setRescanDone] = useState(false);
+  const [mobileView, setMobileView] = useState<'list'|'detail'>('list');
   const imgRef = useRef<HTMLImageElement>(null);
   const supabase = createClient();
   const router = useRouter();
@@ -186,6 +205,7 @@ export default function ReviewPage() {
   const selectInvoice = (inv: Invoice) => {
     setSelected(inv);
     setZoom(1);
+    setMobileView('detail');
     setSaveError(null); setSavedFlash(false); setRescanDone(false);
     setFormData({supplier:inv.supplier||'',description:inv.description||'',invoice_date:inv.invoice_date||'',amount:inv.amount?.toString()||'',vat_amount:inv.vat_amount?.toString()||'',products_services:inv.products_services||'',business_name:inv.business_name||''});
     setCategory(inv.category||null);
@@ -273,12 +293,15 @@ export default function ReviewPage() {
         <div className="scanline"/>
 
         <header className="review-header">
-          <button onClick={()=>router.push('/invoices')} style={{width:36,height:36,borderRadius:6,border:`1px solid ${T.border}`,background:'transparent',color:T.textDim,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,fontFamily:'monospace'}}>←</button>
+          {mobileView==='detail'
+            ? <button className="mob-back" onClick={()=>setMobileView('list')} style={{background:'none',border:`1px solid ${T.border}`,borderRadius:4,color:T.textDim,padding:'5px 10px',cursor:'pointer',fontFamily:'var(--font-share-tech-mono),monospace',fontSize:11,letterSpacing:1,alignItems:'center',gap:4,flexShrink:0}}>← BACK</button>
+            : <button onClick={()=>router.push('/invoices')} style={{width:36,height:36,borderRadius:6,border:`1px solid ${T.border}`,background:'transparent',color:T.textDim,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,fontFamily:'monospace',flexShrink:0}}>←</button>
+          }
           <span className="review-title">GO CAPTURE · REVIEW<span className="t-cursor">_</span></span>
-          <span style={{fontSize:11,color:T.textMuted,letterSpacing:1}}>{filtered.length} / {invoices.length} documents</span>
+          <span style={{fontSize:11,color:T.textMuted,letterSpacing:1,flexShrink:0}}>{filtered.length} / {invoices.length}</span>
         </header>
 
-        <div className="review-body">
+        <div className={`review-body mob-${mobileView}`}>
           {/* ── LEFT PANEL ── */}
           <div className="left-panel">
             <div className="left-search">
@@ -324,7 +347,8 @@ export default function ReviewPage() {
             </div>
           </div>
 
-          {/* ── RIGHT PANEL ── */}
+          {/* ── RIGHT PANEL WRAP ── */}
+          <div className="right-panel-wrap">
           {!selected ? (
             <div className="empty-right">
               <div style={{width:64,height:64,borderRadius:8,border:`1px solid ${T.border}`,display:'flex',alignItems:'center',justifyContent:'center'}}>
@@ -485,6 +509,7 @@ export default function ReviewPage() {
               </div>
             </div>
           )}
+          </div>{/* end right-panel-wrap */}
         </div>
       </div>
     </>
