@@ -27,12 +27,15 @@ const SUPPORTED_PDF_TYPE = 'application/pdf';
 
 export async function POST(request: NextRequest) {
   try {
-    // ── 1. Verify webhook secret ──────────────────────────────────────
-    const secret = process.env.POSTMARK_WEBHOOK_SECRET;
-    if (secret) {
-      const incoming = request.headers.get('x-postmark-webhook-secret');
-      if (incoming !== secret) {
-        console.warn('Postmark webhook secret mismatch');
+    // ── 1. Verify HTTP Basic Auth (set in Postmark inbound settings) ──
+    const webhookPassword = process.env.POSTMARK_WEBHOOK_SECRET;
+    if (webhookPassword) {
+      const authHeader = request.headers.get('authorization') || '';
+      const base64 = authHeader.replace('Basic ', '');
+      const decoded = Buffer.from(base64, 'base64').toString('utf-8');
+      const password = decoded.split(':')[1] || decoded;
+      if (password !== webhookPassword) {
+        console.warn('Postmark webhook auth failed');
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
     }
