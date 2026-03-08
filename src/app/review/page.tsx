@@ -82,7 +82,7 @@ const css = `
 
   /* RIGHT PANEL */
   .right-panel { flex:1;display:flex;gap:0;overflow:hidden; }
-  .img-panel { flex:1;display:flex;flex-direction:column;overflow:hidden;border-right:1px solid ${T.border};background:${T.bg}; }
+  .img-panel { flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;border-right:1px solid ${T.border};background:${T.bg}; }
   .img-toolbar { padding:8px 12px;border-bottom:1px solid ${T.border};display:flex;align-items:center;gap:8px;background:${T.surface};flex-shrink:0; }
   .img-toolbar-btn { width:32px;height:32px;border-radius:4px;border:1px solid ${T.border};background:transparent;color:${T.textDim};cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s; }
   .img-toolbar-btn:hover { border-color:${T.blue};color:${T.blue}; }
@@ -94,7 +94,7 @@ const css = `
   .no-image { flex:1;display:flex;align-items:center;justify-content:center;color:${T.textMuted};font-size:13px;letter-spacing:2px;flex-direction:column;gap:12px; }
 
   /* EDIT PANEL */
-  .edit-panel { width:320px;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden;background:${T.surface}; }
+  .edit-panel { width:340px;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden;background:${T.surface}; }
   .edit-scroll { flex:1;overflow-y:auto;padding:14px;scrollbar-width:thin;scrollbar-color:${T.border} transparent; }
   .edit-scroll::-webkit-scrollbar { width:4px; }
   .edit-scroll::-webkit-scrollbar-thumb { background:${T.border};border-radius:2px; }
@@ -130,6 +130,21 @@ const css = `
   .rescan-btn.done { border-color:${T.success};color:${T.success}; }
   .f-row { margin-bottom:10px; }
   .two-col { display:grid;grid-template-columns:1fr 1fr;gap:8px; }
+  .li-row { display:grid;grid-template-columns:1fr 72px 72px 72px 24px;gap:4px;align-items:center;margin-bottom:4px; }
+  .li-input { width:100%;padding:5px 7px;background:${T.bg};border:1px solid ${T.border};border-radius:3px;color:${T.text};font-family:var(--font-share-tech-mono),monospace;font-size:11px;outline:none; }
+  .li-input:focus { border-color:${T.blue}; }
+  .li-input.amt { color:${T.yellow}; }
+  .li-input.amt:focus { border-color:${T.yellow}; }
+  .li-del { width:24px;height:24px;border-radius:3px;border:1px solid ${T.border};background:transparent;color:${T.textMuted};cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;transition:all 0.15s;flex-shrink:0; }
+  .li-del:hover { border-color:${T.error};color:${T.error}; }
+  .li-add-btn { width:100%;padding:6px;border:1px dashed ${T.border};border-radius:4px;background:transparent;color:${T.textDim};font-family:var(--font-share-tech-mono),monospace;font-size:10px;letter-spacing:1px;cursor:pointer;text-transform:uppercase;transition:all 0.15s;margin-top:4px; }
+  .li-add-btn:hover { border-color:${T.blue};color:${T.blue}; }
+  .li-header { display:grid;grid-template-columns:1fr 72px 72px 72px 24px;gap:4px;margin-bottom:4px; }
+  .li-col-label { font-size:8px;letter-spacing:1px;color:${T.textMuted};text-transform:uppercase; }
+  .match-bar { display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-radius:4px;margin-top:8px;margin-bottom:4px;font-size:10px;letter-spacing:1px; }
+  .match-bar.ok { background:rgba(74,222,128,0.08);border:1px solid ${T.success};color:${T.success}; }
+  .match-bar.off { background:rgba(248,113,113,0.08);border:1px solid ${T.error};color:${T.error}; }
+  .match-bar.empty { background:${T.surfaceHigh};border:1px solid ${T.border};color:${T.textMuted}; }
 `;
 
 export default function ReviewPage() {
@@ -145,6 +160,7 @@ export default function ReviewPage() {
   const [category, setCategory] = useState<InvoiceCategory|null>(null);
   const [projectId, setProjectId] = useState<string|null>(null);
   const [documentNumber, setDocumentNumber] = useState<string|null>(null);
+  const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [saving, setSaving] = useState(false);
   const [savedFlash, setSavedFlash] = useState(false);
   const [saveError, setSaveError] = useState<string|null>(null);
@@ -175,6 +191,7 @@ export default function ReviewPage() {
     setCategory(inv.category||null);
     setProjectId((inv as any).project_id||null);
     setDocumentNumber(inv.document_number||null);
+    setLineItems(Array.isArray(inv.line_items) ? inv.line_items : []);
     // Check duplicate
     setDuplicateWarning(null);
     const dupedDoc = findDuplicate(inv, invoices);
@@ -197,6 +214,7 @@ export default function ReviewPage() {
         products_services: formData.products_services||null, business_name: formData.business_name||null,
         category: category||null, project_id: projectId||null,
         document_number: documentNumber||null,
+        line_items: lineItems.length > 0 ? lineItems : null,
         status: 'reviewed', updated_at: new Date().toISOString(),
       }).eq('id', selected.id);
       if (error) throw error;
@@ -423,6 +441,40 @@ export default function ReviewPage() {
                     </select>
                     <span style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',color:T.blue,pointerEvents:'none',fontSize:11}}>▼</span>
                   </div>
+
+                  <div className="e-section-title" style={{marginTop:4}}>Line Items</div>
+                  {lineItems.length > 0 && (
+                    <div className="li-header">
+                      <span className="li-col-label">Description</span>
+                      <span className="li-col-label">Qty</span>
+                      <span className="li-col-label">Unit</span>
+                      <span className="li-col-label">Total</span>
+                      <span/>
+                    </div>
+                  )}
+                  {lineItems.map((item, i) => (
+                    <div key={i} className="li-row">
+                      <input className="li-input" value={item.description||''} onChange={e=>{const n=[...lineItems];n[i]={...n[i],description:e.target.value};setLineItems(n);}} placeholder="Description"/>
+                      <input className="li-input" type="number" value={item.quantity??''} onChange={e=>{const n=[...lineItems];n[i]={...n[i],quantity:e.target.value?parseFloat(e.target.value):undefined};setLineItems(n);}} placeholder="1"/>
+                      <input className="li-input amt" type="number" value={item.unit_price??''} onChange={e=>{const n=[...lineItems];n[i]={...n[i],unit_price:e.target.value?parseFloat(e.target.value):undefined,line_total:e.target.value&&n[i].quantity?(parseFloat(e.target.value)*n[i].quantity!):n[i].line_total};setLineItems(n);}} placeholder="0.00"/>
+                      <input className="li-input amt" type="number" value={item.line_total??''} onChange={e=>{const n=[...lineItems];n[i]={...n[i],line_total:e.target.value?parseFloat(e.target.value):undefined};setLineItems(n);}} placeholder="0.00"/>
+                      <button className="li-del" onClick={()=>setLineItems(lineItems.filter((_,j)=>j!==i))}>×</button>
+                    </div>
+                  ))}
+                  <button className="li-add-btn" onClick={()=>setLineItems([...lineItems,{description:'',quantity:1,unit_price:undefined,line_total:undefined}])}>+ Add Line</button>
+                  {(() => {
+                    const itemsTotal = lineItems.reduce((s,i)=>s+(i.line_total??0),0);
+                    const invTotal = formData.amount ? parseFloat(formData.amount) : 0;
+                    if (lineItems.length === 0) return <div className="match-bar empty"><span>No line items</span><span>—</span></div>;
+                    const match = invTotal > 0 && Math.abs(itemsTotal - invTotal) < 1;
+                    const diff = Math.abs(itemsTotal - invTotal);
+                    return (
+                      <div className={`match-bar ${invTotal === 0 ? 'empty' : match ? 'ok' : 'off'}`}>
+                        <span>{match ? '✓ Lines match total' : invTotal === 0 ? 'Enter amount to check' : `⚠ R ${Math.round(diff).toLocaleString('en-ZA')} off`}</span>
+                        <span style={{fontFamily:'var(--font-share-tech-mono),monospace'}}>R {Math.round(itemsTotal).toLocaleString('en-ZA')}</span>
+                      </div>
+                    );
+                  })()}
 
                 </div>
                 <div className="edit-footer">
