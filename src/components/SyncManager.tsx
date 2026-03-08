@@ -1,11 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { syncPendingInvoices } from '@/lib/syncInvoices';
-import { WifiOff, Wifi } from 'lucide-react';
+import { Wifi, WifiOff } from 'lucide-react';
 
 export default function SyncManager() {
   const [toast, setToast] = useState<{ msg: string; type: 'online' | 'offline' } | null>(null);
+  const router = useRouter();
+  const pathname = usePathname();
 
   const showToast = (msg: string, type: 'online' | 'offline') => {
     setToast({ msg, type });
@@ -13,23 +16,29 @@ export default function SyncManager() {
   };
 
   useEffect(() => {
-    const handleOnline = async () => {
-      const { synced } = await syncPendingInvoices();
-      if (synced > 0) {
-        showToast(`${synced} offline invoice${synced > 1 ? 's' : ''} uploaded`, 'online');
-      } else {
-        showToast('Back online', 'online');
+    const handleOffline = () => {
+      // Only redirect if not already on offline page
+      if (pathname !== '/offline') {
+        router.push('/offline');
       }
     };
 
-    const handleOffline = () => {
-      showToast('You\'re offline — captures will be saved locally', 'offline');
+    const handleOnline = async () => {
+      // Only handle if we came from offline page or were offline
+      const { synced } = await syncPendingInvoices();
+      if (synced > 0) {
+        showToast(`${synced} document${synced > 1 ? 's' : ''} uploaded and processed`, 'online');
+      }
+      // Navigate to dashboard if currently on offline page
+      if (window.location.pathname === '/offline') {
+        router.push('/');
+      }
     };
 
     const handleMessage = async (e: MessageEvent) => {
       if (e.data?.type === 'SYNC_INVOICES') {
         const { synced } = await syncPendingInvoices();
-        if (synced > 0) showToast(`${synced} invoice${synced > 1 ? 's' : ''} synced`, 'online');
+        if (synced > 0) showToast(`${synced} document${synced > 1 ? 's' : ''} synced`, 'online');
       }
     };
 
@@ -37,7 +46,7 @@ export default function SyncManager() {
     window.addEventListener('offline', handleOffline);
     navigator.serviceWorker?.addEventListener('message', handleMessage);
 
-    // Sync any pending on mount
+    // Sync any pending on mount if online
     if (navigator.onLine) syncPendingInvoices();
 
     return () => {
@@ -45,20 +54,21 @@ export default function SyncManager() {
       window.removeEventListener('offline', handleOffline);
       navigator.serviceWorker?.removeEventListener('message', handleMessage);
     };
-  }, []);
+  }, [pathname]);
 
   if (!toast) return null;
 
   return (
     <div style={{
       position: 'fixed', bottom: 90, left: 16, right: 16, zIndex: 9999,
-      background: '#282828', border: `1px solid ${toast.type === 'online' ? '#86efac' : '#fdba74'}`,
+      background: '#282828',
+      border: `1px solid ${toast.type === 'online' ? '#86efac' : '#fdba74'}`,
       borderRadius: 10, padding: '12px 16px',
       display: 'flex', alignItems: 'center', gap: 10,
       boxShadow: '0 4px 24px rgba(0,0,0,0.5)',
       animation: 'slideUp 0.2s ease',
     }}>
-      <style>{`@keyframes slideUp { from { transform: translateY(20px); opacity:0 } to { transform: translateY(0); opacity:1 } }`}</style>
+      <style>{`@keyframes slideUp { from { transform:translateY(20px);opacity:0 } to { transform:translateY(0);opacity:1 } }`}</style>
       {toast.type === 'online'
         ? <Wifi size={16} color="#86efac" />
         : <WifiOff size={16} color="#fdba74" />}
