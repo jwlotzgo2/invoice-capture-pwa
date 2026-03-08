@@ -1,18 +1,19 @@
 // Go Capture Service Worker — offline caching + push notifications
 
-const CACHE_NAME = 'go-capture-v1';
+const CACHE_NAME = 'go-capture-v2';
 
 // App shell — cache these on install
 const PRECACHE_URLS = [
   '/',
-  '/invoices/list',
   '/capture',
+  '/invoices/list',
   '/documents',
   '/review',
   '/settings',
   '/offline',
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
+  '/manifest.json',
 ];
 
 // ── Install: cache app shell ──────────────────────────────────────────

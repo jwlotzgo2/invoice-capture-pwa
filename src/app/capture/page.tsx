@@ -44,6 +44,7 @@ function CapturePageInner() {
       // getSession reads from local storage — works offline
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) setCachedUserId(session.user.id);
+      if (!navigator.onLine) return; // skip network fetch when offline
       const { data } = await supabase.from('projects').select('id, name').eq('user_id', session?.user?.id || '').order('name');
       setProjects(data || []);
     };
