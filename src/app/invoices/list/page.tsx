@@ -224,7 +224,7 @@ export default function InvoiceListPage() {
             <div className="empty-state">[ NO DOCUMENTS FOUND ]</div>
           ) : filtered.map(inv => {
             const matchStatus = getMatchStatus(inv);
-            const duped = findDuplicate(inv, invoices) !== null;
+            const dupedDoc = findDuplicate(inv, invoices);
             return (
               <div key={inv.id} className={`inv-card${dupedDoc?' duplicate':''}`} onClick={()=>router.push(`/invoices/${inv.id}`)}>
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:6}}>
