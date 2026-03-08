@@ -133,7 +133,7 @@ export default function AdminJournalPage() {
 
     const { data, count, error } = await q;
     if (!error) {
-      const items = (data || []) as ActivityRow[];
+      const items = (data || []) as unknown as ActivityRow[];
       if (reset) setRows(items); else setRows(prev => [...prev, ...items]);
       setTotal(count || 0);
       setHasMore((newOffset + PAGE_SIZE) < (count || 0));
