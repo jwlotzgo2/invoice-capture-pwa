@@ -31,13 +31,19 @@ export async function POST(request: NextRequest) {
     const webhookPassword = process.env.POSTMARK_WEBHOOK_SECRET;
     if (webhookPassword) {
       const authHeader = request.headers.get('authorization') || '';
+      console.log('Auth header present:', !!authHeader, '| starts with Basic:', authHeader.startsWith('Basic '));
       const base64 = authHeader.replace('Basic ', '');
       const decoded = Buffer.from(base64, 'base64').toString('utf-8');
-      const password = decoded.split(':')[1] || decoded;
+      const parts = decoded.split(':');
+      const username = parts[0];
+      const password = parts.slice(1).join(':'); // handles colons in password
+      console.log('Decoded username:', username, '| password length:', password.length, '| expected length:', webhookPassword.length);
       if (password !== webhookPassword) {
-        console.warn('Postmark webhook auth failed');
+        console.warn('Postmark webhook auth failed — password mismatch');
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
+    } else {
+      console.log('No POSTMARK_WEBHOOK_SECRET set — skipping auth');
     }
 
     // ── 2. Parse payload ──────────────────────────────────────────────
