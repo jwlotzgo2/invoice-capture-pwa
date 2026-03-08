@@ -1,26 +1,21 @@
-'use client';
-
-import { WifiOff, RefreshCw } from 'lucide-react';
-
 export default function OfflinePage() {
+  const T = { bg: '#1c1c1c', surface: '#282828', border: '#383838', text: '#f0f0f0', textDim: '#8a8a8a', yellow: '#e5e5e5' };
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gray-50">
-      <div className="text-center">
-        <div className="inline-flex items-center justify-center w-20 h-20 bg-gray-200 rounded-full mb-6">
-          <WifiOff className="text-gray-500" size={40} />
+    <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Go Capture — Offline</title>
+      </head>
+      <body style={{ margin: 0, background: T.bg, color: T.text, fontFamily: 'Inter, system-ui, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100svh', flexDirection: 'column', gap: 16, padding: 24, textAlign: 'center' }}>
+        <div style={{ fontSize: 48 }}>📡</div>
+        <div style={{ fontSize: 20, fontWeight: 600, color: T.yellow }}>You're offline</div>
+        <div style={{ fontSize: 14, color: T.textDim, maxWidth: 280, lineHeight: 1.6 }}>
+          No connection detected. Pages you've visited recently are still available — try navigating back.
         </div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">You&apos;re Offline</h1>
-        <p className="text-gray-600 mb-8 max-w-sm">
-          It looks like you&apos;ve lost your internet connection. Some features may not be available.
-        </p>
-        <button
-          onClick={() => window.location.reload()}
-          className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-        >
-          <RefreshCw size={20} />
-          Try Again
+        <button onClick={() => window.location.reload()} style={{ marginTop: 8, padding: '10px 24px', borderRadius: 8, border: `1px solid ${T.border}`, background: T.surface, color: T.text, fontSize: 14, cursor: 'pointer' }}>
+          Try again
         </button>
-      </div>
-    </div>
+      </body>
+    </html>
   );
 }
