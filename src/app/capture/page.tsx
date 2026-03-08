@@ -20,6 +20,7 @@ function CapturePageInner() {
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fileType, setFileType] = useState<string>('image/jpeg');
   const [isOnline, setIsOnline] = useState(true);
   const [queuedOffline, setQueuedOffline] = useState(false);
   const [ocrConfidence, setOcrConfidence] = useState<number | null>(null);
@@ -99,8 +100,18 @@ function CapturePageInner() {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const type = file.type || 'image/jpeg';
+    setFileType(type);
     const reader = new FileReader();
-    reader.onloadend = () => handleCapture(reader.result as string);
+    reader.onloadend = () => {
+      if (type === 'application/pdf') {
+        // For PDFs, store base64 and skip OCR preview — go straight to review
+        setCapturedImage(reader.result as string);
+        setStep('review');
+      } else {
+        handleCapture(reader.result as string);
+      }
+    };
     reader.readAsDataURL(file);
   };
 
@@ -155,11 +166,13 @@ function CapturePageInner() {
       let imagePath = null;
 
       if (capturedImage) {
-        const fileName = `${user.id}/${Date.now()}.jpg`;
+        const isPdf = fileType === 'application/pdf';
+        const ext = isPdf ? 'pdf' : 'jpg';
+        const fileName = `${user.id}/${Date.now()}.${ext}`;
         const base64Data = capturedImage.split(',')[1];
         const binaryData = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
         const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('invoices').upload(fileName, binaryData, { contentType: 'image/jpeg', upsert: false });
+          .from('invoices').upload(fileName, binaryData, { contentType: fileType, upsert: false });
         if (uploadError) throw uploadError;
         imagePath = uploadData.path;
         const { data: urlData } = supabase.storage.from('invoices').getPublicUrl(imagePath);
@@ -221,7 +234,7 @@ function CapturePageInner() {
             How would you like<br />to add an invoice?
           </h2>
           <p style={{ fontSize: 14, color: '#64748b', textAlign: 'center', margin: '0 0 28px' }}>
-            Take a photo or upload an existing image
+            Take a photo or upload an image or PDF
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', maxWidth: 360 }}>
@@ -240,7 +253,7 @@ function CapturePageInner() {
                 <Upload size={24} color="#2563eb" />
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 2 }}>Upload Image</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 2 }}>Upload File</div>
                 <div style={{ fontSize: 13, color: '#64748b' }}>Choose a file from your device</div>
               </div>
             </div>
@@ -257,7 +270,7 @@ function CapturePageInner() {
           </div>
         </div>
 
-        <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} style={{ display: 'none' }} />
+        <input ref={fileInputRef} type="file" accept="image/*,application/pdf,.pdf,.heic,.heif" onChange={handleFileUpload} style={{ display: 'none' }} />
       </div>
     );
   }
@@ -451,7 +464,8 @@ function CapturePageInner() {
             onCancel={handleBack}
             isLoading={saving}
             submitLabel="Save Invoice"
-            imagePreview={capturedImage}
+            imagePreview={fileType === 'application/pdf' ? null : capturedImage}
+            pdfPreview={fileType === 'application/pdf' ? capturedImage : null}
           />
         </div>
       </main>

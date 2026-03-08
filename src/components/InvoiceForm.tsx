@@ -11,6 +11,7 @@ interface InvoiceFormProps {
   isLoading?: boolean;
   submitLabel?: string;
   imagePreview?: string | null;
+  pdfPreview?: string | null;
 }
 
 const T = {
@@ -37,7 +38,7 @@ const fieldTextarea: React.CSSProperties = {
 
 export default function InvoiceForm({
   formData, onChange, onSubmit, onCancel,
-  isLoading = false, submitLabel = 'Save Invoice', imagePreview,
+  isLoading = false, submitLabel = 'Save Invoice', imagePreview, pdfPreview,
 }: InvoiceFormProps) {
   const handleChange = (field: keyof InvoiceFormData, value: string) => {
     onChange({ ...formData, [field]: value });
@@ -58,6 +59,13 @@ export default function InvoiceForm({
           <span style={fieldLabel}>Invoice Image</span>
           <img src={imagePreview} alt="Invoice preview"
             style={{ width: '100%', maxHeight: 180, objectFit: 'contain', borderRadius: 6, border: `1px solid ${T.border}` }} />
+        </div>
+      )}
+
+      {pdfPreview && (
+        <div>
+          <span style={fieldLabel}>PDF Document</span>
+          <iframe src={pdfPreview} style={{ width: '100%', height: 200, borderRadius: 6, border: `1px solid ${T.border}`, background: T.bg }} />
         </div>
       )}
 
