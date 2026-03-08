@@ -52,7 +52,7 @@ const css = `
   .review-layout { display:flex;flex-direction:column;height:100svh;background:${T.bg};font-family:Inter, system-ui, sans-serif,Inter, system-ui, sans-serif;color:${T.text}; }
   .scanline { position:fixed;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px);pointer-events:none;z-index:1000; }
   .review-header { background:${T.surface};border-bottom:1px solid ${T.border};padding:12px 20px;display:flex;align-items:center;gap:12px;flex-shrink:0;box-shadow:0 0 20px rgba(138,138,138,0.08); }
-  .review-title { font-family:Inter, system-ui, sans-serif;font-size:22px;letter-spacing:0.3px;color:${T.yellow};text-shadow:0 0 10px rgba(229,229,229,0.12);flex:1; }
+  .review-title { font-family:Inter, system-ui, sans-serif;font-size:22px;color:${T.yellow};text-shadow:0 0 10px rgba(229,229,229,0.12);flex:1; }
   .review-body { flex:1;display:flex;overflow:hidden; }
 
   /* LEFT PANEL — fixed 240px */
@@ -297,7 +297,7 @@ export default function ReviewPage() {
             ? <button className="mob-back" onClick={()=>setMobileView('list')} style={{background:'none',border:`1px solid ${T.border}`,borderRadius:4,color:T.textDim,padding:'5px 10px',cursor:'pointer',fontFamily:'Inter, system-ui, sans-serif',fontSize:11,letterSpacing:1,alignItems:'center',gap:4,flexShrink:0}}>← BACK</button>
             : <button onClick={()=>router.push('/invoices')} style={{width:36,height:36,borderRadius:6,border:`1px solid ${T.border}`,background:'transparent',color:T.textDim,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,fontFamily:'monospace',flexShrink:0}}>←</button>
           }
-          <span className="review-title">GO CAPTURE · REVIEW<span className="t-cursor">_</span></span>
+          <span className="review-title">Go Capture · Review</span>
           <span style={{fontSize:11,color:T.textMuted,letterSpacing:1,flexShrink:0}}>{filtered.length} / {invoices.length}</span>
         </header>
 

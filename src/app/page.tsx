@@ -263,7 +263,7 @@ export default function InvoicesPage() {
           <div className="header-top">
             <div className="header-logo">
               <div className="header-logo-mark"><Receipt size={16} color="#fff" /></div>
-              <span className="header-title">Invoice Capture</span>
+              <span className="header-title">Go Capture</span>
             </div>
             <div className="header-actions">
               {isAdmin && (

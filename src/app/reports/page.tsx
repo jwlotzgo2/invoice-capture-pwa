@@ -186,7 +186,7 @@ export default function ReportsPage() {
       <div className="rep-page">
         <div className="scanline"/>
         <header className="rep-header">
-          <div className="rep-title">REPORTS<span className="t-cursor">_</span></div>
+          <div className="rep-title">Reports</div>
         </header>
 
         {/* Period filter */}

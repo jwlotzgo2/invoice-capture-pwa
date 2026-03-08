@@ -220,7 +220,7 @@ export default function InvoiceListPage() {
           {loading ? (
             <div className="empty-state">LOADING…</div>
           ) : filtered.length===0 ? (
-            <div className="empty-state">[ NO DOCUMENTS FOUND ]</div>
+            <div className="empty-state">[ NO Documents FOUND ]</div>
           ) : filtered.map(inv => {
             const matchStatus = getMatchStatus(inv);
             const dupedDoc = findDuplicate(inv, invoices);

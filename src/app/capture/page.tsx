@@ -202,7 +202,7 @@ function CapturePageInner() {
         <div className="scanline" />
         <header className="cap-header">
           <button onClick={() => router.push('/invoices')} className="btn-icon"><ArrowLeft size={18}/></button>
-          <span className="cap-title">GO CAPTURE<span className="t-cursor">_</span></span>
+          <span className="cap-title">GO CAPTURE</span>
         </header>
         <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'40px 24px'}}>
           <div style={{fontFamily:'Inter, system-ui, sans-serif',fontSize:16,letterSpacing:0.5,color:T.textMuted,marginBottom:24,textTransform:'none'}}>Select Capture Method</div>
@@ -256,7 +256,7 @@ function CapturePageInner() {
         <header className="cap-header">
           <button onClick={handleBack} className="btn-icon"><ArrowLeft size={18}/></button>
           <div style={{flex:1}}>
-            <div className="cap-title">REVIEW<span className="t-cursor">_</span></div>
+            <div className="cap-title">REVIEW</div>
             {ocrConfidence !== null && <div className="cap-sub">OCR CONFIDENCE: {Math.round(ocrConfidence*100)}%</div>}
           </div>
         </header>

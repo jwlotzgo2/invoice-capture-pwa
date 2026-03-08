@@ -108,7 +108,7 @@ export default function SettingsPage() {
         <div className="scanline" />
 
         <header className="settings-header">
-          <div className="settings-title">SETTINGS<span className="t-cursor">_</span></div>
+          <div className="settings-title">Settings</div>
         </header>
 
         <main style={{ padding:16, maxWidth:480, margin:'0 auto', paddingBottom:100 }}>
