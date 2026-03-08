@@ -47,8 +47,4 @@ export default function RootLayout({
     </html>
   );
 }
-useEffect(() => {
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js');
-  }
-}, []);
+
