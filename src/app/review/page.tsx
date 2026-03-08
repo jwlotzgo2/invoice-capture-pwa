@@ -295,7 +295,7 @@ export default function ReviewPage() {
         <header className="review-header">
           {mobileView==='detail'
             ? <button className="mob-back" onClick={()=>setMobileView('list')} style={{background:'none',border:`1px solid ${T.border}`,borderRadius:4,color:T.textDim,padding:'5px 10px',cursor:'pointer',fontFamily:'Inter, system-ui, sans-serif',fontSize:11,letterSpacing:1,alignItems:'center',gap:4,flexShrink:0}}>← BACK</button>
-            : <button onClick={()=>router.push('/invoices')} style={{width:36,height:36,borderRadius:6,border:`1px solid ${T.border}`,background:'transparent',color:T.textDim,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,fontFamily:'monospace',flexShrink:0}}>←</button>
+            : <button onClick={()=>router.push('/')} style={{width:36,height:36,borderRadius:6,border:`1px solid ${T.border}`,background:'transparent',color:T.textDim,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,fontFamily:'monospace',flexShrink:0}}>←</button>
           }
           <span className="review-title">Go Capture · Review</span>
           <span style={{fontSize:11,color:T.textMuted,letterSpacing:1,flexShrink:0}}>{filtered.length} / {invoices.length}</span>

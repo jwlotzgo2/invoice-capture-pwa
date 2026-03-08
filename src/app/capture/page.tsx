@@ -178,7 +178,7 @@ function CapturePageInner() {
         document_type: 'invoice', doc_status: 'open',
       });
       if (insertError) throw insertError;
-      router.push('/invoices');
+      router.push('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save');
     } finally { setSaving(false); }
@@ -186,7 +186,7 @@ function CapturePageInner() {
 
   const handleBack = () => {
     if (step === 'review' || step === 'capture') { setStep('choose'); setCapturedImage(null); }
-    else router.push('/invoices');
+    else router.push('/');
   };
 
   const fc = (field: keyof InvoiceFormData, val: string) => setFormData(p => ({ ...p, [field]: val }));
@@ -201,7 +201,7 @@ function CapturePageInner() {
       <div className="cap-page">
         <div className="scanline" />
         <header className="cap-header">
-          <button onClick={() => router.push('/invoices')} className="btn-icon"><ArrowLeft size={18}/></button>
+          <button onClick={() => router.push('/')} className="btn-icon"><ArrowLeft size={18}/></button>
           <span className="cap-title">GO CAPTURE</span>
         </header>
         <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'40px 24px'}}>

@@ -162,7 +162,7 @@ export default function InvoiceListPage() {
 
         <header className="list-header">
           <div className="list-header-top">
-            <button onClick={() => router.push('/invoices')} style={{ width:36,height:36,borderRadius:6,border:`1px solid ${T.border}`,background:'transparent',display:'flex',alignItems:'center',justifyContent:'center',color:T.textDim,cursor:'pointer',flexShrink:0,fontSize:16,fontFamily:'monospace' }}>←</button>
+            <button onClick={() => router.push('/')} style={{ width:36,height:36,borderRadius:6,border:`1px solid ${T.border}`,background:'transparent',display:'flex',alignItems:'center',justifyContent:'center',color:T.textDim,cursor:'pointer',flexShrink:0,fontSize:16,fontFamily:'monospace' }}>←</button>
             <div className="list-search">
               <Search size={16} color={T.textMuted} />
               <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search supplier, description, doc no…" />

@@ -158,7 +158,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
         project_id:projectId||null, status:'reviewed', updated_at:new Date().toISOString(),
       }).eq('id', id);
       if (updateError) throw updateError;
-      router.push('/invoices');
+      router.push('/');
     } catch (err) { setError(err instanceof Error ? err.message : 'Failed to save'); setSaving(false); }
   };
 
@@ -169,7 +169,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       if (invoice?.image_path) await supabase.storage.from('invoices').remove([invoice.image_path]);
       const { error: deleteError } = await supabase.from('invoices').delete().eq('id', id);
       if (deleteError) throw deleteError;
-      router.push('/invoices');
+      router.push('/');
     } catch (err) { setError(err instanceof Error ? err.message : 'Failed to delete'); setDeleting(false); }
   };
 
@@ -198,7 +198,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       <div className="detail-page" style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:24}}>
         <AlertCircle size={48} color={T.error}/>
         <p style={{fontSize:17,color:T.text,margin:'16px 0 8px'}}>Invoice not found</p>
-        <button onClick={()=>router.push('/invoices')} style={{color:T.blue,background:'none',border:'none',cursor:'pointer',fontFamily:'Inter, system-ui, sans-serif'}}>← Back</button>
+        <button onClick={()=>router.push('/')} style={{color:T.blue,background:'none',border:'none',cursor:'pointer',fontFamily:'Inter, system-ui, sans-serif'}}>← Back</button>
       </div>
     </>
   );
@@ -219,7 +219,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
 
         <header className="detail-header">
           <div style={{display:'flex',alignItems:'center',gap:10,flex:1,minWidth:0}}>
-            <button onClick={()=>router.push('/invoices')} className="btn-icon"><ArrowLeft size={18}/></button>
+            <button onClick={()=>router.push('/')} className="btn-icon"><ArrowLeft size={18}/></button>
             <div style={{minWidth:0}}>
               <div style={{fontFamily:'Inter, system-ui, sans-serif',fontSize:20,letterSpacing:0.5,color:T.yellow,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
                 {invoice.supplier||'DOCUMENT DETAILS'}<span className="t-cursor">_</span>

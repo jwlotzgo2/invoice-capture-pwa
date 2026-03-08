@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { User, Building2, Phone, Mail, LogOut, Shield, ChevronRight, Loader2, Check } from 'lucide-react';
+import { User, Building2, Phone, Mail, LogOut, Shield, ChevronRight, Loader2, Check, FolderOpen } from 'lucide-react';
 
 interface Profile {
   full_name: string; email: string; phone: string | null;
@@ -175,6 +175,20 @@ export default function SettingsPage() {
                 ))}
               </>
             )}
+          </div>
+
+          {/* Projects link */}
+          <div className="t-card">
+            <button onClick={() => router.push('/projects')} style={{ width:'100%',border:'none',background:'transparent',cursor:'pointer',textAlign:'left',fontFamily:'inherit' }}>
+              <div className="t-row last" style={{ border:'none' }}>
+                <FolderOpen size={16} color={T.textDim} />
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:13,color:T.text }}>Projects</div>
+                  <div style={{ fontSize:11,color:T.textMuted,marginTop:2 }}>Create and manage project tags</div>
+                </div>
+                <ChevronRight size={14} color={T.textMuted} />
+              </div>
+            </button>
           </div>
 
           {/* Admin link */}
