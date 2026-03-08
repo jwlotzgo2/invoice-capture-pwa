@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { Invoice, InvoiceFilters } from '@/types/invoice';
-import { Camera, Shield, TrendingUp, FileText, Receipt, Building2, ChevronRight, Upload } from 'lucide-react';
+import { Camera, Shield, TrendingUp, FileText, Receipt, Building2, ChevronRight, Upload, Bell } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, startOfYear, endOfYear, subMonths } from 'date-fns';
 
 type Period = 'this_month' | 'last_month' | 'this_year' | 'last_year' | 'all';
@@ -64,6 +64,7 @@ export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
   const [period, setPeriod] = useState<Period>('this_month');
   const [filters] = useState<InvoiceFilters>({ search: '', status: '', dateFrom: '', dateTo: '', sortBy: 'created_at', sortOrder: 'desc' });
   const router = useRouter();
@@ -84,6 +85,14 @@ export default function InvoicesPage() {
       if (user) {
         const { data: profile } = await supabase.from('user_profiles').select('role').eq('id', user.id).single();
         setIsAdmin(profile?.role === 'admin');
+        // Count invoices from email that haven't been reviewed yet
+        const { count } = await supabase
+          .from('invoices')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('source', 'email')
+          .eq('status', 'pending_review');
+        setPendingCount(count || 0);
       }
     };
     checkAdmin();
@@ -178,6 +187,8 @@ export default function InvoicesPage() {
         .header-actions { display: flex; gap: 4px; }
         .icon-btn { width: 36px; height: 36px; border-radius: 8px; border: none; background: transparent; display: flex; align-items: center; justify-content: center; color: var(--ink-3); cursor: pointer; }
         .icon-btn.admin { color: #7c3aed; }
+        .bell-wrap { position: relative; display: inline-flex; }
+        .bell-badge { position: absolute; top: -4px; right: -4px; min-width: 16px; height: 16px; border-radius: 8px; background: var(--rose); color: #fff; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; padding: 0 4px; pointer-events: none; border: 2px solid var(--card); line-height: 1; }
 
 
         /* Period Filter */
@@ -266,6 +277,17 @@ export default function InvoicesPage() {
               <span className="header-title">Go Capture</span>
             </div>
             <div className="header-actions">
+              <button
+                className="icon-btn bell-wrap"
+                onClick={() => router.push('/review')}
+                title="Pending review"
+                style={{ position: 'relative' }}
+              >
+                <Bell size={18} />
+                {pendingCount > 0 && (
+                  <span className="bell-badge">{pendingCount > 99 ? '99+' : pendingCount}</span>
+                )}
+              </button>
               {isAdmin && (
                 <Link href="/admin" className="icon-btn admin" title="Admin"><Shield size={18} /></Link>
               )}
