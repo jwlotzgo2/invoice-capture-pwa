@@ -14,7 +14,7 @@ const T = {
   yellow: '#facc15', yellowGlow: 'rgba(250,204,21,0.15)',
   blue: '#6366f1', blueGlow: 'rgba(99,102,241,0.2)',
   text: '#e2e8f0', textDim: '#94a3b8', textMuted: '#475569',
-  error: '#f87171', success: '#4ade80',
+  error: '#f87171', success: '#4ade80', warning: '#fb923c',
 };
 
 const css = `
