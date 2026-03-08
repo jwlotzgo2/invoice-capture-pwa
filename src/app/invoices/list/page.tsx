@@ -43,28 +43,27 @@ function getMatchStatus(inv: Invoice): 'match' | 'off' | 'none' {
 }
 
 const css = `
-  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap');
   * { box-sizing:border-box; }
   body { background:${T.bg};margin:0; }
-  .list-page { font-family:'Share Tech Mono','Courier New',monospace;min-height:100svh;background:${T.bg};color:${T.text}; }
+  .list-page { font-family:var(--font-share-tech-mono),'Courier New',monospace;min-height:100svh;background:${T.bg};color:${T.text}; }
   .scanline { position:fixed;top:0;left:0;right:0;bottom:0;
     background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px);
     pointer-events:none;z-index:1000; }
   .list-header { background:${T.surface};border-bottom:1px solid ${T.border};position:sticky;top:0;z-index:40;box-shadow:0 0 20px rgba(99,102,241,0.08); }
   .list-header-top { padding:12px 16px;display:flex;align-items:center;gap:10px; }
   .list-search { flex:1;display:flex;align-items:center;gap:8px;background:${T.bg};border:1px solid ${T.border};border-radius:6px;padding:8px 12px; }
-  .list-search input { flex:1;border:none;background:transparent;outline:none;font-size:13px;font-family:'Share Tech Mono',monospace;color:${T.text};letter-spacing:0.5px; }
+  .list-search input { flex:1;border:none;background:transparent;outline:none;font-size:13px;font-family:var(--font-share-tech-mono),monospace;color:${T.text};letter-spacing:0.5px; }
   .list-search input::placeholder { color:${T.textMuted}; }
   .icon-btn { width:38px;height:38px;border-radius:6px;border:1px solid ${T.border};background:transparent;display:flex;align-items:center;justify-content:center;color:${T.textDim};cursor:pointer;flex-shrink:0;transition:border-color 0.2s,color 0.2s; }
   .icon-btn:hover { border-color:${T.blue};color:${T.blue}; }
   .icon-btn.active { border-color:${T.yellow};background:${T.yellowGlow};color:${T.yellow}; }
   .filter-panel { padding:12px 16px;background:${T.surface};border-top:1px solid ${T.border};display:flex;flex-wrap:wrap;gap:8px;align-items:center; }
-  .f-select,.f-input { padding:7px 10px;border:1px solid ${T.border};border-radius:4px;font-size:12px;font-family:'Share Tech Mono',monospace;color:${T.text};background:${T.bg};outline:none; }
+  .f-select,.f-input { padding:7px 10px;border:1px solid ${T.border};border-radius:4px;font-size:12px;font-family:var(--font-share-tech-mono),monospace;color:${T.text};background:${T.bg};outline:none; }
   .f-input { width:130px; }
   .summary-bar { padding:8px 16px;background:${T.surface};border-bottom:1px solid ${T.border};display:flex;align-items:center;justify-content:space-between;font-size:12px;color:${T.textDim};letter-spacing:0.5px; }
   .sort-bar { display:flex;gap:6px;padding:10px 16px;overflow-x:auto;scrollbar-width:none; }
   .sort-bar::-webkit-scrollbar { display:none; }
-  .sort-pill { padding:5px 12px;border-radius:4px;border:1px solid ${T.border};background:transparent;font-size:11px;color:${T.textDim};cursor:pointer;font-family:'Share Tech Mono',monospace;display:flex;align-items:center;gap:4px;white-space:nowrap;letter-spacing:1px;text-transform:uppercase; }
+  .sort-pill { padding:5px 12px;border-radius:4px;border:1px solid ${T.border};background:transparent;font-size:11px;color:${T.textDim};cursor:pointer;font-family:var(--font-share-tech-mono),monospace;display:flex;align-items:center;gap:4px;white-space:nowrap;letter-spacing:1px;text-transform:uppercase; }
   .sort-pill.active { border-color:${T.yellow};background:${T.yellowGlow};color:${T.yellow}; }
   .card-list { padding:0 16px 100px;display:flex;flex-direction:column;gap:10px; }
   .inv-card { background:${T.surface};border-radius:8px;border:1px solid ${T.border};padding:14px;cursor:pointer;transition:border-color 0.15s,box-shadow 0.15s;position:relative;overflow:hidden; }
@@ -72,9 +71,9 @@ const css = `
   .inv-card:hover { border-color:${T.blue};box-shadow:0 0 16px rgba(99,102,241,0.15); }
   .inv-card.duplicate { border-color:rgba(251,146,60,0.4); }
   .inv-card.duplicate::before { background:linear-gradient(90deg,transparent,${T.warning},transparent); }
-  .badge { display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:10px;text-transform:uppercase;letter-spacing:1px;border:1px solid;font-family:'Share Tech Mono',monospace; }
+  .badge { display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:10px;text-transform:uppercase;letter-spacing:1px;border:1px solid;font-family:var(--font-share-tech-mono),monospace; }
   .empty-state { text-align:center;padding:60px 24px;color:${T.textMuted};font-size:13px;letter-spacing:1px; }
-  .filter-chip { padding:4px 10px;border-radius:4px;border:1px solid ${T.border};background:transparent;font-size:11px;color:${T.textDim};cursor:pointer;font-family:'Share Tech Mono',monospace;letter-spacing:1px;text-transform:uppercase;transition:all 0.15s;white-space:nowrap; }
+  .filter-chip { padding:4px 10px;border-radius:4px;border:1px solid ${T.border};background:transparent;font-size:11px;color:${T.textDim};cursor:pointer;font-family:var(--font-share-tech-mono),monospace;letter-spacing:1px;text-transform:uppercase;transition:all 0.15s;white-space:nowrap; }
   .filter-chip.active { border-color:${T.yellow};background:${T.yellowGlow};color:${T.yellow}; }
 `;
 
@@ -198,7 +197,7 @@ export default function InvoiceListPage() {
               <input type="date" className="f-input" value={filterDateTo} onChange={e=>setFilterDateTo(e.target.value)} />
               {(filterSupplier||filterProject||filterDateFrom||filterDateTo) && (
                 <button onClick={()=>{setFilterSupplier('');setFilterProject('');setFilterDateFrom('');setFilterDateTo('');}}
-                  style={{fontSize:12,color:T.error,background:'none',border:'none',cursor:'pointer',fontFamily:'Share Tech Mono,monospace',letterSpacing:1}}>CLEAR</button>
+                  style={{fontSize:12,color:T.error,background:'none',border:'none',cursor:'pointer',fontFamily:'var(--font-share-tech-mono),monospace',letterSpacing:1}}>CLEAR</button>
               )}
             </div>
           )}
@@ -206,7 +205,7 @@ export default function InvoiceListPage() {
 
         <div className="summary-bar">
           <span>{filtered.length} of {invoices.length} documents</span>
-          <span style={{color:T.yellow,fontFamily:'Share Tech Mono,monospace'}}>{fmtZAR(total)}</span>
+          <span style={{color:T.yellow,fontFamily:'var(--font-share-tech-mono),monospace'}}>{fmtZAR(total)}</span>
         </div>
 
         <div className="sort-bar">
@@ -230,11 +229,11 @@ export default function InvoiceListPage() {
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:6}}>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontSize:14,color:T.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{inv.supplier||'Unknown Supplier'}</div>
-                    {inv.document_number && <div style={{fontSize:11,color:T.textMuted,fontFamily:'Share Tech Mono,monospace',marginTop:2}}>#{inv.document_number}</div>}
+                    {inv.document_number && <div style={{fontSize:11,color:T.textMuted,fontFamily:'var(--font-share-tech-mono),monospace',marginTop:2}}>#{inv.document_number}</div>}
                     {inv.description && <div style={{fontSize:12,color:T.textMuted,marginTop:2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{inv.description}</div>}
                   </div>
                   <div style={{textAlign:'right',flexShrink:0,marginLeft:12}}>
-                    <div style={{fontSize:16,color:T.yellow,fontFamily:'Share Tech Mono,monospace'}}>{inv.amount?fmtZAR(inv.amount):'—'}</div>
+                    <div style={{fontSize:16,color:T.yellow,fontFamily:'var(--font-share-tech-mono),monospace'}}>{inv.amount?fmtZAR(inv.amount):'—'}</div>
                     {inv.invoice_date && <div style={{fontSize:11,color:T.textMuted,marginTop:2}}>{new Date(inv.invoice_date).toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'})}</div>}
                   </div>
                 </div>

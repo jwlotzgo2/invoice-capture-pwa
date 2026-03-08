@@ -24,10 +24,9 @@ const fmtZAR = (n: number | null | undefined) =>
   n != null ? `R ${Math.round(n).toLocaleString('en-ZA')}` : null;
 
 const css = `
-  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap');
   * { box-sizing:border-box; }
   body { background:${T.bg};margin:0; }
-  .detail-page { min-height:100svh;background:${T.bg};font-family:'Share Tech Mono','Courier New',monospace;color:${T.text}; }
+  .detail-page { min-height:100svh;background:${T.bg};font-family:var(--font-share-tech-mono),'Courier New',monospace;color:${T.text}; }
   .scanline { position:fixed;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px);pointer-events:none;z-index:1000; }
   .detail-header { background:${T.surface};border-bottom:1px solid ${T.border};padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40;box-shadow:0 0 20px rgba(99,102,241,0.08); }
   .btn-icon { width:38px;height:38px;border-radius:6px;border:1px solid ${T.border};background:transparent;color:${T.textDim};cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s; }
@@ -36,17 +35,17 @@ const css = `
   .btn-icon.ok { border-color:${T.success};color:${T.success}; }
   .t-card { background:${T.surface};border:1px solid ${T.border};border-radius:8px;padding:16px;margin-bottom:12px;position:relative;overflow:hidden; }
   .t-card::before { content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,${T.blue},transparent);opacity:0.4; }
-  .t-card-title { font-family:'VT323',monospace;font-size:16px;letter-spacing:2px;color:${T.yellow};text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px; }
+  .t-card-title { font-family:var(--font-vt323),monospace;font-size:16px;letter-spacing:2px;color:${T.yellow};text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px; }
   .t-card-title::before { content:'>';color:${T.blue}; }
-  .t-pill { padding:6px 12px;border-radius:4px;border:1px solid ${T.border};background:transparent;color:${T.textDim};font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:1px;cursor:pointer;transition:all 0.15s;text-transform:uppercase; }
+  .t-pill { padding:6px 12px;border-radius:4px;border:1px solid ${T.border};background:transparent;color:${T.textDim};font-family:var(--font-share-tech-mono),monospace;font-size:11px;letter-spacing:1px;cursor:pointer;transition:all 0.15s;text-transform:uppercase; }
   .t-pill:hover { border-color:${T.blue};color:${T.text}; }
   .t-pill.active { border-color:${T.yellow};background:${T.yellowGlow};color:${T.yellow}; }
   .detail-label { font-size:10px;letter-spacing:2px;color:${T.text};text-transform:uppercase;margin-bottom:4px; }
-  .detail-value { font-size:14px;color:${T.text};font-family:'Share Tech Mono',monospace; }
-  .badge { display:inline-flex;align-items:center;padding:3px 10px;border-radius:4px;font-size:10px;text-transform:uppercase;letter-spacing:1px;border:1px solid;font-family:'Share Tech Mono',monospace; }
+  .detail-value { font-size:14px;color:${T.text};font-family:var(--font-share-tech-mono),monospace; }
+  .badge { display:inline-flex;align-items:center;padding:3px 10px;border-radius:4px;font-size:10px;text-transform:uppercase;letter-spacing:1px;border:1px solid;font-family:var(--font-share-tech-mono),monospace; }
   .err-bar { display:flex;align-items:center;gap:8px;padding:12px;background:rgba(248,113,113,0.1);border:1px solid ${T.error};border-radius:6px;margin-bottom:16px;color:${T.error};font-size:13px; }
   .dupe-bar { display:flex;align-items:center;gap:8px;padding:12px;background:rgba(251,146,60,0.1);border:1px solid ${T.warning};border-radius:6px;margin-bottom:16px;color:${T.warning};font-size:13px; }
-  .t-select { width:100%;padding:9px 12px;background:${T.bg};border:1px solid ${T.border};border-radius:4px;color:${T.text};font-family:'Share Tech Mono',monospace;font-size:13px;outline:none;appearance:none;cursor:pointer; }
+  .t-select { width:100%;padding:9px 12px;background:${T.bg};border:1px solid ${T.border};border-radius:4px;color:${T.text};font-family:var(--font-share-tech-mono),monospace;font-size:13px;outline:none;appearance:none;cursor:pointer; }
   .t-select:focus { border-color:${T.blue}; }
   .img-wrap { position:relative;cursor:pointer; }
   .img-zoom-btn { position:absolute;bottom:8px;right:8px;width:32px;height:32px;border-radius:6px;background:rgba(0,0,0,0.6);border:1px solid ${T.border};display:flex;align-items:center;justify-content:center;color:${T.text};cursor:pointer; }
@@ -199,7 +198,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       <div className="detail-page" style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:24}}>
         <AlertCircle size={48} color={T.error}/>
         <p style={{fontSize:17,color:T.text,margin:'16px 0 8px'}}>Invoice not found</p>
-        <button onClick={()=>router.push('/invoices')} style={{color:T.blue,background:'none',border:'none',cursor:'pointer',fontFamily:'Share Tech Mono,monospace'}}>← Back</button>
+        <button onClick={()=>router.push('/invoices')} style={{color:T.blue,background:'none',border:'none',cursor:'pointer',fontFamily:'var(--font-share-tech-mono),monospace'}}>← Back</button>
       </div>
     </>
   );
@@ -222,7 +221,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
           <div style={{display:'flex',alignItems:'center',gap:10,flex:1,minWidth:0}}>
             <button onClick={()=>router.push('/invoices')} className="btn-icon"><ArrowLeft size={18}/></button>
             <div style={{minWidth:0}}>
-              <div style={{fontFamily:'VT323,monospace',fontSize:20,letterSpacing:2,color:T.yellow,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+              <div style={{fontFamily:'var(--font-vt323),monospace',fontSize:20,letterSpacing:2,color:T.yellow,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
                 {invoice.supplier||'DOCUMENT DETAILS'}<span className="t-cursor">_</span>
               </div>
               {invoice.document_number && <div style={{fontSize:11,color:T.textMuted,letterSpacing:1}}>#{invoice.document_number}</div>}
@@ -324,7 +323,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
                   <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
                     <div className="t-card-title" style={{margin:0}}>Line Items</div>
                     {invoiceTotal>0 && (
-                      <span style={{fontSize:10,letterSpacing:1,padding:'3px 8px',borderRadius:4,fontFamily:'Share Tech Mono,monospace',textTransform:'uppercase',background:totalsMatch?'rgba(74,222,128,0.1)':'rgba(248,113,113,0.1)',color:totalsMatch?T.success:T.error,border:`1px solid ${totalsMatch?T.success:T.error}`}}>
+                      <span style={{fontSize:10,letterSpacing:1,padding:'3px 8px',borderRadius:4,fontFamily:'var(--font-share-tech-mono),monospace',textTransform:'uppercase',background:totalsMatch?'rgba(74,222,128,0.1)':'rgba(248,113,113,0.1)',color:totalsMatch?T.success:T.error,border:`1px solid ${totalsMatch?T.success:T.error}`}}>
                         {totalsMatch?'✓ MATCH':`⚠ ${fmtZAR(diff)} OFF`}
                       </span>
                     )}
@@ -332,7 +331,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
                   {lineItems.map((item,i)=>(
                     <div key={i} style={{paddingBottom:10,marginBottom:10,borderBottom:i<lineItems.length-1?`1px solid ${T.border}`:'none'}}>
                       <div style={{fontSize:13,color:T.text,marginBottom:3}}>{item.description}</div>
-                      <div style={{display:'flex',gap:12,fontSize:12,color:T.textDim,fontFamily:'Share Tech Mono,monospace'}}>
+                      <div style={{display:'flex',gap:12,fontSize:12,color:T.textDim,fontFamily:'var(--font-share-tech-mono),monospace'}}>
                         {item.quantity!=null&&<span>×{item.quantity}</span>}
                         {item.unit_price!=null&&<span>@ {fmtZAR(item.unit_price)}</span>}
                         {item.line_total!=null&&<span style={{marginLeft:'auto',color:T.yellow}}>{fmtZAR(item.line_total)}</span>}
@@ -341,7 +340,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
                   ))}
                   <div style={{display:'flex',justifyContent:'space-between',paddingTop:8,borderTop:`1px solid ${T.border}`}}>
                     <span style={{fontSize:11,color:T.textMuted,letterSpacing:2,textTransform:'uppercase'}}>Items Total</span>
-                    <span style={{fontFamily:'Share Tech Mono,monospace',color:T.yellow,fontSize:14}}>{fmtZAR(itemsTotal)}</span>
+                    <span style={{fontFamily:'var(--font-share-tech-mono),monospace',color:T.yellow,fontSize:14}}>{fmtZAR(itemsTotal)}</span>
                   </div>
                 </div>
               )}

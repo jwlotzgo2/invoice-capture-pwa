@@ -1,10 +1,22 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter } from 'next/font/google';
+import { VT323, Share_Tech_Mono } from 'next/font/google';
 import './globals.css';
 import BottomNav from '@/components/BottomNav';
 import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 
-const inter = Inter({ subsets: ['latin'] });
+const vt323 = VT323({
+  weight: '400',
+  subsets: ['latin'],
+  variable: '--font-vt323',
+  display: 'swap',
+});
+
+const shareTechMono = Share_Tech_Mono({
+  weight: '400',
+  subsets: ['latin'],
+  variable: '--font-share-tech-mono',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'Go Capture',
@@ -23,7 +35,6 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  // removed maximumScale and userScalable — allows pinch-zoom and landscape rotation
   themeColor: '#0d0d0d',
 };
 
@@ -33,25 +44,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${vt323.variable} ${shareTechMono.variable}`}>
       <head>
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
-      <body className={`${inter.className} antialiased`} style={{ background: '#0d0d0d' }}>
+      <body style={{ background: '#0d0d0d', margin: 0 }}>
         {children}
         <BottomNav />
         <PWAInstallPrompt />
         <script
           dangerouslySetInnerHTML={{
-            __html: `
-              if ('serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js');
-                });
-              }
-            `,
+            __html: `if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js'));}`,
           }}
         />
       </body>
