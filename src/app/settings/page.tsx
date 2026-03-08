@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { User, Building2, Phone, Mail, LogOut, Shield, ChevronRight, Loader2, Check, FolderOpen } from 'lucide-react';
+import { User, Building2, Phone, Mail, LogOut, Shield, ChevronRight, Loader2, Check, FolderOpen, Bell, BellOff } from 'lucide-react';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 interface Profile {
   full_name: string; email: string; phone: string | null;
@@ -60,6 +61,7 @@ export default function SettingsPage() {
   const [orgJoining, setOrgJoining] = useState(false);
   const [orgError, setOrgError] = useState<string | null>(null);
   const [orgSuccess, setOrgSuccess] = useState<string | null>(null);
+  const { supported: pushSupported, permission, subscribed, loading: pushLoading, subscribe, unsubscribe } = usePushNotifications();
   const router = useRouter();
   const supabase = createClient();
 
@@ -238,6 +240,41 @@ export default function SettingsPage() {
               )}
             </div>
           </div>
+
+          {/* Push notifications */}
+          {pushSupported && (
+            <div className="t-card">
+              <div className="t-row last">
+                {subscribed ? <Bell size={16} color={T.yellow} /> : <BellOff size={16} color={T.textDim} />}
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, color: T.text }}>Push Notifications</div>
+                  <div style={{ fontSize: 11, color: T.textMuted, marginTop: 2 }}>
+                    {permission === 'denied'
+                      ? 'Blocked — enable in browser settings'
+                      : subscribed
+                      ? 'Enabled — you\'ll be notified of new invoices'
+                      : 'Get notified when invoices arrive by email'}
+                  </div>
+                </div>
+                {permission !== 'denied' && (
+                  <button
+                    onClick={subscribed ? unsubscribe : subscribe}
+                    disabled={pushLoading}
+                    style={{
+                      padding: '6px 12px', borderRadius: 6, border: `1px solid ${T.border}`,
+                      background: subscribed ? 'rgba(252,165,165,0.1)' : T.surfaceHigh,
+                      color: subscribed ? T.error : T.text,
+                      fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
+                      display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0,
+                    }}>
+                    {pushLoading
+                      ? <Loader2 size={12} style={{ animation: 'tspin 1s linear infinite' }} />
+                      : subscribed ? 'Turn off' : 'Enable'}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Projects link */}
           <div className="t-card">

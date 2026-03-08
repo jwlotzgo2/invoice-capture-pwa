@@ -193,6 +193,32 @@ If a field cannot be determined, set it to null. Return ONLY the JSON, no markdo
         results.push({ attachment: attachment.Name, invoice_id: invoice.id, status: 'created' });
         console.log(`Created invoice ${invoice.id} from email attachment: ${attachment.Name}`);
 
+        // ── 6d. Fire push notification to org members ─────────────────
+        try {
+          const { data: profile } = await supabase
+            .from('user_profiles').select('org_id').eq('id', user.id).single();
+          if (profile?.org_id) {
+            const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://invoice-capture-pwa.vercel.app';
+            await fetch(`${baseUrl}/api/push/send`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-internal-secret': process.env.INTERNAL_API_SECRET || '',
+              },
+              body: JSON.stringify({
+                org_id: profile.org_id,
+                title: 'New invoice received',
+                body: ocrData.supplier
+                  ? `From ${ocrData.supplier}${ocrData.amount ? ` · R${parseFloat(ocrData.amount).toFixed(2)}` : ''}`
+                  : `From ${senderEmail}`,
+                url: '/review',
+              }),
+            });
+          }
+        } catch (pushErr) {
+          console.error('Push notification failed (non-fatal):', pushErr);
+        }
+
       } catch (attachErr) {
         console.error(`Failed to process attachment ${attachment.Name}:`, attachErr);
         results.push({ attachment: attachment.Name, status: 'failed', error: String(attachErr) });
