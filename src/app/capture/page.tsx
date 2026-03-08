@@ -3,61 +3,13 @@
 import { Suspense, useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import CameraCapture from '@/components/CameraCapture';
+import InvoiceForm from '@/components/InvoiceForm';
 import { InvoiceFormData, OCRResult } from '@/types/invoice';
 import { createClient } from '@/lib/supabase/client';
-import { ArrowLeft, Loader2, Sparkles, AlertCircle, Camera, Upload, FileImage, ZoomIn, X } from 'lucide-react';
+import { ArrowLeft, Loader2, Sparkles, AlertCircle, Camera, Upload, FileImage, WifiOff } from 'lucide-react';
+import { queueInvoice, requestSync } from '@/lib/offlineQueue';
 
 type Step = 'choose' | 'capture' | 'processing' | 'review';
-
-const T = {
-  bg: '#1c1c1c', surface: '#282828', surfaceHigh: '#323232', border: '#383838',
-  yellow: '#e5e5e5', yellowGlow: 'rgba(229,229,229,0.1)',
-  blue: '#8a8a8a', blueGlow: 'rgba(138,138,138,0.15)',
-  text: '#f0f0f0', textDim: '#8a8a8a', textMuted: '#6b6b6b',
-  error: '#fca5a5', success: '#86efac', warning: '#fdba74',
-};
-
-const css = `
-  * { box-sizing:border-box; }
-  body { background:${T.bg};margin:0; }
-  .cap-page { min-height:100svh;background:${T.bg};font-family:Inter, system-ui, sans-serif,Inter, system-ui, sans-serif;color:${T.text}; }
-  .scanline { position:fixed;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px);pointer-events:none;z-index:1000; }
-  .cap-header { background:${T.surface};border-bottom:1px solid ${T.border};padding:12px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:40;box-shadow:0 0 20px rgba(138,138,138,0.08); }
-  .cap-title { font-family:Inter, system-ui, sans-serif;font-size:22px;letter-spacing:0.3px;color:${T.yellow};text-shadow:0 0 10px rgba(229,229,229,0.12);flex:1; }
-  .cap-sub { font-size:11px;color:${T.text};letter-spacing:0.2px; }
-  .btn-icon { width:38px;height:38px;border-radius:6px;border:1px solid ${T.border};background:transparent;color:${T.textDim};cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s; }
-  .btn-icon:hover { border-color:${T.blue};color:${T.blue}; }
-  .t-card { background:${T.surface};border:1px solid ${T.border};border-radius:8px;padding:16px;margin-bottom:12px;position:relative;overflow:hidden; }
-  .t-card::before { content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,${T.blue},transparent);opacity:0.4; }
-  .t-card-title { font-family:Inter, system-ui, sans-serif;font-size:16px;letter-spacing:0.3px;color:${T.yellow};text-transform:none;margin-bottom:12px;display:flex;align-items:center;gap:6px; }
-  .t-card-title::before { content:'>';color:${T.blue}; }
-  .t-label { font-size:10px;letter-spacing:0.3px;color:${T.text};text-transform:none;margin-bottom:5px;display:block; }
-  .t-input { width:100%;padding:9px 12px;background:${T.bg};border:1px solid ${T.border};border-radius:4px;color:${T.text};font-family:Inter, system-ui, sans-serif;font-size:14px;outline:none;transition:border-color 0.2s,box-shadow 0.2s; }
-  .t-input:focus { border-color:${T.blue};box-shadow:0 0 0 2px ${T.blueGlow}; }
-  .t-input::placeholder { color:${T.textMuted}; }
-  .t-input.mono { color:${T.yellow}; }
-  .t-select { width:100%;padding:9px 12px;background:${T.bg};border:1px solid ${T.border};border-radius:4px;color:${T.text};font-family:Inter, system-ui, sans-serif;font-size:13px;outline:none;appearance:none;cursor:pointer; }
-  .t-select:focus { border-color:${T.blue}; }
-  .t-textarea { width:100%;padding:9px 12px;background:${T.bg};border:1px solid ${T.border};border-radius:4px;color:${T.text};font-family:Inter, system-ui, sans-serif;font-size:14px;outline:none;resize:vertical;min-height:70px; }
-  .t-textarea:focus { border-color:${T.blue};box-shadow:0 0 0 2px ${T.blueGlow}; }
-  .t-textarea::placeholder { color:${T.textMuted}; }
-  .save-btn { width:100%;padding:14px;background:${T.yellow};border:none;border-radius:6px;color:${T.bg};font-family:Inter, system-ui, sans-serif;font-size:20px;letter-spacing:0.3px;cursor:pointer;text-transform:none;box-shadow:0 0 20px rgba(229,229,229,0.12);transition:box-shadow 0.2s,transform 0.1s; }
-  .save-btn:hover { box-shadow:0 0 30px rgba(250,204,21,0.5);transform:translateY(-1px); }
-  .save-btn:disabled { opacity:0.5;cursor:default;transform:none; }
-  .cancel-btn { width:100%;padding:11px;background:transparent;border:1px solid ${T.border};border-radius:6px;color:${T.textDim};font-family:Inter, system-ui, sans-serif;font-size:13px;letter-spacing:0.2px;cursor:pointer;margin-top:8px; }
-  .cancel-btn:hover { border-color:${T.textDim};color:${T.text}; }
-  .err-bar { display:flex;align-items:center;gap:8px;padding:12px;background:rgba(252,165,165,0.12);border:1px solid ${T.error};border-radius:6px;margin-bottom:16px;color:${T.error};font-size:13px; }
-  .dupe-bar { display:flex;align-items:center;gap:8px;padding:12px;background:rgba(253,186,116,0.12);border:1px solid ${T.warning};border-radius:6px;margin-bottom:16px;color:${T.warning};font-size:13px; }
-  .img-wrap { position:relative;cursor:pointer; }
-  .img-zoom-btn { position:absolute;bottom:8px;right:8px;width:32px;height:32px;border-radius:6px;background:rgba(0,0,0,0.6);border:1px solid ${T.border};display:flex;align-items:center;justify-content:center;color:${T.text};cursor:pointer;transition:background 0.2s; }
-  .img-zoom-btn:hover { background:rgba(99,102,241,0.4); }
-  .lightbox { position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.92);z-index:2000;display:flex;align-items:center;justify-content:center; }
-  .lightbox-close { position:absolute;top:16px;right:16px;width:40px;height:40px;border-radius:6px;background:rgba(255,255,255,0.1);border:1px solid ${T.border};display:flex;align-items:center;justify-content:center;color:${T.text};cursor:pointer; }
-  .lightbox img { max-width:95vw;max-height:90vh;object-fit:contain;touch-action:pinch-zoom; }
-  .t-cursor { animation:tblink 1s step-end infinite;color:${T.yellow}; }
-  @keyframes tblink { 0%,100%{opacity:1} 50%{opacity:0} }
-  @keyframes tspin { to{transform:rotate(360deg)} }
-`;
 
 function CapturePageInner() {
   const [step, setStep] = useState<Step>('choose');
@@ -68,295 +20,449 @@ function CapturePageInner() {
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isOnline, setIsOnline] = useState(true);
+  const [queuedOffline, setQueuedOffline] = useState(false);
   const [ocrConfidence, setOcrConfidence] = useState<number | null>(null);
+  const [isPaid, setIsPaid] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<string>('');
+  const [category, setCategory] = useState<string | null>(null);
+  const [documentType, setDocumentType] = useState<string>('invoice');
   const [documentNumber, setDocumentNumber] = useState<string | null>(null);
+  const [lineItems, setLineItems] = useState<Array<{description:string;quantity:number|null;unit_price:number|null;line_total:number|null}>>([]);
   const [projects, setProjects] = useState<{id:string;name:string}[]>([]);
   const [projectId, setProjectId] = useState<string | null>(null);
-  const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
-  const [lightboxOpen, setLightboxOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
 
   useEffect(() => {
-    const load = async () => {
+    const loadProjects = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      const { data } = await supabase.from('projects').select('id,name').eq('user_id', user?.id||'').order('name');
+      const { data } = await supabase.from('projects').select('id, name').eq('user_id', user?.id || '').order('name');
       setProjects(data || []);
     };
-    load();
+    loadProjects();
+  }, []);
+
+  useEffect(() => {
+    setIsOnline(navigator.onLine);
+    const on = () => setIsOnline(true);
+    const off = () => setIsOnline(false);
+    window.addEventListener('online', on);
+    window.addEventListener('offline', off);
+    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
   }, []);
 
   useEffect(() => {
     if (searchParams.get('source') === 'upload') {
       const img = sessionStorage.getItem('uploadedInvoice');
-      if (img) { sessionStorage.removeItem('uploadedInvoice'); handleCapture(img); }
+      if (img) {
+        sessionStorage.removeItem('uploadedInvoice');
+        handleCapture(img);
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleCapture = async (imageData: string) => {
-    setCapturedImage(imageData); setStep('processing'); setError(null);
+    setCapturedImage(imageData);
+    setStep('processing');
+    setError(null);
     try {
-      const res = await fetch('/api/ocr', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ image: imageData }) });
-      if (!res.ok) throw new Error('Failed to process image');
-      const result: OCRResult = await res.json();
+      const response = await fetch('/api/ocr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: imageData }),
+      });
+      if (!response.ok) throw new Error('Failed to process image');
+      const result: OCRResult = await response.json();
       setFormData({
-        supplier: result.supplier||'', description: result.description||'',
-        invoice_date: result.invoice_date||'', amount: result.amount?.toString()||'',
-        vat_amount: result.vat_amount?.toString()||'', products_services: result.products_services||'',
-        business_name: result.business_name||'',
+        supplier: result.supplier || '', description: result.description || '',
+        invoice_date: result.invoice_date || '', amount: result.amount?.toString() || '',
+        vat_amount: result.vat_amount?.toString() || '',
+        products_services: result.products_services || '', business_name: result.business_name || '',
       });
       setOcrConfidence(result.confidence);
+      setCategory(result.category || null);
+      setDocumentType(result.document_type || 'invoice');
       setDocumentNumber(result.document_number || null);
+      setLineItems(result.line_items || []);
       setStep('review');
-      // Check for duplicates after OCR
-      checkDuplicate(result.supplier, result.amount, result.invoice_date, result.document_number);
-    } catch {
-      setError('Failed to extract data. Please fill in manually.'); setStep('review');
-    }
-  };
-
-  const checkDuplicate = async (supplier?: string|null, amount?: number|null, date?: string|null, docNum?: string|null) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    let dupeFound = false;
-    if (docNum) {
-      const { data } = await supabase.from('invoices').select('id,supplier').eq('user_id', user?.id||'').eq('document_number', docNum).limit(1);
-      if (data && data.length > 0) { setDuplicateWarning(`Doc ref ${docNum} already exists`); dupeFound = true; }
-    }
-    if (!dupeFound && supplier && amount && date) {
-      const { data } = await supabase.from('invoices').select('id').eq('user_id', user?.id||'').eq('supplier', supplier).eq('amount', amount).eq('invoice_date', date).limit(1);
-      if (data && data.length > 0) { setDuplicateWarning(`Possible duplicate — same supplier, amount and date already on file`); }
+    } catch (err) {
+      console.error('OCR Error:', err);
+      setError('Failed to extract data. Please fill in manually.');
+      setStep('review');
     }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]; if (!file) return;
+    const file = e.target.files?.[0];
+    if (!file) return;
     const reader = new FileReader();
     reader.onloadend = () => handleCapture(reader.result as string);
     reader.readAsDataURL(file);
   };
 
-  // Re-check duplicate when fields change
-  useEffect(() => {
-    if (step !== 'review') return;
-    const t = setTimeout(() => {
-      checkDuplicate(formData.supplier, formData.amount ? parseFloat(formData.amount) : null, formData.invoice_date, documentNumber);
-    }, 600);
-    return () => clearTimeout(t);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData.supplier, formData.amount, formData.invoice_date, documentNumber]);
-
   const handleSave = async () => {
-    setSaving(true); setError(null);
+    setSaving(true);
+    setError(null);
+
+    // ── Offline: queue locally and return ────────────────────────────
+    if (!navigator.onLine) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Not authenticated');
+        await queueInvoice({
+          image: capturedImage,
+          userId: user.id,
+          formData: {
+            supplier: formData.supplier || null,
+            description: formData.description || null,
+            invoice_date: formData.invoice_date || null,
+            amount: formData.amount ? parseFloat(formData.amount) : null,
+            vat_amount: formData.vat_amount ? parseFloat(formData.vat_amount) : null,
+            products_services: formData.products_services || null,
+            business_name: formData.business_name || null,
+            original_ocr_values: { ...formData },
+            is_paid: isPaid,
+            payment_method: isPaid && paymentMethod ? paymentMethod : null,
+            document_type: documentType || 'invoice',
+            doc_status: 'open',
+            document_number: documentNumber || null,
+            project_id: projectId || null,
+            category: category || null,
+            line_items: lineItems.length > 0 ? lineItems : null,
+          },
+        });
+        requestSync();
+        setQueuedOffline(true);
+        setSaving(false);
+        setTimeout(() => router.push('/'), 2000);
+        return;
+      } catch (err) {
+        setError('Failed to save offline. Please try again.');
+        setSaving(false);
+        return;
+      }
+    }
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
-      let imageUrl = null, imagePath = null;
+
+      let imageUrl = null;
+      let imagePath = null;
+
       if (capturedImage) {
         const fileName = `${user.id}/${Date.now()}.jpg`;
         const base64Data = capturedImage.split(',')[1];
         const binaryData = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
-        const { data: uploadData, error: uploadError } = await supabase.storage.from('invoices').upload(fileName, binaryData, { contentType:'image/jpeg', upsert:false });
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('invoices').upload(fileName, binaryData, { contentType: 'image/jpeg', upsert: false });
         if (uploadError) throw uploadError;
         imagePath = uploadData.path;
         const { data: urlData } = supabase.storage.from('invoices').getPublicUrl(imagePath);
         imageUrl = urlData.publicUrl;
       }
+
       const { error: insertError } = await supabase.from('invoices').insert({
         user_id: user.id,
-        supplier: formData.supplier||null, description: formData.description||null,
-        invoice_date: formData.invoice_date||null,
+        supplier: formData.supplier || null, description: formData.description || null,
+        invoice_date: formData.invoice_date || null,
         amount: formData.amount ? parseFloat(formData.amount) : null,
         vat_amount: formData.vat_amount ? parseFloat(formData.vat_amount) : null,
-        products_services: formData.products_services||null, business_name: formData.business_name||null,
-        image_url: imageUrl, image_path: imagePath, original_ocr_values: { ...formData },
+        products_services: formData.products_services || null,
+        business_name: formData.business_name || null,
+        image_url: imageUrl, image_path: imagePath,
+        original_ocr_values: { ...formData },
         source: 'camera', status: 'pending',
-        document_number: documentNumber||null,
-        project_id: projectId||null,
-        document_type: 'invoice', doc_status: 'open',
-      });
+        is_paid: isPaid,
+        payment_method: isPaid && paymentMethod ? paymentMethod : null,
+        document_type: documentType || 'invoice',
+        doc_status: 'open',
+        document_number: documentNumber || null,
+        project_id: projectId || null,
+        category: category || null,
+        line_items: lineItems.length > 0 ? lineItems : null,
+      }).select().single();
+
       if (insertError) throw insertError;
-      router.push('/');
+      router.push('/invoices');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save');
-    } finally { setSaving(false); }
+      console.error('Save error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to save invoice');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleBack = () => {
-    if (step === 'review' || step === 'capture') { setStep('choose'); setCapturedImage(null); }
-    else router.push('/');
+    if (step === 'review' || step === 'capture') {
+      setStep('choose');
+      setCapturedImage(null);
+    } else {
+      router.push('/invoices');
+    }
   };
 
-  const fc = (field: keyof InvoiceFormData, val: string) => setFormData(p => ({ ...p, [field]: val }));
-  const focusBlue = (e: React.FocusEvent<HTMLInputElement|HTMLTextAreaElement>) => { e.target.style.borderColor=T.blue; e.target.style.boxShadow=`0 0 0 2px ${T.blueGlow}`; };
-  const blurReset = (e: React.FocusEvent<HTMLInputElement|HTMLTextAreaElement>) => { e.target.style.borderColor=T.border; e.target.style.boxShadow='none'; };
-  const focusYellow = (e: React.FocusEvent<HTMLInputElement>) => { e.target.style.borderColor=T.yellow; e.target.style.boxShadow=`0 0 0 2px ${T.yellowGlow}`; };
-
-  // ── CHOOSE ───────────────────────────────────────────────────────────────────
-  if (step === 'choose') return (
-    <>
-      <style>{css}</style>
-      <div className="cap-page">
-        <div className="scanline" />
-        <header className="cap-header">
-          <button onClick={() => router.push('/')} className="btn-icon"><ArrowLeft size={18}/></button>
-          <span className="cap-title">GO CAPTURE</span>
+  if (step === 'choose') {
+    return (
+      <div style={{ minHeight: '100svh', background: '#f8fafc', fontFamily: 'DM Sans, sans-serif', display: 'flex', flexDirection: 'column' }}>
+        <header style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: '#fff', borderBottom: '1px solid #e2e8f0' }}>
+          <button onClick={() => router.push('/invoices')} style={{ width: 36, height: 36, borderRadius: 8, border: 'none', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', cursor: 'pointer' }}>
+            <ArrowLeft size={20} />
+          </button>
+          <span style={{ fontSize: 17, fontWeight: 700, color: '#0f172a' }}>Add Invoice</span>
         </header>
-        <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'40px 24px'}}>
-          <div style={{fontFamily:'Inter, system-ui, sans-serif',fontSize:16,letterSpacing:0.5,color:T.textMuted,marginBottom:24,textTransform:'none'}}>Select Capture Method</div>
-          <div style={{display:'flex',flexDirection:'column',gap:10,width:'100%',maxWidth:360}}>
-            {[
-              { icon:<Camera size={22} color={T.bg}/>, label:'Use Camera', sub:'Take a photo', action:()=>setStep('capture'), primary:true },
-              { icon:<Upload size={22} color={T.blue}/>, label:'Upload Image', sub:'Choose from device', action:()=>fileInputRef.current?.click(), primary:false },
-              { icon:<FileImage size={22} color={T.blue}/>, label:'From Gallery', sub:'Pick from gallery', action:()=>fileInputRef.current?.click(), primary:false },
-            ].map(({icon,label,sub,action,primary}) => (
-              <div key={label} onClick={action} style={{background:primary?T.yellow:T.surface,border:primary?'none':`1px solid ${T.border}`,borderRadius:8,padding:'18px 20px',display:'flex',alignItems:'center',gap:16,cursor:'pointer',boxShadow:primary?'0 0 20px rgba(250,204,21,0.25)':'none'}}>
-                <div style={{width:48,height:48,borderRadius:6,background:primary?'rgba(0,0,0,0.15)':T.blueGlow,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{icon}</div>
-                <div>
-                  <div style={{fontSize:15,fontFamily:'Inter, system-ui, sans-serif',letterSpacing:0.5,color:primary?T.bg:T.text,marginBottom:2}}>{label.toUpperCase()}</div>
-                  <div style={{fontSize:12,color:primary?'rgba(0,0,0,0.5)':T.textMuted}}>{sub}</div>
-                </div>
+
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 24px' }}>
+          <h2 style={{ fontSize: 22, fontWeight: 700, color: '#0f172a', textAlign: 'center', margin: '0 0 8px' }}>
+            How would you like<br />to add an invoice?
+          </h2>
+          <p style={{ fontSize: 14, color: '#64748b', textAlign: 'center', margin: '0 0 28px' }}>
+            Take a photo or upload an existing image
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', maxWidth: 360 }}>
+            <div onClick={() => setStep('capture')} style={{ background: 'linear-gradient(135deg,#1d4ed8,#3b82f6)', borderRadius: 16, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer', boxShadow: '0 4px 20px rgba(37,99,235,0.25)' }}>
+              <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Camera size={24} color="#fff" />
               </div>
-            ))}
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 2 }}>Use Camera</div>
+                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)' }}>Take a photo of your invoice</div>
+              </div>
+            </div>
+
+            <div onClick={() => fileInputRef.current?.click()} style={{ background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 16, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer' }}>
+              <div style={{ width: 48, height: 48, borderRadius: 12, background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Upload size={24} color="#2563eb" />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 2 }}>Upload Image</div>
+                <div style={{ fontSize: 13, color: '#64748b' }}>Choose a file from your device</div>
+              </div>
+            </div>
+
+            <div onClick={() => fileInputRef.current?.click()} style={{ background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 16, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer' }}>
+              <div style={{ width: 48, height: 48, borderRadius: 12, background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <FileImage size={24} color="#2563eb" />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 2 }}>From Gallery</div>
+                <div style={{ fontSize: 13, color: '#64748b' }}>Pick a photo from your gallery</div>
+              </div>
+            </div>
           </div>
         </div>
-        <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} style={{display:'none'}} />
+
+        <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} style={{ display: 'none' }} />
       </div>
-    </>
-  );
+    );
+  }
 
-  if (step === 'capture') return <CameraCapture onCapture={handleCapture} onClose={()=>setStep('choose')} />;
+  if (step === 'capture') {
+    return <CameraCapture onCapture={handleCapture} onClose={() => setStep('choose')} />;
+  }
 
-  // ── PROCESSING ───────────────────────────────────────────────────────────────
-  if (step === 'processing') return (
-    <>
-      <style>{css}</style>
-      <div className="cap-page" style={{display:'flex',alignItems:'center',justifyContent:'center'}}>
-        <div className="scanline" />
-        <div style={{textAlign:'center',padding:'0 24px'}}>
-          <div style={{width:80,height:80,borderRadius:8,border:`1px solid ${T.blue}`,background:`rgba(99,102,241,0.1)`,display:'inline-flex',alignItems:'center',justifyContent:'center',marginBottom:24}}>
-            <Sparkles size={36} color={T.blue}/>
+  if (step === 'processing') {
+    return (
+      <div style={{ minHeight: '100svh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', fontFamily: 'DM Sans, sans-serif' }}>
+        <div style={{ textAlign: 'center', padding: '0 24px' }}>
+          <div style={{ width: 80, height: 80, borderRadius: '50%', background: '#eff6ff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24 }}>
+            <Sparkles size={36} color="#2563eb" />
           </div>
-          <div style={{fontFamily:'Inter, system-ui, sans-serif',fontSize:24,letterSpacing:0.5,color:T.yellow,marginBottom:8}}>PROCESSING…</div>
-          <div style={{fontSize:12,color:T.textDim,letterSpacing:1,marginBottom:24}}>AI IS EXTRACTING DATA</div>
-          <Loader2 size={28} color={T.blue} style={{animation:'tspin 1s linear infinite'}}/>
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: '#0f172a', margin: '0 0 8px' }}>Processing Invoice</h2>
+          <p style={{ fontSize: 14, color: '#64748b', margin: '0 0 24px' }}>AI is extracting your invoice data…</p>
+          <Loader2 size={28} color="#2563eb" style={{ animation: 'spin 1s linear infinite' }} />
         </div>
       </div>
-    </>
+    );
+  }
+
+  if (queuedOffline) return (
+    <div style={{ minHeight: '100svh', background: '#1c1c1c', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 24, textAlign: 'center' }}>
+      <WifiOff size={40} color="#fdba74" />
+      <div style={{ fontSize: 18, fontWeight: 600, color: '#f0f0f0' }}>Saved offline</div>
+      <div style={{ fontSize: 13, color: '#8a8a8a', maxWidth: 260, lineHeight: 1.6 }}>
+        Invoice queued locally. It will upload automatically when you're back online.
+      </div>
+    </div>
   );
 
-  // ── REVIEW ───────────────────────────────────────────────────────────────────
   return (
-    <>
-      <style>{css}</style>
-      <div className="cap-page">
-        <div className="scanline" />
-        <header className="cap-header">
-          <button onClick={handleBack} className="btn-icon"><ArrowLeft size={18}/></button>
-          <div style={{flex:1}}>
-            <div className="cap-title">REVIEW</div>
-            {ocrConfidence !== null && <div className="cap-sub">OCR CONFIDENCE: {Math.round(ocrConfidence*100)}%</div>}
-          </div>
-        </header>
-
-        <main style={{padding:16,paddingBottom:80}}>
-          {error && <div className="err-bar"><AlertCircle size={18}/>{error}</div>}
-          {duplicateWarning && (
-            <div className="dupe-bar">
-              <span style={{fontSize:16}}>⚡</span>
-              <span>{duplicateWarning}</span>
-              <button onClick={()=>setDuplicateWarning(null)} style={{marginLeft:'auto',background:'none',border:'none',color:T.warning,cursor:'pointer',padding:0}}><X size={14}/></button>
-            </div>
+    <div style={{ minHeight: '100svh', background: '#f8fafc', fontFamily: 'DM Sans, sans-serif' }}>
+      {!isOnline && (
+        <div style={{ background: '#1c1c1c', borderBottom: '1px solid #383838', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
+          <WifiOff size={13} color="#fdba74" />
+          <span style={{ fontSize: 12, color: '#fdba74' }}>You're offline — invoice will be saved locally and uploaded when reconnected</span>
+        </div>
+      )}
+      <header style={{ position: 'sticky', top: 0, zIndex: 40, background: '#fff', borderBottom: '1px solid #e2e8f0', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+        <button onClick={handleBack} style={{ width: 36, height: 36, borderRadius: 8, border: 'none', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', cursor: 'pointer' }}>
+          <ArrowLeft size={20} />
+        </button>
+        <div>
+          <div style={{ fontSize: 17, fontWeight: 700, color: '#0f172a' }}>Review Document</div>
+          {ocrConfidence !== null && (
+            <div style={{ fontSize: 12, color: '#64748b' }}>AI Confidence: {Math.round(ocrConfidence * 100)}%</div>
           )}
-
-          {/* Image preview with zoom */}
-          {capturedImage && (
-            <div className="t-card" style={{padding:8,marginBottom:12}}>
-              <div className="img-wrap" onClick={()=>setLightboxOpen(true)}>
-                <img src={capturedImage} alt="Invoice" style={{width:'100%',borderRadius:4,maxHeight:220,objectFit:'contain',display:'block'}}/>
-                <button className="img-zoom-btn" onClick={e=>{e.stopPropagation();setLightboxOpen(true);}}><ZoomIn size={16}/></button>
-              </div>
-            </div>
-          )}
-
-          {/* Document details */}
-          <div className="t-card">
-            <div className="t-card-title">Document Details</div>
-
-            <div style={{marginBottom:12}}>
-              <label className="t-label">Doc / Reference No.</label>
-              <input className="t-input" style={{fontFamily:'Inter, system-ui, sans-serif'}} value={documentNumber||''} onChange={e=>setDocumentNumber(e.target.value||null)} placeholder="e.g. INV-0042" onFocus={focusBlue} onBlur={blurReset}/>
-            </div>
-
-            {[
-              {label:'Supplier', key:'supplier', type:'text'},
-              {label:'Business Name', key:'business_name', type:'text'},
-              {label:'Invoice Date', key:'invoice_date', type:'date'},
-            ].map(({label,key,type}) => (
-              <div key={key} style={{marginBottom:12}}>
-                <label className="t-label">{label}</label>
-                <input type={type} className="t-input" value={formData[key as keyof InvoiceFormData]} onChange={e=>fc(key as keyof InvoiceFormData, e.target.value)} placeholder={label} onFocus={focusBlue} onBlur={blurReset}/>
-              </div>
-            ))}
-
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:12}}>
-              {[{label:'Amount (incl. VAT)',key:'amount'},{label:'VAT Amount',key:'vat_amount'}].map(({label,key}) => (
-                <div key={key}>
-                  <label className="t-label">{label}</label>
-                  <input type="number" className="t-input mono" value={formData[key as keyof InvoiceFormData]} onChange={e=>fc(key as keyof InvoiceFormData, e.target.value)} placeholder="0" onFocus={focusYellow} onBlur={blurReset}/>
-                </div>
-              ))}
-            </div>
-
-            <div style={{marginBottom:12}}>
-              <label className="t-label">Description</label>
-              <textarea className="t-textarea" value={formData.description} onChange={e=>fc('description',e.target.value)} placeholder="Invoice description" onFocus={focusBlue} onBlur={blurReset}/>
-            </div>
-
-            <div>
-              <label className="t-label">Products / Services</label>
-              <textarea className="t-textarea" value={formData.products_services} onChange={e=>fc('products_services',e.target.value)} placeholder="Products or services" onFocus={focusBlue} onBlur={blurReset}/>
-            </div>
-          </div>
-
-          {/* Project */}
-          <div className="t-card">
-            <div className="t-card-title">Project</div>
-            {projects.length === 0 ? (
-              <div style={{fontSize:13,color:T.textMuted}}>No projects — <span onClick={()=>router.push('/projects')} style={{color:T.blue,cursor:'pointer'}}>create one</span></div>
-            ) : (
-              <div style={{position:'relative'}}>
-                <select className="t-select" value={projectId||''} onChange={e=>setProjectId(e.target.value||null)}>
-                  <option value="">-- No project --</option>
-                  {projects.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
-                <span style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',color:T.blue,pointerEvents:'none',fontSize:12}}>▼</span>
-              </div>
-            )}
-          </div>
-
-          <div style={{marginTop:4}}>
-            <button className="save-btn" disabled={saving} onClick={handleSave}>
-              {saving ? 'SAVING…' : 'SAVE DOCUMENT'}
-            </button>
-            <button className="cancel-btn" onClick={handleBack}>Cancel</button>
-          </div>
-        </main>
-
-        {/* Lightbox */}
-        {lightboxOpen && capturedImage && (
-          <div className="lightbox" onClick={()=>setLightboxOpen(false)}>
-            <button className="lightbox-close"><X size={20}/></button>
-            <img src={capturedImage} alt="Invoice" onClick={e=>e.stopPropagation()}/>
+        </div>
+      </header>
+      <main style={{ padding: 16 }}>
+        {error && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 12, background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: 10, marginBottom: 16, color: '#be123c', fontSize: 14 }}>
+            <AlertCircle size={18} />{error}
           </div>
         )}
-      </div>
-    </>
+
+
+        {/* Document Type + Number */}
+        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: 16, marginBottom: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: 10 }}>Document Type</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+            {[['invoice','Tax Invoice'],['quote','Quote'],['purchase_order','Purchase Order'],['credit_note','Credit Note'],['delivery_note','Delivery Note'],['receipt','Receipt']].map(([val, label]) => (
+              <button key={val} onClick={() => setDocumentType(val)}
+                style={{ padding: '6px 12px', borderRadius: 20, border: '1.5px solid', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                  borderColor: documentType === val ? '#2563eb' : '#e2e8f0',
+                  background: documentType === val ? '#eff6ff' : '#fff',
+                  color: documentType === val ? '#2563eb' : '#64748b' }}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 6 }}>Document / Reference Number</div>
+            <input
+              value={documentNumber || ''}
+              onChange={e => setDocumentNumber(e.target.value || null)}
+              placeholder="e.g. INV-0042"
+              style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 14, fontFamily: 'DM Mono, monospace', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#fff' }}
+            />
+          </div>
+        </div>
+
+        {/* Category */}
+        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: 16, marginBottom: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: 10 }}>Category</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {['Travel & Transport','Utilities','Materials & Supplies','Subscriptions & Software','Professional Services','Food & Entertainment','Equipment','Marketing','Other'].map(cat => (
+              <button key={cat} onClick={() => setCategory(cat)}
+                style={{ padding: '6px 12px', borderRadius: 20, border: '1.5px solid', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                  borderColor: category === cat ? '#2563eb' : '#e2e8f0',
+                  background: category === cat ? '#eff6ff' : '#fff',
+                  color: category === cat ? '#2563eb' : '#64748b' }}>
+                {cat}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Line Items — editable */}
+        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: 16, marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>Line Items</div>
+            <button onClick={() => setLineItems(prev => [...prev, { description: '', quantity: null, unit_price: null, line_total: null }])}
+              style={{ fontSize: 12, fontWeight: 700, color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 4 }}>
+              + Add row
+            </button>
+          </div>
+          {lineItems.length === 0 ? (
+            <div style={{ fontSize: 13, color: '#94a3b8', textAlign: 'center', padding: '12px 0' }}>No line items — tap Add row to add one</div>
+          ) : lineItems.map((item, i) => (
+            <div key={i} style={{ marginBottom: 10, paddingBottom: 10, borderBottom: i < lineItems.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
+              <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+                <input
+                  value={item.description}
+                  onChange={e => setLineItems(prev => prev.map((r, j) => j === i ? { ...r, description: e.target.value } : r))}
+                  placeholder="Description"
+                  style={{ flex: 1, padding: '7px 10px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, fontFamily: 'DM Sans, sans-serif', outline: 'none' }}
+                />
+                <button onClick={() => setLineItems(prev => prev.filter((_, j) => j !== i))}
+                  style={{ width: 32, height: 32, borderRadius: 8, border: 'none', background: 'transparent', color: '#e11d48', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  ✕
+                </button>
+              </div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input type="number" value={item.quantity ?? ''} onChange={e => setLineItems(prev => prev.map((r, j) => j === i ? { ...r, quantity: e.target.value ? Number(e.target.value) : null } : r))}
+                  placeholder="Qty" style={{ width: 60, padding: '7px 8px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, fontFamily: 'DM Mono, monospace', outline: 'none', textAlign: 'right' }} />
+                <input type="number" value={item.unit_price ?? ''} onChange={e => {
+                    const up = e.target.value ? Number(e.target.value) : null;
+                    setLineItems(prev => prev.map((r, j) => j === i ? { ...r, unit_price: up, line_total: up != null && r.quantity != null ? up * r.quantity : r.line_total } : r));
+                  }}
+                  placeholder="Unit price" style={{ flex: 1, padding: '7px 8px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, fontFamily: 'DM Mono, monospace', outline: 'none', textAlign: 'right' }} />
+                <input type="number" value={item.line_total ?? ''} onChange={e => setLineItems(prev => prev.map((r, j) => j === i ? { ...r, line_total: e.target.value ? Number(e.target.value) : null } : r))}
+                  placeholder="Total" style={{ flex: 1, padding: '7px 8px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, fontFamily: 'DM Mono, monospace', outline: 'none', textAlign: 'right' }} />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Project */}
+        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: 16, marginBottom: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: 10 }}>Project</div>
+          {projects.length === 0 ? (
+            <div style={{ fontSize: 13, color: '#94a3b8' }}>No projects yet — <span onClick={() => router.push('/projects')} style={{ color: '#2563eb', cursor: 'pointer', fontWeight: 600 }}>create one</span></div>
+          ) : (
+            <select value={projectId || ''} onChange={e => setProjectId(e.target.value || null)}
+              style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 14, fontFamily: 'DM Sans, sans-serif', color: '#0f172a', outline: 'none', background: '#fff' }}>
+              <option value="">No project</option>
+              {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          )}
+        </div>
+
+        {/* Payment */}
+        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: 16, marginBottom: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: 12 }}>Payment</div>
+          
+          {/* Paid toggle */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: isPaid ? 12 : 0 }}>
+            <span style={{ fontSize: 14, fontWeight: 500, color: '#334155' }}>Paid?</span>
+            <button
+              onClick={() => { setIsPaid(!isPaid); if (isPaid) setPaymentMethod(''); }}
+              style={{ width: 48, height: 26, borderRadius: 13, border: 'none', cursor: 'pointer', position: 'relative', background: isPaid ? '#16a34a' : '#e2e8f0', transition: 'background 0.2s' }}
+            >
+              <span style={{ position: 'absolute', top: 3, left: isPaid ? 25 : 3, width: 20, height: 20, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s' }} />
+            </button>
+          </div>
+
+          {/* Payment method */}
+          {isPaid && (
+            <div style={{ display: 'flex', gap: 8 }}>
+              {['cash', 'card', 'eft'].map((method) => (
+                <button
+                  key={method}
+                  onClick={() => setPaymentMethod(method)}
+                  style={{ flex: 1, padding: '8px 0', borderRadius: 10, border: '1.5px solid', borderColor: paymentMethod === method ? '#2563eb' : '#e2e8f0', background: paymentMethod === method ? '#eff6ff' : '#fff', color: paymentMethod === method ? '#2563eb' : '#64748b', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', textTransform: 'uppercase', letterSpacing: '0.3px' }}
+                >
+                  {method}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: 16 }}>
+          <InvoiceForm
+            formData={formData}
+            onChange={setFormData}
+            onSubmit={handleSave}
+            onCancel={handleBack}
+            isLoading={saving}
+            submitLabel="Save Invoice"
+            imagePreview={capturedImage}
+          />
+        </div>
+      </main>
+    </div>
   );
 }
 
 export default function CapturePage() {
-  return <Suspense><CapturePageInner /></Suspense>;
+  return (
+    <Suspense>
+      <CapturePageInner />
+    </Suspense>
+  );
 }

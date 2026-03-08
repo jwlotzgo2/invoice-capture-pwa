@@ -140,3 +140,15 @@ self.addEventListener('notificationclick', e => {
     })
   );
 });
+
+// ── Background Sync ───────────────────────────────────────────────────
+self.addEventListener('sync', e => {
+  if (e.tag === 'sync-invoices') {
+    // Notify all open clients to run the sync
+    e.waitUntil(
+      clients.matchAll({ type: 'window' }).then(windowClients => {
+        windowClients.forEach(client => client.postMessage({ type: 'SYNC_INVOICES' }));
+      })
+    );
+  }
+});
