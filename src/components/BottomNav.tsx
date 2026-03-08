@@ -10,7 +10,7 @@ const T = {
 };
 
 const tabs = [
-  { href: '/invoices',      icon: LayoutDashboard, label: 'Dashboard', exact: true },
+  { href: '/',              icon: LayoutDashboard, label: 'Dashboard', exact: true },
   { href: '/invoices/list', icon: FileText,         label: 'Documents', exact: false },
   { href: '/capture',       icon: Camera,           label: 'Capture',   exact: true, primary: true },
   { href: '/review',        icon: Monitor,          label: 'Review',    exact: false },
