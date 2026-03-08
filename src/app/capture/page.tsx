@@ -82,7 +82,7 @@ function CapturePageInner() {
       await queueInvoice({ image: imageData, userId: uid, formData: { document_type: 'invoice', doc_status: 'open', needs_ocr: true } });
       requestSync();
       setToast('Image saved offline — OCR will run when reconnected');
-      setTimeout(() => router.push('/'), 1500);
+      setTimeout(() => router.push('/offline'), 1500);
       return;
     }
 
@@ -129,7 +129,7 @@ function CapturePageInner() {
         await queueInvoice({ image: data, userId: uid, formData: { document_type: type === 'application/pdf' ? 'invoice' : 'invoice', doc_status: 'open', needs_ocr: true } });
         requestSync();
         setToast('File saved offline — OCR will run when reconnected');
-        setTimeout(() => router.push('/'), 1500);
+        setTimeout(() => router.push('/offline'), 1500);
         return;
       }
       if (type === 'application/pdf') {
@@ -175,7 +175,7 @@ function CapturePageInner() {
       requestSync();
       setSaving(false);
       setToast('Saved offline — will upload when reconnected');
-      setTimeout(() => router.push('/'), 2000);
+      setTimeout(() => router.push('/offline'), 2000);
       return;
     }
 
