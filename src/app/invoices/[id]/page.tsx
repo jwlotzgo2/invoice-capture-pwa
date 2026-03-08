@@ -210,6 +210,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   const hasLines = lineItems.length > 0;
   const projectName = projects.find(p=>p.id===projectId)?.name;
   const imageUrl = invoice.image_url;
+  const isPdf = imageUrl?.toLowerCase().includes('.pdf') || invoice.image_path?.toLowerCase().endsWith('.pdf');
 
   return (
     <>
@@ -256,7 +257,10 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
           {imageUrl && (
             <div className="t-card" style={{padding:8,marginBottom:12}}>
               <div className="img-wrap" onClick={()=>setLightboxOpen(true)}>
-                <img src={imageUrl} alt="Invoice" style={{width:'100%',borderRadius:4,maxHeight:240,objectFit:'contain',display:'block'}}/>
+                {isPdf
+                  ? <iframe src={imageUrl} style={{width:'100%',height:240,borderRadius:4,border:'none',display:'block'}} title="Invoice PDF" />
+                  : <img src={imageUrl} alt="Invoice" style={{width:'100%',borderRadius:4,maxHeight:240,objectFit:'contain',display:'block'}}/>
+                }
                 <button className="img-zoom-btn" onClick={e=>{e.stopPropagation();setLightboxOpen(true);}}><ZoomIn size={16}/></button>
               </div>
             </div>
@@ -357,7 +361,10 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
         {lightboxOpen && imageUrl && (
           <div className="lightbox" onClick={()=>setLightboxOpen(false)}>
             <button className="lightbox-close"><X size={20}/></button>
-            <img src={imageUrl} alt="Invoice" onClick={e=>e.stopPropagation()}/>
+            {isPdf
+              ? <iframe src={imageUrl} style={{width:'95vw',height:'90vh',border:'none',borderRadius:8}} title="Invoice PDF" onClick={(e:any)=>e.stopPropagation()} />
+              : <img src={imageUrl} alt="Invoice" onClick={e=>e.stopPropagation()}/>
+            }
           </div>
         )}
       </div>

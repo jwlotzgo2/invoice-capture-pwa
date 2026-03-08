@@ -376,14 +376,27 @@ export default function ReviewPage() {
                   </button>
                 </div>
                 {selected.image_url ? (
-                  <div className="img-canvas" onClick={()=>setZoom(z=>z<2?2:1)}>
-                    <img
-                      ref={imgRef}
-                      src={selected.image_url}
-                      alt="Invoice"
-                      style={{ transform:`scale(${zoom})`, cursor: zoom < 2 ? 'zoom-in' : 'zoom-out' }}
-                    />
-                  </div>
+                  (() => {
+                    const isPdf = selected.image_url.toLowerCase().includes('.pdf') || selected.image_path?.toLowerCase().endsWith('.pdf');
+                    return isPdf ? (
+                      <div className="img-canvas" style={{padding:0,overflow:'hidden'}}>
+                        <iframe
+                          src={selected.image_url}
+                          style={{width:'100%',height:'100%',border:'none',display:'block'}}
+                          title="Invoice PDF"
+                        />
+                      </div>
+                    ) : (
+                      <div className="img-canvas" onClick={()=>setZoom(z=>z<2?2:1)}>
+                        <img
+                          ref={imgRef}
+                          src={selected.image_url}
+                          alt="Invoice"
+                          style={{ transform:`scale(${zoom})`, cursor: zoom < 2 ? 'zoom-in' : 'zoom-out' }}
+                        />
+                      </div>
+                    );
+                  })()
                 ) : (
                   <div className="no-image">
                     <AlertCircle size={32} color={T.textMuted}/>
