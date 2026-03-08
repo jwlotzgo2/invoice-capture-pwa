@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { Invoice, InvoiceFilters } from '@/types/invoice';
-import { Camera, Shield, TrendingUp, FileText, Receipt, Building2, ChevronRight, Upload, Bell } from 'lucide-react';
+import { Camera, Shield, TrendingUp, FileText, Receipt, Building2, ChevronRight, Upload, Bell, HelpCircle } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, startOfYear, endOfYear, subMonths } from 'date-fns';
 import { getPendingCount } from '@/lib/offlineQueue';
 
@@ -295,6 +295,7 @@ export default function InvoicesPage() {
               {isAdmin && (
                 <Link href="/admin" className="icon-btn admin" title="Admin"><Shield size={18} /></Link>
               )}
+              <Link href="/help" className="icon-btn" title="Help"><HelpCircle size={18} /></Link>
             </div>
           </div>
         </header>
