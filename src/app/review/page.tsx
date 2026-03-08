@@ -242,7 +242,8 @@ export default function ReviewPage() {
       const updated = { ...selected, ...formData, amount: formData.amount?parseFloat(formData.amount):null, vat_amount: formData.vat_amount?parseFloat(formData.vat_amount):null, category, project_id: projectId, document_number: documentNumber, status: 'reviewed' } as Invoice;
       setInvoices(prev => prev.map(i => i.id === selected.id ? updated : i));
       setSelected(updated);
-      setSavedFlash(true); setTimeout(()=>setSavedFlash(false), 2500);
+      setSavedFlash(true);
+      setTimeout(() => router.push('/invoices/list'), 1200);
     } catch (err) { setSaveError(err instanceof Error ? err.message : 'Save failed'); }
     finally { setSaving(false); }
   };
