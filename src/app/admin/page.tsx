@@ -300,6 +300,8 @@ export default function AdminDashboardPage() {
               { href: '/admin/orgs', icon: <Shield size={18} color="#9333ea" />, bg: '#faf5ff', title: 'Organisations', desc: 'Org codes, member assignment' },
               { href: '/admin/analytics', icon: <TrendingUp size={18} color="#16a34a" />, bg: '#f0fdf4', title: 'OCR Analytics', desc: 'Field accuracy and correction patterns' },
               { href: '/invoices/list', icon: <FileText size={18} color="#7c3aed" />, bg: '#f5f3ff', title: 'All Invoices', desc: 'Browse and export all invoices' },
+              { href: '/admin/journal', icon: <Activity size={18} color="#0ea5e9" />, bg: '#f0f9ff', title: 'Activity Journal', desc: 'Live feed of all user events' },
+              { href: '/admin/activity-report', icon: <Zap size={18} color="#f59e0b" />, bg: '#fffbeb', title: 'Activity Report', desc: 'Usage stats, heatmaps, leaderboard' },
             ].map((q) => (
               <Link key={q.href} href={q.href} className="adm-quick-card">
                 <div className="adm-quick-icon" style={{ background: q.bg }}>{q.icon}</div>

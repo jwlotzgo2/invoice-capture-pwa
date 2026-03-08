@@ -8,6 +8,7 @@ import { InvoiceFormData, OCRResult } from '@/types/invoice';
 import { createClient } from '@/lib/supabase/client';
 import { ArrowLeft, Loader2, Sparkles, AlertCircle, Camera, Upload, FileImage, WifiOff } from 'lucide-react';
 import { queueInvoice, requestSync } from '@/lib/offlineQueue';
+import { logActivity } from '@/lib/logActivity';
 
 type Step = 'choose' | 'capture' | 'processing' | 'review';
 
@@ -81,6 +82,7 @@ function CapturePageInner() {
       if (!uid) { setError('Cannot save offline — open the app while connected first.'); return; }
       await queueInvoice({ image: imageData, userId: uid, formData: { document_type: 'invoice', doc_status: 'open', needs_ocr: true } });
       requestSync();
+      logActivity('capture_offline');
       setToast('Image saved offline — OCR will run when reconnected');
       setTimeout(() => router.push('/offline'), 1500);
       return;
@@ -107,6 +109,7 @@ function CapturePageInner() {
       setDocumentNumber(result.document_number || null);
       setLineItems(result.line_items || []);
       setStep('review');
+      logActivity('capture_ocr', { confidence: result.confidence, document_type: result.document_type });
     } catch (err) {
       console.error('OCR Error:', err);
       setError('Failed to extract data. Please fill in manually.');
