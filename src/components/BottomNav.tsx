@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, FileText, Camera, Settings } from 'lucide-react';
+import { LayoutDashboard, FileText, Camera, Settings, Monitor, BarChart2 } from 'lucide-react';
 
 const T = {
   bg: '#0d0d0d', surface: '#1a1a1a', border: '#2a2a2a',
@@ -10,10 +10,11 @@ const T = {
 };
 
 const tabs = [
-  { href: '/invoices', icon: LayoutDashboard, label: 'Dashboard' },
-  { href: '/invoices/list', icon: FileText, label: 'Documents' },
-  { href: '/capture', icon: Camera, label: 'Capture', primary: true },
-  { href: '/settings', icon: Settings, label: 'Settings' },
+  { href: '/invoices',      icon: LayoutDashboard, label: 'Dashboard' },
+  { href: '/invoices/list', icon: FileText,         label: 'Documents' },
+  { href: '/capture',       icon: Camera,           label: 'Capture', primary: true },
+  { href: '/reports',       icon: BarChart2,        label: 'Reports' },
+  { href: '/settings',      icon: Settings,         label: 'Settings' },
 ];
 
 export default function BottomNav() {
@@ -31,7 +32,7 @@ export default function BottomNav() {
         boxShadow: '0 -4px 20px rgba(0,0,0,0.5)',
       }}>
         {tabs.map(({ href, icon: Icon, label, primary }) => {
-          const active = pathname === href;
+          const active = pathname === href || pathname.startsWith(href + '/');
           return (
             <Link key={href} href={href} style={{
               flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
@@ -47,10 +48,10 @@ export default function BottomNav() {
                   <Icon size={22} color={T.bg} />
                 </div>
               ) : (
-                <Icon size={22} color={active ? T.yellow : T.textMuted} strokeWidth={active ? 2.5 : 1.8} />
+                <Icon size={20} color={active ? T.yellow : T.textMuted} strokeWidth={active ? 2.5 : 1.8} />
               )}
               <span style={{
-                fontSize: 9, letterSpacing: '1px', textTransform: 'uppercase',
+                fontSize: 8, letterSpacing: '1px', textTransform: 'uppercase',
                 fontFamily: "'Share Tech Mono', 'Courier New', monospace",
                 color: active || primary ? T.yellow : T.textMuted,
                 marginTop: primary ? 4 : 0,
