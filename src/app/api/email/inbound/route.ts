@@ -9,6 +9,7 @@ interface PostmarkAttachment {
   Content: string; // base64
   ContentType: string;
   ContentLength: number;
+  ContentID?: string; // set for inline images (e.g. cid:image001.png)
 }
 
 interface PostmarkInbound {
@@ -67,10 +68,22 @@ export async function POST(request: NextRequest) {
     }
 
     // ── 5. Find processable attachments ───────────────────────────────
-    const attachments = (payload.Attachments || []).filter(a =>
-      SUPPORTED_IMAGE_TYPES.includes(a.ContentType) ||
-      a.ContentType === SUPPORTED_PDF_TYPE
-    );
+    // Exclude inline images (Outlook signatures, logos etc. have a ContentID like cid:image001.png)
+    const attachments = (payload.Attachments || []).filter(a => {
+      const isSupported = SUPPORTED_IMAGE_TYPES.includes(a.ContentType) || a.ContentType === SUPPORTED_PDF_TYPE;
+      const isInline = !!a.ContentID && a.ContentID.trim() !== '';
+      const isTooSmall = a.ContentLength < 10000; // ignore anything under 10KB — likely a logo/icon
+      if (isInline) { console.log(`Skipping inline attachment: ${a.Name} (ContentID: ${a.ContentID})`); return false; }
+      if (isTooSmall) { console.log(`Skipping small attachment: ${a.Name} (${a.ContentLength} bytes)`); return false; }
+      return isSupported;
+    });
+
+    // Log all attachments for diagnostics
+    console.log(`Total attachments in payload: ${(payload.Attachments || []).length}`);
+    (payload.Attachments || []).forEach((a, i) => {
+      console.log(`  [${i}] ${a.Name} | type: ${a.ContentType} | size: ${a.ContentLength} | contentID: ${a.ContentID || 'none'} | hasContent: ${!!a.Content && a.Content.length > 0}`);
+    });
+    console.log(`Processable attachments after filter: ${attachments.length}`);
 
     if (attachments.length === 0) {
       console.log(`Email from ${senderEmail} had no supported attachments`);
