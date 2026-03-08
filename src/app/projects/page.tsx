@@ -38,7 +38,8 @@ export default function ProjectsPage() {
   const fetchProjects = async () => {
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: _sess } } = await supabase.auth.getSession();
+      const user = _sess?.user;
       const { data: proj } = await supabase
         .from('projects').select('id, name, created_at')
         .eq('user_id', user?.id || '').order('name');
@@ -67,7 +68,8 @@ export default function ProjectsPage() {
     if (!newName.trim()) return;
     setSaving(true); setError(null);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: _sess } } = await supabase.auth.getSession();
+      const user = _sess?.user;
       const { error: err } = await supabase.from('projects').insert({ name: newName.trim(), user_id: user?.id });
       if (err) throw err;
       setNewName(''); setAdding(false);

@@ -67,7 +67,8 @@ export default function SettingsPage() {
 
   useEffect(() => {
     const load = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: _sess } } = await supabase.auth.getSession();
+      const user = _sess?.user;
       if (!user) { router.push('/auth/login'); return; }
       const { data } = await supabase.from('user_profiles').select('*').eq('id', user.id).single();
       if (data) {
@@ -86,7 +87,8 @@ export default function SettingsPage() {
 
   const handleSave = async () => {
     setSaving(true);
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session: _sess } } = await supabase.auth.getSession();
+      const user = _sess?.user;
     if (!user) return;
     await supabase.from('user_profiles').update({
       full_name: form.full_name, phone: form.phone || null,

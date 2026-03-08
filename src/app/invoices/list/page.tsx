@@ -97,7 +97,8 @@ export default function InvoiceListPage() {
   const fetchInvoices = useCallback(async () => {
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: _sess } } = await supabase.auth.getSession();
+      const user = _sess?.user;
       const { data } = await supabase.from('invoices').select('*').eq('user_id', user?.id || '').order(sortBy, { ascending: sortDir === 'asc' });
       setInvoices(data || []);
     } finally { setLoading(false); }
@@ -106,7 +107,8 @@ export default function InvoiceListPage() {
   useEffect(() => { fetchInvoices(); }, [fetchInvoices]);
   useEffect(() => {
     const load = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: _sess } } = await supabase.auth.getSession();
+      const user = _sess?.user;
       const { data } = await supabase.from('projects').select('id,name').eq('user_id', user?.id||'').order('name');
       setProjects(data || []);
     };

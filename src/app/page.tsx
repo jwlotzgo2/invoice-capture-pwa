@@ -81,11 +81,11 @@ export default function InvoicesPage() {
 
   useEffect(() => {
     const checkAdmin = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
       if (user) {
         const { data: profile } = await supabase.from('user_profiles').select('role').eq('id', user.id).single();
         setIsAdmin(profile?.role === 'admin');
-        // Count email invoices pending review
         const { count } = await supabase
           .from('invoices')
           .select('*', { count: 'exact', head: true })
@@ -101,7 +101,8 @@ export default function InvoicesPage() {
   const fetchInvoices = useCallback(async () => {
     setLoading(true);
     try {
-      const { data: { user: fetchUser } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
+      const fetchUser = session?.user;
       let query = supabase.from('invoices').select('*').eq('user_id', fetchUser?.id || '').order(filters.sortBy, { ascending: filters.sortOrder === 'asc' });
       if (filters.search) query = query.or(`supplier.ilike.%${filters.search}%,description.ilike.%${filters.search}%,business_name.ilike.%${filters.search}%`);
       if (filters.status) query = query.eq('status', filters.status);

@@ -97,7 +97,8 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
     };
     fetchInvoice();
     const fetchProjects = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: _sess } } = await supabase.auth.getSession();
+      const user = _sess?.user;
       const { data } = await supabase.from('projects').select('id,name').eq('user_id', user?.id||'').order('name');
       setProjects(data || []);
     };
@@ -105,7 +106,8 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   }, [id]);
 
   const checkDuplicate = async (inv: any) => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session: _sess } } = await supabase.auth.getSession();
+      const user = _sess?.user;
     if (inv.document_number) {
       const { data } = await supabase.from('invoices').select('id').eq('user_id', user?.id||'').eq('document_number', inv.document_number).neq('id', id).limit(1);
       if (data && data.length > 0) { setDuplicateWarning(`Doc ref ${inv.document_number} exists on another record`); return; }

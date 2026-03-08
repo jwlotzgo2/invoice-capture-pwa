@@ -179,7 +179,8 @@ function CapturePageInner() {
     }
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: _sess } } = await supabase.auth.getSession();
+      const user = _sess?.user;
       if (!user) throw new Error('Not authenticated');
 
       let imageUrl = null;

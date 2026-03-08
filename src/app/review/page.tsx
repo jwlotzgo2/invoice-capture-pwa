@@ -192,7 +192,8 @@ export default function ReviewPage() {
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session: _sess } } = await supabase.auth.getSession();
+      const user = _sess?.user;
     const { data } = await supabase.from('invoices').select('*').eq('user_id', user?.id||'').order('created_at', {ascending:false});
     setInvoices(data || []);
     const { data: proj } = await supabase.from('projects').select('id,name').eq('user_id', user?.id||'').order('name');
