@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import webpush from 'web-push';
 
@@ -7,6 +7,15 @@ webpush.setVapidDetails(
   process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
   process.env.VAPID_PRIVATE_KEY!
 );
+
+// Service role client — bypasses RLS
+function getServiceClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
+}
 
 // Called internally by email webhook after invoice created
 // POST /api/push/send  { org_id, title, body, url }
@@ -20,7 +29,7 @@ export async function POST(request: NextRequest) {
   const { org_id, title, body, url } = await request.json();
   if (!org_id) return NextResponse.json({ error: 'Missing org_id' }, { status: 400 });
 
-  const supabase = await createClient();
+  const supabase = getServiceClient();
 
   // Get all user_ids in this org
   const { data: members } = await supabase
