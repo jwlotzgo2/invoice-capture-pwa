@@ -43,7 +43,8 @@ function getMatchStatus(inv: Invoice): 'match' | 'off' | 'none' {
   if (items.length === 0) return 'none';
   const itemsTotal = items.reduce((s: number, i: any) => s + (i.line_total ?? 0), 0);
   if (!inv.amount) return 'none';
-  return Math.abs(itemsTotal - inv.amount) < 1 ? 'match' : 'off';
+  const exclTotal = inv.amount - (inv.vat_amount ?? 0);
+  return Math.abs(itemsTotal - exclTotal) < 1 ? 'match' : 'off';
 }
 
 const css = `
@@ -503,14 +504,16 @@ export default function ReviewPage() {
                   <button className="li-add-btn" onClick={()=>setLineItems([...lineItems,{description:'',quantity:1,unit_price:null,line_total:null}])}>+ Add Line</button>
                   {(() => {
                     const itemsTotal = lineItems.reduce((s,i)=>s+(i.line_total??0),0);
-                    const invTotal = formData.amount ? parseFloat(formData.amount) : 0;
+                    const vatAmt = formData.vat_amount ? parseFloat(formData.vat_amount) : 0;
+                    const inclTotal = formData.amount ? parseFloat(formData.amount) : 0;
+                    const exclTotal = inclTotal > 0 ? inclTotal - vatAmt : 0;
                     if (lineItems.length === 0) return <div className="match-bar empty"><span>No line items</span><span>—</span></div>;
-                    const match = invTotal > 0 && Math.abs(itemsTotal - invTotal) < 1;
-                    const diff = Math.abs(itemsTotal - invTotal);
+                    const match = exclTotal > 0 && Math.abs(itemsTotal - exclTotal) < 1;
+                    const diff = Math.abs(itemsTotal - exclTotal);
                     return (
-                      <div className={`match-bar ${invTotal === 0 ? 'empty' : match ? 'ok' : 'off'}`}>
-                        <span>{match ? '✓ Lines match total' : invTotal === 0 ? 'Enter amount to check' : `⚠ R ${Math.round(diff).toLocaleString('en-ZA')} off`}</span>
-                        <span style={{fontFamily:'Inter, system-ui, sans-serif'}}>R {Math.round(itemsTotal).toLocaleString('en-ZA')}</span>
+                      <div className={`match-bar ${exclTotal === 0 ? 'empty' : match ? 'ok' : 'off'}`}>
+                        <span>{match ? '✓ Lines match excl. total' : exclTotal === 0 ? 'Enter amount to check' : `⚠ R ${Math.round(diff).toLocaleString('en-ZA')} off`}</span>
+                        <span style={{fontFamily:'Inter, system-ui, sans-serif'}}>R {Math.round(itemsTotal).toLocaleString('en-ZA')} vs R {Math.round(exclTotal).toLocaleString('en-ZA')} excl.</span>
                       </div>
                     );
                   })()}
