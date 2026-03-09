@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
+import { logActivityServer } from '@/lib/logActivityServer';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -24,12 +25,14 @@ export async function GET(request: NextRequest) {
       }
     );
 
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      if (data.user) {
+        await logActivityServer(data.user.id, 'login');
+      }
       return NextResponse.redirect(new URL(next, request.url));
     }
   }
 
-  // Something went wrong — redirect to login
   return NextResponse.redirect(new URL('/auth/login', request.url));
 }
