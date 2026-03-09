@@ -46,7 +46,7 @@ function getMatchStatus(inv: Invoice): 'match' | 'off' | 'none' {
 const css = `
   * { box-sizing:border-box; }
   body { background:${T.bg};margin:0; }
-  .list-page { font-family:Inter, system-ui, sans-serif,Inter, system-ui, sans-serif;min-height:100svh;background:${T.bg};color:${T.text}; }
+  .list-page { font-family:Inter, system-ui, sans-serif;min-height:100svh;background:${T.bg};color:${T.text};overflow-x:hidden; }
   .scanline { position:fixed;top:0;left:0;right:0;bottom:0;
     background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px);
     pointer-events:none;z-index:1000; }
@@ -181,7 +181,7 @@ export default function InvoiceListPage() {
           </div>
 
           {/* Quick filter chips */}
-          <div style={{ display:'flex',gap:6,padding:'8px 16px',overflowX:'auto',scrollbarWidth:'none' }}>
+          <div style={{ display:'flex',gap:6,padding:'8px 16px',overflowX:'auto',scrollbarWidth:'none',maxWidth:'100vw' }}>
             <button className={`filter-chip${filterMatched==='match'?' active':''}`} onClick={()=>setFilterMatched(v=>v==='match'?'all':'match')}>✓ Matched</button>
             <button className={`filter-chip${filterMatched==='off'?' active':''}`} onClick={()=>setFilterMatched(v=>v==='off'?'all':'off')}>⚠ Off</button>
             <button className={`filter-chip${filterDuplicates==='dupes'?' active':''}`} style={{ borderColor: filterDuplicates==='dupes'?T.warning:T.border, color: filterDuplicates==='dupes'?T.warning:T.textDim, background: filterDuplicates==='dupes'?'rgba(253,186,116,0.12)':'transparent' }} onClick={()=>setFilterDuplicates(v=>v==='dupes'?'all':'dupes')}>

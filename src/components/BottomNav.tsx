@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Camera, Settings, Monitor, BarChart2, Menu, FileText, List, X } from 'lucide-react';
+import { LayoutDashboard, Camera, Settings, Monitor, BarChart2, Menu, FileText, List, X, TrendingUp } from 'lucide-react';
 
 const T = {
   bg: '#1c1c1c', surface: '#282828', surfaceHigh: '#323232', border: '#383838',
@@ -19,8 +19,9 @@ const tabs = [
 ];
 
 const menuItems = [
-  { href: '/documents',     icon: FileText, label: 'Documents',      desc: 'Browse and preview files' },
-  { href: '/invoices/list', icon: List,     label: 'Invoice Listing', desc: 'Full list with filters & export' },
+  { href: '/documents',     icon: FileText,    label: 'Documents',       desc: 'Browse and preview files' },
+  { href: '/invoices/list', icon: List,        label: 'Invoice Listing',  desc: 'Full list with filters & export' },
+  { href: '/invoices/open', icon: TrendingUp,  label: 'Open Invoices',    desc: 'Aging, outstanding & suppliers' },
 ];
 
 export default function BottomNav() {
