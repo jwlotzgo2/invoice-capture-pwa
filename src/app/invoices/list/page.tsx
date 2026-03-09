@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Invoice, DocumentType, DOCUMENT_TYPE_LABELS } from '@/types/invoice';
-import { Search, X, Download, ChevronUp, ChevronDown, SlidersHorizontal } from 'lucide-react';
+import { Search, X, Download, ChevronUp, ChevronDown, SlidersHorizontal, TrendingUp } from 'lucide-react';
 
 type SortField = 'created_at' | 'invoice_date' | 'amount' | 'supplier';
 
@@ -176,6 +176,7 @@ export default function InvoiceListPage() {
               {search && <button onClick={()=>setSearch('')} style={{background:'none',border:'none',cursor:'pointer',color:T.textMuted,padding:0}}><X size={14}/></button>}
             </div>
             <button className={`icon-btn${showFilters?' active':''}`} onClick={()=>setShowFilters(f=>!f)}><SlidersHorizontal size={16}/></button>
+            <button className="icon-btn" onClick={() => router.push('/invoices/open')} title="Open invoices report"><TrendingUp size={16}/></button>
             <button className="icon-btn" onClick={exportCSV}><Download size={16}/></button>
           </div>
 
@@ -187,10 +188,6 @@ export default function InvoiceListPage() {
               ⚡ Dupes{dupeCount>0?` (${dupeCount})`:''}</button>
             <button className={`filter-chip${filterPaid==='paid'?' active':''}`} style={{ borderColor: filterPaid==='paid'?T.success:T.border, color: filterPaid==='paid'?T.success:T.textDim, background: filterPaid==='paid'?'rgba(134,239,172,0.1)':'transparent' }} onClick={()=>setFilterPaid(v=>v==='paid'?'all':'paid')}>✓ Paid</button>
             <button className={`filter-chip${filterPaid==='unpaid'?' active':''}`} style={{ borderColor: filterPaid==='unpaid'?T.error:T.border, color: filterPaid==='unpaid'?T.error:T.textDim, background: filterPaid==='unpaid'?'rgba(252,165,165,0.1)':'transparent' }} onClick={()=>setFilterPaid(v=>v==='unpaid'?'all':'unpaid')}>✗ Unpaid</button>
-          </div>
-
-          {showFilters && (
-            </button>
           </div>
 
           {showFilters && (
