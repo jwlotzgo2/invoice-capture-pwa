@@ -89,6 +89,7 @@ export default function InvoiceListPage() {
   const [filterProject, setFilterProject] = useState('');
   const [filterMatched, setFilterMatched] = useState<'all'|'match'|'off'|'none'>('all');
   const [filterDuplicates, setFilterDuplicates] = useState<'all'|'dupes'|'clean'>('all');
+  const [filterPaid, setFilterPaid] = useState<'all'|'paid'|'unpaid'>('all');
   const [projects, setProjects] = useState<{id:string;name:string}[]>([]);
   const [sortBy, setSortBy] = useState<SortField>('created_at');
   const [sortDir, setSortDir] = useState<'asc'|'desc'>('desc');
@@ -123,6 +124,8 @@ export default function InvoiceListPage() {
     if (filterDateTo && inv.invoice_date && inv.invoice_date > filterDateTo) return false;
     if (filterMatched !== 'all' && getMatchStatus(inv) !== filterMatched) return false;
     if (filterDuplicates === 'dupes' && !findDuplicate(inv, invoices) !== null) return false;
+    if (filterPaid === 'paid' && !inv.is_paid) return false;
+    if (filterPaid === 'unpaid' && inv.is_paid) return false;
     if (search) {
       const q = search.toLowerCase();
       if (!(inv.supplier||'').toLowerCase().includes(q) && !(inv.description||'').toLowerCase().includes(q) && !(inv.document_number||'').toLowerCase().includes(q)) return false;
@@ -141,10 +144,11 @@ export default function InvoiceListPage() {
 
   const exportCSV = () => {
     const rows = [
-      ['Date','Doc No.','Supplier','Business','Description','Amount','VAT','Category','Duplicate','Match'],
+      ['Date','Doc No.','Supplier','Business','Description','Amount','VAT','Category','Paid','Payment Method','Duplicate','Match'],
       ...filtered.map(i => [
         i.invoice_date||'', i.document_number||'', i.supplier||'', i.business_name||'',
         i.description||'', i.amount||'', i.vat_amount||'', i.category||'',
+        i.is_paid?'Yes':'No', i.payment_method||'',
         findDuplicate(i, invoices) !== null?'Yes':'No', getMatchStatus(i),
       ])
     ];
@@ -180,7 +184,12 @@ export default function InvoiceListPage() {
             <button className={`filter-chip${filterMatched==='match'?' active':''}`} onClick={()=>setFilterMatched(v=>v==='match'?'all':'match')}>✓ Matched</button>
             <button className={`filter-chip${filterMatched==='off'?' active':''}`} onClick={()=>setFilterMatched(v=>v==='off'?'all':'off')}>⚠ Off</button>
             <button className={`filter-chip${filterDuplicates==='dupes'?' active':''}`} style={{ borderColor: filterDuplicates==='dupes'?T.warning:T.border, color: filterDuplicates==='dupes'?T.warning:T.textDim, background: filterDuplicates==='dupes'?'rgba(253,186,116,0.12)':'transparent' }} onClick={()=>setFilterDuplicates(v=>v==='dupes'?'all':'dupes')}>
-              ⚡ Dupes{dupeCount>0?` (${dupeCount})`:''}
+              ⚡ Dupes{dupeCount>0?` (${dupeCount})`:''}</button>
+            <button className={`filter-chip${filterPaid==='paid'?' active':''}`} style={{ borderColor: filterPaid==='paid'?T.success:T.border, color: filterPaid==='paid'?T.success:T.textDim, background: filterPaid==='paid'?'rgba(134,239,172,0.1)':'transparent' }} onClick={()=>setFilterPaid(v=>v==='paid'?'all':'paid')}>✓ Paid</button>
+            <button className={`filter-chip${filterPaid==='unpaid'?' active':''}`} style={{ borderColor: filterPaid==='unpaid'?T.error:T.border, color: filterPaid==='unpaid'?T.error:T.textDim, background: filterPaid==='unpaid'?'rgba(252,165,165,0.1)':'transparent' }} onClick={()=>setFilterPaid(v=>v==='unpaid'?'all':'unpaid')}>✗ Unpaid</button>
+          </div>
+
+          {showFilters && (
             </button>
           </div>
 
@@ -208,7 +217,11 @@ export default function InvoiceListPage() {
 
         <div className="summary-bar">
           <span>{filtered.length} of {invoices.length} documents</span>
-          <span style={{color:T.yellow,fontFamily:'Inter, system-ui, sans-serif'}}>{fmtZAR(total)}</span>
+          <span style={{display:'flex',gap:12,alignItems:'center'}}>
+            <span style={{color:T.success,fontSize:11}}>{fmtZAR(filtered.filter(i=>i.is_paid).reduce((s,i)=>s+(i.amount||0),0))} paid</span>
+            <span style={{color:T.error,fontSize:11}}>{fmtZAR(filtered.filter(i=>!i.is_paid).reduce((s,i)=>s+(i.amount||0),0))} unpaid</span>
+            <span style={{color:T.yellow,fontFamily:'Inter, system-ui, sans-serif'}}>{fmtZAR(total)}</span>
+          </span>
         </div>
 
         <div className="sort-bar">
@@ -240,7 +253,7 @@ export default function InvoiceListPage() {
                     {inv.invoice_date && <div style={{fontSize:11,color:T.textMuted,marginTop:2}}>{new Date(inv.invoice_date).toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'})}</div>}
                   </div>
                 </div>
-                <div style={{display:'flex',gap:6,flexWrap:'wrap',marginTop:6}}>
+                <div style={{display:'flex',gap:6,flexWrap:'wrap',marginTop:6,alignItems:'center'}}>
                   {matchStatus==='match' && <span className="badge" style={{background:'rgba(134,239,172,0.12)',color:T.success,borderColor:T.success}}>✓ Match</span>}
                   {matchStatus==='off' && <span className="badge" style={{background:'rgba(252,165,165,0.12)',color:T.error,borderColor:T.error}}>⚠ Off</span>}
                   {dupedDoc && (
@@ -249,6 +262,16 @@ export default function InvoiceListPage() {
                     </span>
                   )}
                   {inv.category && <span className="badge" style={{background:T.blueGlow,color:T.blue,borderColor:T.blue}}>{inv.category}</span>}
+                  <button
+                    onClick={async e => {
+                      e.stopPropagation();
+                      const supabase = createClient();
+                      const newPaid = !inv.is_paid;
+                      await supabase.from('invoices').update({ is_paid: newPaid }).eq('id', inv.id);
+                      setInvoices(prev => prev.map(i => i.id === inv.id ? { ...i, is_paid: newPaid } : i));
+                    }}
+                    style={{ marginLeft:'auto', padding:'2px 10px', borderRadius:4, border:`1px solid ${inv.is_paid?T.success:T.border}`, background: inv.is_paid?'rgba(134,239,172,0.1)':'transparent', color: inv.is_paid?T.success:T.textMuted, fontSize:10, fontWeight:700, cursor:'pointer', fontFamily:'inherit', letterSpacing:'0.3px' }}
+                  >{inv.is_paid ? '✓ Paid' : 'Mark Paid'}</button>
                 </div>
               </div>
             );
