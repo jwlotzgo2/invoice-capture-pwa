@@ -39,7 +39,8 @@ function getMatchStatus(inv: Invoice): 'match' | 'off' | 'none' {
   const itemsTotal = items.reduce((s: number, i: any) => s + (i.line_total ?? 0), 0);
   const invoiceTotal = inv.amount ?? 0;
   if (invoiceTotal === 0) return 'none';
-  return Math.abs(itemsTotal - invoiceTotal) < 1 ? 'match' : 'off';
+  const exclTotal = invoiceTotal - (inv.vat_amount ?? 0);
+  return Math.abs(itemsTotal - exclTotal) < 1 ? 'match' : 'off';
 }
 
 const css = `
