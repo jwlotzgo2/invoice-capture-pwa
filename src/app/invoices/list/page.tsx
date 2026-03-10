@@ -21,15 +21,19 @@ function findDuplicate(inv: Invoice, all: Invoice[]): Invoice | null {
     if (other.id === inv.id) return false;
     const aRef = inv.document_number?.trim().toLowerCase() || '';
     const bRef = other.document_number?.trim().toLowerCase() || '';
-    const sameRef = aRef.length >= 3 && bRef.length >= 3 && aRef === bRef;
     const aSupplier = inv.supplier?.trim().toLowerCase() || '';
     const bSupplier = other.supplier?.trim().toLowerCase() || '';
+    const sameSupplier = aSupplier.length > 0 && aSupplier === bSupplier;
+    // Same ref + same supplier = definite duplicate
+    const sameRefAndSupplier = aRef.length >= 3 && bRef.length >= 3 && aRef === bRef && sameSupplier;
+    // Same ref alone — only flag if ref is long/specific enough (>=6 chars) to be meaningful without supplier
+    const sameRefOnly = aRef.length >= 6 && bRef.length >= 6 && aRef === bRef;
+    // Same supplier + amount + date (no ref match needed)
     const sameCombo =
-      aSupplier.length > 0 && bSupplier.length > 0 &&
-      aSupplier === bSupplier &&
+      sameSupplier &&
       inv.amount != null && other.amount != null && inv.amount === other.amount &&
       inv.invoice_date && other.invoice_date && inv.invoice_date === other.invoice_date;
-    return !!(sameRef || sameCombo);
+    return !!(sameRefAndSupplier || sameRefOnly || sameCombo);
   }) ?? null;
 }
 
