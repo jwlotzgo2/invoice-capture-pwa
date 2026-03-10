@@ -6,8 +6,8 @@ import { createClient } from '@/lib/supabase/client';
 import { Invoice } from '@/types/invoice';
 import { startOfMonth, endOfMonth, startOfYear, endOfYear, subMonths, format } from 'date-fns';
 
-type Period = 'this_month' | 'last_month' | 'this_year' | 'all';
-type View = 'category' | 'supplier' | 'project' | 'trend';
+type Period = 'this_month' | 'last_month' | 'this_year' | 'all' | 'custom';
+type View = 'category' | 'supplier' | 'project' | 'trend' | 'lines';
 
 const T = {
   bg: '#1c1c1c', surface: '#282828', surfaceHigh: '#323232', border: '#383838',
@@ -24,6 +24,7 @@ const PERIODS: {key:Period;label:string}[] = [
   {key:'last_month',label:'Last Month'},
   {key:'this_year',label:'This Year'},
   {key:'all',label:'All Time'},
+  {key:'custom',label:'Custom'},
 ];
 
 const VIEWS: {key:View;label:string}[] = [
@@ -31,6 +32,7 @@ const VIEWS: {key:View;label:string}[] = [
   {key:'supplier',label:'Supplier'},
   {key:'project',label:'Project'},
   {key:'trend',label:'Trend'},
+  {key:'lines',label:'Lines'},
 ];
 
 function getPeriodRange(period: Period) {
@@ -94,13 +96,16 @@ export default function ReportsPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<Period>('this_month');
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
   const [view, setView] = useState<View>('category');
   const [projects, setProjects] = useState<{id:string;name:string}[]>([]);
   const supabase = createClient();
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session: _sess } } = await supabase.auth.getSession();
+      const user = _sess?.user;
     const { data } = await supabase.from('invoices').select('*').eq('user_id', user?.id||'').order('invoice_date');
     setInvoices(data || []);
     const { data: proj } = await supabase.from('projects').select('id,name').eq('user_id', user?.id||'');
@@ -110,9 +115,11 @@ export default function ReportsPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const { from, to } = getPeriodRange(period);
+  const { from: pFrom, to: pTo } = getPeriodRange(period);
+  const from = period === 'custom' ? (customFrom ? new Date(customFrom) : null) : pFrom;
+  const to   = period === 'custom' ? (customTo   ? new Date(customTo)   : null) : pTo;
   const periodInvoices = from && to
-    ? invoices.filter(i => { const d = i.invoice_date ? new Date(i.invoice_date) : new Date(i.created_at); return d >= from && d <= to; })
+    ? invoices.filter(i => { const d = i.invoice_date ? new Date(i.invoice_date) : new Date(i.created_at); return d >= from! && d <= to!; })
     : invoices;
 
   const totalAmount = periodInvoices.reduce((s,i)=>s+(i.amount??0),0);
@@ -195,6 +202,18 @@ export default function ReportsPage() {
             <button key={key} className={`period-btn${period===key?' active':''}`} onClick={()=>setPeriod(key)}>{label}</button>
           ))}
         </div>
+
+        {/* Custom date range pickers */}
+        {period === 'custom' && (
+          <div style={{display:'flex',gap:8,padding:'8px 16px',alignItems:'center',background:T.surface,borderTop:`1px solid ${T.border}`}}>
+            <input type="date" value={customFrom} onChange={e=>setCustomFrom(e.target.value)}
+              style={{padding:'6px 10px',border:`1px solid ${T.border}`,borderRadius:4,fontSize:12,fontFamily:'Inter, system-ui, sans-serif',color:T.text,background:T.bg,outline:'none'}}/>
+            <span style={{fontSize:11,color:T.textMuted}}>to</span>
+            <input type="date" value={customTo} onChange={e=>setCustomTo(e.target.value)}
+              style={{padding:'6px 10px',border:`1px solid ${T.border}`,borderRadius:4,fontSize:12,fontFamily:'Inter, system-ui, sans-serif',color:T.text,background:T.bg,outline:'none'}}/>
+            {(customFrom||customTo) && <button onClick={()=>{setCustomFrom('');setCustomTo('');}} style={{fontSize:11,color:T.error,background:'none',border:'none',cursor:'pointer',fontFamily:'inherit'}}>Clear</button>}
+          </div>
+        )}
 
         {/* KPI row */}
         <div style={{padding:'12px 16px 0'}}>
@@ -347,6 +366,101 @@ export default function ReportsPage() {
                   </div>
                 </div>
               )}
+              {/* ── LINES ── */}
+              {view === 'lines' && (() => {
+                // Flatten all line items across period invoices
+                type LineRow = { description: string; qty: number; totalQty: number; totalAmt: number; avgUnit: number; count: number; };
+                const lineMap: Record<string, LineRow> = {};
+                periodInvoices.forEach(inv => {
+                  const items = Array.isArray((inv as any).line_items) ? (inv as any).line_items : [];
+                  items.forEach((item: any) => {
+                    const desc = (item.description || 'Unknown').trim();
+                    if (!lineMap[desc]) lineMap[desc] = { description: desc, qty: 0, totalQty: 0, totalAmt: 0, avgUnit: 0, count: 0 };
+                    lineMap[desc].totalQty += item.quantity ?? 1;
+                    lineMap[desc].totalAmt += item.line_total ?? 0;
+                    lineMap[desc].count++;
+                  });
+                });
+                const lines = Object.values(lineMap)
+                  .map(r => ({ ...r, avgUnit: r.totalQty > 0 ? r.totalAmt / r.totalQty : 0 }))
+                  .sort((a, b) => b.totalAmt - a.totalAmt);
+                const linesGrandTotal = lines.reduce((s, l) => s + l.totalAmt, 0);
+                const maxLine = lines[0]?.totalAmt || 1;
+
+                return (
+                  <div className="t-card">
+                    <div className="t-card-title">Line Item Analysis</div>
+                    {lines.length === 0 ? (
+                      <div style={{fontSize:13,color:T.textMuted,textAlign:'center',padding:20}}>No line items captured for this period</div>
+                    ) : (
+                      <>
+                        <div style={{display:'flex',gap:10,marginBottom:16,flexWrap:'wrap'}}>
+                          <div style={{flex:1,minWidth:120,background:T.surfaceHigh,borderRadius:8,padding:'10px 14px'}}>
+                            <div style={{fontSize:10,color:T.textMuted,textTransform:'uppercase',letterSpacing:'0.5px',marginBottom:4}}>Line Types</div>
+                            <div style={{fontSize:20,fontWeight:700,color:T.yellow}}>{lines.length}</div>
+                          </div>
+                          <div style={{flex:1,minWidth:120,background:T.surfaceHigh,borderRadius:8,padding:'10px 14px'}}>
+                            <div style={{fontSize:10,color:T.textMuted,textTransform:'uppercase',letterSpacing:'0.5px',marginBottom:4}}>Total Units</div>
+                            <div style={{fontSize:20,fontWeight:700,color:T.text}}>{lines.reduce((s,l)=>s+l.totalQty,0).toLocaleString('en-ZA')}</div>
+                          </div>
+                          <div style={{flex:1,minWidth:120,background:T.surfaceHigh,borderRadius:8,padding:'10px 14px'}}>
+                            <div style={{fontSize:10,color:T.textMuted,textTransform:'uppercase',letterSpacing:'0.5px',marginBottom:4}}>Lines Total</div>
+                            <div style={{fontSize:20,fontWeight:700,color:T.success}}>{fmtZAR(linesGrandTotal)}</div>
+                          </div>
+                        </div>
+                        <div style={{overflowX:'auto'}}>
+                          <table style={{width:'100%',borderCollapse:'collapse',fontFamily:'Inter, system-ui, sans-serif'}}>
+                            <thead>
+                              <tr>
+                                {['Description','Appearances','Total Qty','Avg Unit Price','Total'].map(h=>(
+                                  <th key={h} style={{fontSize:10,fontWeight:700,color:T.textMuted,textTransform:'uppercase',letterSpacing:'0.6px',padding:'8px 8px',textAlign:h==='Total'||h==='Avg Unit Price'||h==='Total Qty'?'right':'left',background:T.surfaceHigh,borderBottom:`1px solid ${T.border}`}}>{h}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {lines.map((row, i) => (
+                                <tr key={row.description}>
+                                  <td style={{padding:'9px 8px',borderBottom:`1px solid ${T.border}`,fontSize:12,color:T.text,maxWidth:180,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                                    <div style={{display:'flex',alignItems:'center',gap:8}}>
+                                      <div style={{width:3,height:20,borderRadius:2,background:CAT_COLORS[i%CAT_COLORS.length],flexShrink:0}}/>
+                                      {row.description}
+                                    </div>
+                                  </td>
+                                  <td style={{padding:'9px 8px',borderBottom:`1px solid ${T.border}`,fontSize:12,color:T.textDim,textAlign:'right'}}>{row.count}</td>
+                                  <td style={{padding:'9px 8px',borderBottom:`1px solid ${T.border}`,fontSize:12,color:T.text,textAlign:'right',fontVariantNumeric:'tabular-nums'}}>{row.totalQty.toLocaleString('en-ZA',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+                                  <td style={{padding:'9px 8px',borderBottom:`1px solid ${T.border}`,fontSize:12,color:T.textDim,textAlign:'right',fontVariantNumeric:'tabular-nums'}}>{fmtZAR(row.avgUnit)}</td>
+                                  <td style={{padding:'9px 8px',borderBottom:`1px solid ${T.border}`,fontSize:13,fontWeight:700,color:T.yellow,textAlign:'right',fontVariantNumeric:'tabular-nums'}}>{fmtZAR(row.totalAmt)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                            <tfoot>
+                              <tr>
+                                <td colSpan={4} style={{padding:'10px 8px',fontSize:12,fontWeight:700,color:T.textMuted}}>Total</td>
+                                <td style={{padding:'10px 8px',fontSize:13,fontWeight:700,color:T.success,textAlign:'right'}}>{fmtZAR(linesGrandTotal)}</td>
+                              </tr>
+                            </tfoot>
+                          </table>
+                        </div>
+                        {/* Bar chart */}
+                        <div style={{marginTop:20}}>
+                          {lines.slice(0,10).map((row,i)=>(
+                            <div key={row.description} style={{marginBottom:10}}>
+                              <div style={{display:'flex',justifyContent:'space-between',fontSize:11,marginBottom:4}}>
+                                <span style={{color:T.textDim,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'55%'}}>{row.description}</span>
+                                <span style={{color:T.yellow,fontFamily:'Inter, system-ui, sans-serif',flexShrink:0,marginLeft:8}}>{fmtZAR(row.totalAmt)}</span>
+                              </div>
+                              <div style={{height:4,background:T.border,borderRadius:2,overflow:'hidden'}}>
+                                <div style={{height:'100%',width:`${row.totalAmt/maxLine*100}%`,background:CAT_COLORS[i%CAT_COLORS.length],borderRadius:2,transition:'width 0.6s'}}/>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
+
             </>
           )}
         </div>
