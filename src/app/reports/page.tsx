@@ -401,7 +401,7 @@ export default function ReportsPage() {
                           </div>
                           <div style={{flex:1,minWidth:120,background:T.surfaceHigh,borderRadius:8,padding:'10px 14px'}}>
                             <div style={{fontSize:10,color:T.textMuted,textTransform:'uppercase',letterSpacing:'0.5px',marginBottom:4}}>Total Units</div>
-                            <div style={{fontSize:20,fontWeight:700,color:T.text}}>{lines.reduce((s,l)=>s+l.totalQty,0).toLocaleString('en-ZA')}</div>
+                            <div style={{fontSize:20,fontWeight:700,color:T.text}}>{Math.round(lines.reduce((s,l)=>s+l.totalQty,0)).toLocaleString('en-ZA')}</div>
                           </div>
                           <div style={{flex:1,minWidth:120,background:T.surfaceHigh,borderRadius:8,padding:'10px 14px'}}>
                             <div style={{fontSize:10,color:T.textMuted,textTransform:'uppercase',letterSpacing:'0.5px',marginBottom:4}}>Lines Total</div>
@@ -412,7 +412,7 @@ export default function ReportsPage() {
                           <table style={{width:'100%',borderCollapse:'collapse',fontFamily:'Inter, system-ui, sans-serif'}}>
                             <thead>
                               <tr>
-                                {['Description','Appearances','Total Qty','Avg Unit Price','Total'].map(h=>(
+                                {['Description','Total Qty','Avg Unit Price','Total'].map(h=>(
                                   <th key={h} style={{fontSize:10,fontWeight:700,color:T.textMuted,textTransform:'uppercase',letterSpacing:'0.6px',padding:'8px 8px',textAlign:h==='Total'||h==='Avg Unit Price'||h==='Total Qty'?'right':'left',background:T.surfaceHigh,borderBottom:`1px solid ${T.border}`}}>{h}</th>
                                 ))}
                               </tr>
@@ -426,8 +426,7 @@ export default function ReportsPage() {
                                       {row.description}
                                     </div>
                                   </td>
-                                  <td style={{padding:'9px 8px',borderBottom:`1px solid ${T.border}`,fontSize:12,color:T.textDim,textAlign:'right'}}>{row.count}</td>
-                                  <td style={{padding:'9px 8px',borderBottom:`1px solid ${T.border}`,fontSize:12,color:T.text,textAlign:'right',fontVariantNumeric:'tabular-nums'}}>{row.totalQty.toLocaleString('en-ZA',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+                                  <td style={{padding:'9px 8px',borderBottom:`1px solid ${T.border}`,fontSize:12,color:T.text,textAlign:'right',fontVariantNumeric:'tabular-nums'}}>{Math.round(row.totalQty).toLocaleString('en-ZA')}</td>
                                   <td style={{padding:'9px 8px',borderBottom:`1px solid ${T.border}`,fontSize:12,color:T.textDim,textAlign:'right',fontVariantNumeric:'tabular-nums'}}>{fmtZAR(row.avgUnit)}</td>
                                   <td style={{padding:'9px 8px',borderBottom:`1px solid ${T.border}`,fontSize:13,fontWeight:700,color:T.yellow,textAlign:'right',fontVariantNumeric:'tabular-nums'}}>{fmtZAR(row.totalAmt)}</td>
                                 </tr>
