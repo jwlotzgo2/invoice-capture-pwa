@@ -34,7 +34,7 @@ function findDuplicate(inv: Invoice, all: Invoice[]): Invoice | null {
     const sameRefOnly = aRef.length >= 6 && bRef.length >= 6 && aRef === bRef;
     const sameCombo =
       sameSupplier &&
-      inv.amount != null && other.amount != null && inv.amount === other.amount &&
+      inv.amount != null && other.amount != null && Math.round(inv.amount * 100) === Math.round(other.amount * 100) &&
       inv.invoice_date && other.invoice_date && inv.invoice_date === other.invoice_date;
     return !!(sameRefAndSupplier || sameRefOnly || sameCombo);
   }) ?? null;
@@ -46,7 +46,7 @@ function getMatchStatus(inv: Invoice): 'match' | 'off' | 'none' {
   const itemsTotal = items.reduce((s: number, i: any) => s + (i.line_total ?? 0), 0);
   if (!inv.amount) return 'none';
   const exclTotal = inv.amount - (inv.vat_amount ?? 0);
-  return Math.abs(itemsTotal - exclTotal) < 1 ? 'match' : 'off';
+  return Math.abs(Math.round(itemsTotal * 100) - Math.round(exclTotal * 100)) < 2 ? 'match' : 'off';
 }
 
 const css = `

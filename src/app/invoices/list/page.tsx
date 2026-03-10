@@ -31,7 +31,7 @@ function findDuplicate(inv: Invoice, all: Invoice[]): Invoice | null {
     // Same supplier + amount + date (no ref match needed)
     const sameCombo =
       sameSupplier &&
-      inv.amount != null && other.amount != null && inv.amount === other.amount &&
+      inv.amount != null && other.amount != null && Math.round(inv.amount * 100) === Math.round(other.amount * 100) &&
       inv.invoice_date && other.invoice_date && inv.invoice_date === other.invoice_date;
     return !!(sameRefAndSupplier || sameRefOnly || sameCombo);
   }) ?? null;
@@ -44,7 +44,7 @@ function getMatchStatus(inv: Invoice): 'match' | 'off' | 'none' {
   const invoiceTotal = inv.amount ?? 0;
   if (invoiceTotal === 0) return 'none';
   const exclTotal = invoiceTotal - (inv.vat_amount ?? 0);
-  return Math.abs(itemsTotal - exclTotal) < 1 ? 'match' : 'off';
+  return Math.abs(Math.round(itemsTotal * 100) - Math.round(exclTotal * 100)) < 2 ? 'match' : 'off';
 }
 
 const css = `
@@ -111,6 +111,15 @@ export default function InvoiceListPage() {
   }, [sortBy, sortDir]);
 
   useEffect(() => { fetchInvoices(); }, [fetchInvoices]);
+
+  // Refetch when user returns to this tab/page (e.g. after editing in detail)
+  useEffect(() => {
+    const onFocus = () => fetchInvoices();
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchInvoices(); };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { window.removeEventListener('focus', onFocus); document.removeEventListener('visibilitychange', onVisible); };
+  }, [fetchInvoices]);
   useEffect(() => {
     const load = async () => {
       const { data: { session: _sess } } = await supabase.auth.getSession();
