@@ -136,7 +136,7 @@ export default function InvoiceListPage() {
     if (filterDateFrom && inv.invoice_date && inv.invoice_date < filterDateFrom) return false;
     if (filterDateTo && inv.invoice_date && inv.invoice_date > filterDateTo) return false;
     if (filterMatched !== 'all' && getMatchStatus(inv) !== filterMatched) return false;
-    if (filterDuplicates === 'dupes' && !findDuplicate(inv, invoices) !== null) return false;
+    if (filterDuplicates === 'dupes' && findDuplicate(inv, invoices) === null) return false;
     if (filterPaid === 'paid' && !inv.is_paid) return false;
     if (filterPaid === 'unpaid' && inv.is_paid) return false;
     if (search) {
