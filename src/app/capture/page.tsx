@@ -15,6 +15,9 @@ type Step = 'choose' | 'capture' | 'processing' | 'review';
 function CapturePageInner() {
   const [step, setStep] = useState<Step>('choose');
   const [showMore, setShowMore] = useState(false);
+  const [showLines, setShowLines] = useState(false);
+  const [showProject, setShowProject] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [formData, setFormData] = useState<InvoiceFormData>({
     supplier: '', description: '', invoice_date: '',
@@ -107,8 +110,14 @@ function CapturePageInner() {
       setOcrConfidence(result.confidence);
       setCategory(result.category || null);
       setDocumentType(result.document_type || 'invoice');
+      if (result.document_type && result.document_type !== 'invoice') setShowMore(true);
       setDocumentNumber(result.document_number || null);
       setLineItems(result.line_items || []);
+      if (result.line_items && result.line_items.length > 0) {
+        const lTotal = result.line_items.reduce((s: number, i: any) => s + (i.line_total ?? 0), 0);
+        const excl = (result.amount ?? 0) - (result.vat_amount ?? 0);
+        if (Math.abs(Math.round(lTotal * 100) - Math.round(excl * 100)) >= 2) setShowLines(true);
+      }
       setStep('review');
       logActivity('capture_ocr', { confidence: result.confidence, document_type: result.document_type });
     } catch (err) {
@@ -361,6 +370,145 @@ function CapturePageInner() {
         )}
 
 
+        {/* Main fields */}
+        <div style={{ background: '#282828', borderRadius: 14, border: '1px solid #383838', padding: 16, marginBottom: 12 }}>
+          <InvoiceForm
+            formData={formData}
+            onChange={setFormData}
+            onSubmit={handleSave}
+            onCancel={handleBack}
+            isLoading={saving}
+            submitLabel="Save Invoice"
+            imagePreview={fileType === 'application/pdf' ? null : capturedImage}
+            pdfPreview={fileType === 'application/pdf' ? capturedImage : null}
+          />
+        </div>
+
+        {/* Line Items — collapsible, highlights mismatch */}
+        {(() => {
+          const linesTotal = lineItems.reduce((s, i) => s + (i.line_total ?? 0), 0);
+          const invAmount = parseFloat(formData.amount || '0') || 0;
+          const invVat = parseFloat(formData.vat_amount || '0') || 0;
+          const exclTotal = invAmount - invVat;
+          const hasMismatch = lineItems.length > 0 && invAmount > 0 && Math.abs(Math.round(linesTotal * 100) - Math.round(exclTotal * 100)) >= 2;
+          return (
+            <div style={{ background: '#282828', borderRadius: 14, border: `1px solid ${hasMismatch ? 'rgba(253,186,116,0.5)' : '#383838'}`, marginBottom: 12, overflow: 'hidden' }}>
+              <button onClick={() => setShowLines(v => !v)}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#f0f0f0' }}>Line Items</span>
+                  {lineItems.length > 0 && !hasMismatch && (
+                    <span style={{ fontSize: 10, background: 'rgba(134,239,172,0.12)', color: '#86efac', border: '1px solid rgba(134,239,172,0.3)', borderRadius: 4, padding: '1px 6px', fontWeight: 700 }}>✓ {lineItems.length} lines matched</span>
+                  )}
+                  {hasMismatch && (
+                    <span style={{ fontSize: 10, background: 'rgba(253,186,116,0.12)', color: '#fdba74', border: '1px solid rgba(253,186,116,0.3)', borderRadius: 4, padding: '1px 6px', fontWeight: 700 }}>⚠ Mismatch · R{Math.round(Math.abs(linesTotal - exclTotal)).toLocaleString('en-ZA')}</span>
+                  )}
+                  {lineItems.length === 0 && (
+                    <span style={{ fontSize: 11, color: '#6b6b6b' }}>none</span>
+                  )}
+                </div>
+                {showLines ? <ChevronUp size={15} color="#8a8a8a" /> : <ChevronDown size={15} color="#8a8a8a" />}
+              </button>
+              {showLines && (
+                <div style={{ borderTop: '1px solid #383838', padding: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
+                    <button onClick={() => setLineItems(prev => [...prev, { description: '', quantity: null, unit_price: null, line_total: null }])}
+                      style={{ fontSize: 12, fontWeight: 700, color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+                      + Add row
+                    </button>
+                  </div>
+                  {lineItems.length === 0 ? (
+                    <div style={{ fontSize: 13, color: '#6b6b6b', textAlign: 'center', padding: '12px 0' }}>No line items — tap Add row to add one</div>
+                  ) : lineItems.map((item, i) => (
+                    <div key={i} style={{ marginBottom: 10, paddingBottom: 10, borderBottom: i < lineItems.length - 1 ? '1px solid #383838' : 'none' }}>
+                      <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+                        <input value={item.description}
+                          onChange={e => setLineItems(prev => prev.map((r, j) => j === i ? { ...r, description: e.target.value } : r))}
+                          placeholder="Description"
+                          style={{ flex: 1, padding: '7px 10px', border: '1px solid #383838', borderRadius: 8, fontSize: 13, fontFamily: 'Inter, system-ui, sans-serif', outline: 'none', background: '#1c1c1c', color: '#f0f0f0' }} />
+                        <button onClick={() => setLineItems(prev => prev.filter((_, j) => j !== i))}
+                          style={{ width: 32, height: 32, borderRadius: 8, border: 'none', background: 'transparent', color: '#e11d48', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✕</button>
+                      </div>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <input type="number" value={item.quantity ?? ''} onChange={e => setLineItems(prev => prev.map((r, j) => j === i ? { ...r, quantity: e.target.value ? Number(e.target.value) : null } : r))}
+                          placeholder="Qty" style={{ width: 70, padding: '7px 8px', border: '1px solid #383838', borderRadius: 8, fontSize: 13, fontFamily: 'Inter, system-ui, sans-serif', outline: 'none', textAlign: 'right', background: '#1c1c1c', color: '#f0f0f0' }} />
+                        <input type="number" value={item.line_total ?? ''} onChange={e => setLineItems(prev => prev.map((r, j) => j === i ? { ...r, line_total: e.target.value ? Number(e.target.value) : null } : r))}
+                          placeholder="Line total" style={{ flex: 1, padding: '7px 8px', border: '1px solid #383838', borderRadius: 8, fontSize: 13, fontFamily: 'Inter, system-ui, sans-serif', outline: 'none', textAlign: 'right', background: '#1c1c1c', color: '#f0f0f0' }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* Project — collapsible */}
+        <div style={{ background: '#282828', borderRadius: 14, border: '1px solid #383838', marginBottom: 12, overflow: 'hidden' }}>
+          <button onClick={() => setShowProject(v => !v)}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#f0f0f0' }}>Project</span>
+              {projectId && projects.find(p => p.id === projectId) && (
+                <span style={{ fontSize: 10, background: 'rgba(96,165,250,0.12)', color: '#60a5fa', border: '1px solid rgba(96,165,250,0.3)', borderRadius: 4, padding: '1px 6px', fontWeight: 700 }}>
+                  {projects.find(p => p.id === projectId)?.name}
+                </span>
+              )}
+            </div>
+            {showProject ? <ChevronUp size={15} color="#8a8a8a" /> : <ChevronDown size={15} color="#8a8a8a" />}
+          </button>
+          {showProject && (
+            <div style={{ borderTop: '1px solid #383838', padding: 16 }}>
+              {projects.length === 0 ? (
+                <div style={{ fontSize: 13, color: '#6b6b6b' }}>No projects yet — <span onClick={() => router.push('/projects')} style={{ color: '#2563eb', cursor: 'pointer', fontWeight: 600 }}>create one</span></div>
+              ) : (
+                <select value={projectId || ''} onChange={e => setProjectId(e.target.value || null)}
+                  style={{ width: '100%', padding: '9px 12px', border: '1px solid #383838', borderRadius: 10, fontSize: 14, fontFamily: 'Inter, system-ui, sans-serif', color: '#f0f0f0', outline: 'none', background: '#1c1c1c' }}>
+                  <option value="">No project</option>
+                  {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Payment — collapsible */}
+        <div style={{ background: '#282828', borderRadius: 14, border: '1px solid #383838', marginBottom: 12, overflow: 'hidden' }}>
+          <button onClick={() => setShowPayment(v => !v)}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#f0f0f0' }}>Payment</span>
+              {isPaid && (
+                <span style={{ fontSize: 10, background: 'rgba(134,239,172,0.12)', color: '#86efac', border: '1px solid rgba(134,239,172,0.3)', borderRadius: 4, padding: '1px 6px', fontWeight: 700 }}>
+                  Paid{paymentMethod ? ` · ${paymentMethod.toUpperCase()}` : ''}
+                </span>
+              )}
+            </div>
+            {showPayment ? <ChevronUp size={15} color="#8a8a8a" /> : <ChevronDown size={15} color="#8a8a8a" />}
+          </button>
+          {showPayment && (
+            <div style={{ borderTop: '1px solid #383838', padding: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: isPaid ? 12 : 0 }}>
+                <span style={{ fontSize: 14, fontWeight: 500, color: '#e5e5e5' }}>Paid?</span>
+                <button onClick={() => { setIsPaid(!isPaid); if (isPaid) setPaymentMethod(''); }}
+                  style={{ width: 48, height: 26, borderRadius: 13, border: 'none', cursor: 'pointer', position: 'relative', background: isPaid ? '#16a34a' : '#e2e8f0', transition: 'background 0.2s' }}>
+                  <span style={{ position: 'absolute', top: 3, left: isPaid ? 25 : 3, width: 20, height: 20, borderRadius: '50%', background: '#282828', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s' }} />
+                </button>
+              </div>
+              {isPaid && (
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {['cash', 'card', 'eft'].map((method) => (
+                    <button key={method} onClick={() => setPaymentMethod(method)}
+                      style={{ flex: 1, padding: '8px 0', borderRadius: 10, border: '1.5px solid', borderColor: paymentMethod === method ? '#2563eb' : '#383838', background: paymentMethod === method ? 'rgba(37,99,235,0.15)' : 'transparent', color: paymentMethod === method ? '#60a5fa' : '#8a8a8a', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+                      {method}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* More Options — collapsible */}
         <div style={{ background: '#282828', borderRadius: 14, border: '1px solid #383838', marginBottom: 12, overflow: 'hidden' }}>
           <button onClick={() => setShowMore(v => !v)}
@@ -379,41 +527,30 @@ function CapturePageInner() {
           </button>
           {showMore && (
             <div style={{ borderTop: '1px solid #383838', padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {/* Document Type */}
               <div>
                 <div style={{ fontSize: 12, fontWeight: 700, color: '#8a8a8a', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 8 }}>Document Type</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                   {[['invoice','Tax Invoice'],['quote','Quote'],['purchase_order','Purchase Order'],['credit_note','Credit Note'],['delivery_note','Delivery Note'],['receipt','Receipt']].map(([val, label]) => (
                     <button key={val} onClick={() => setDocumentType(val)}
                       style={{ padding: '6px 12px', borderRadius: 20, border: '1.5px solid', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-                        borderColor: documentType === val ? '#2563eb' : '#e2e8f0',
-                        background: documentType === val ? '#eff6ff' : '#fff',
-                        color: documentType === val ? '#2563eb' : '#64748b' }}>
+                        borderColor: documentType === val ? '#2563eb' : '#383838', background: documentType === val ? 'rgba(37,99,235,0.15)' : 'transparent', color: documentType === val ? '#60a5fa' : '#8a8a8a' }}>
                       {label}
                     </button>
                   ))}
                 </div>
               </div>
-              {/* Document / Reference Number */}
               <div>
                 <div style={{ fontSize: 12, fontWeight: 700, color: '#8a8a8a', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 6 }}>Document / Reference Number</div>
-                <input
-                  value={documentNumber || ''}
-                  onChange={e => setDocumentNumber(e.target.value || null)}
-                  placeholder="e.g. INV-0042"
-                  style={{ width: '100%', padding: '9px 12px', border: '1px solid #383838', borderRadius: 10, fontSize: 14, fontFamily: 'Inter, system-ui, sans-serif', color: '#f0f0f0', outline: 'none', boxSizing: 'border-box', background: '#1c1c1c' }}
-                />
+                <input value={documentNumber || ''} onChange={e => setDocumentNumber(e.target.value || null)} placeholder="e.g. INV-0042"
+                  style={{ width: '100%', padding: '9px 12px', border: '1px solid #383838', borderRadius: 10, fontSize: 14, fontFamily: 'Inter, system-ui, sans-serif', color: '#f0f0f0', outline: 'none', boxSizing: 'border-box', background: '#1c1c1c' }} />
               </div>
-              {/* Category */}
               <div>
                 <div style={{ fontSize: 12, fontWeight: 700, color: '#8a8a8a', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 8 }}>Category</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                   {['Travel & Transport','Utilities','Materials & Supplies','Subscriptions & Software','Professional Services','Food & Entertainment','Equipment','Marketing','Other'].map(cat => (
                     <button key={cat} onClick={() => setCategory(prev => prev === cat ? null : cat)}
                       style={{ padding: '6px 12px', borderRadius: 20, border: '1.5px solid', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-                        borderColor: category === cat ? '#2563eb' : '#e2e8f0',
-                        background: category === cat ? '#eff6ff' : '#fff',
-                        color: category === cat ? '#2563eb' : '#64748b' }}>
+                        borderColor: category === cat ? '#2563eb' : '#383838', background: category === cat ? 'rgba(37,99,235,0.15)' : 'transparent', color: category === cat ? '#60a5fa' : '#8a8a8a' }}>
                       {cat}
                     </button>
                   ))}
@@ -421,116 +558,6 @@ function CapturePageInner() {
               </div>
             </div>
           )}
-        </div>
-
-        {/* Line Items — only shown when mismatch */}
-        {(() => {
-          const linesTotal = lineItems.reduce((s, i) => s + (i.line_total ?? 0), 0);
-          const invAmount = parseFloat(formData.amount || '0') || 0;
-          const invVat = parseFloat(formData.vat_amount || '0') || 0;
-          const exclTotal = invAmount - invVat;
-          const hasMismatch = lineItems.length > 0 && invAmount > 0 && Math.abs(Math.round(linesTotal * 100) - Math.round(exclTotal * 100)) >= 2;
-          const showLines = hasMismatch || lineItems.length === 0;
-          return (
-            <div style={{ background: '#282828', borderRadius: 14, border: `1px solid ${hasMismatch ? 'rgba(253,186,116,0.5)' : '#383838'}`, padding: 16, marginBottom: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: showLines ? 12 : 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: '#f0f0f0' }}>Line Items</span>
-                  {lineItems.length > 0 && !hasMismatch && (
-                    <span style={{ fontSize: 10, background: 'rgba(134,239,172,0.12)', color: '#86efac', border: '1px solid rgba(134,239,172,0.3)', borderRadius: 4, padding: '1px 6px', fontWeight: 700 }}>✓ Matched</span>
-                  )}
-                  {hasMismatch && (
-                    <span style={{ fontSize: 10, background: 'rgba(253,186,116,0.12)', color: '#fdba74', border: '1px solid rgba(253,186,116,0.3)', borderRadius: 4, padding: '1px 6px', fontWeight: 700 }}>⚠ Mismatch · R{Math.round(Math.abs(linesTotal - exclTotal)).toLocaleString('en-ZA')}</span>
-                  )}
-                </div>
-                <button onClick={() => setLineItems(prev => [...prev, { description: '', quantity: null, unit_price: null, line_total: null }])}
-                  style={{ fontSize: 12, fontWeight: 700, color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  + Add row
-                </button>
-              </div>
-              {showLines && (lineItems.length === 0 ? (
-                <div style={{ fontSize: 13, color: '#6b6b6b', textAlign: 'center', padding: '12px 0' }}>No line items — tap Add row to add one</div>
-              ) : lineItems.map((item, i) => (
-                <div key={i} style={{ marginBottom: 10, paddingBottom: 10, borderBottom: i < lineItems.length - 1 ? '1px solid #383838' : 'none' }}>
-                  <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
-                    <input
-                      value={item.description}
-                      onChange={e => setLineItems(prev => prev.map((r, j) => j === i ? { ...r, description: e.target.value } : r))}
-                      placeholder="Description"
-                      style={{ flex: 1, padding: '7px 10px', border: '1px solid #383838', borderRadius: 8, fontSize: 13, fontFamily: 'Inter, system-ui, sans-serif', outline: 'none', background: '#1c1c1c', color: '#f0f0f0' }}
-                    />
-                    <button onClick={() => setLineItems(prev => prev.filter((_, j) => j !== i))}
-                      style={{ width: 32, height: 32, borderRadius: 8, border: 'none', background: 'transparent', color: '#e11d48', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      ✕
-                    </button>
-                  </div>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <input type="number" value={item.quantity ?? ''} onChange={e => setLineItems(prev => prev.map((r, j) => j === i ? { ...r, quantity: e.target.value ? Number(e.target.value) : null } : r))}
-                      placeholder="Qty" style={{ width: 70, padding: '7px 8px', border: '1px solid #383838', borderRadius: 8, fontSize: 13, fontFamily: 'Inter, system-ui, sans-serif', outline: 'none', textAlign: 'right', background: '#1c1c1c', color: '#f0f0f0' }} />
-                    <input type="number" value={item.line_total ?? ''} onChange={e => setLineItems(prev => prev.map((r, j) => j === i ? { ...r, line_total: e.target.value ? Number(e.target.value) : null } : r))}
-                      placeholder="Line total" style={{ flex: 1, padding: '7px 8px', border: '1px solid #383838', borderRadius: 8, fontSize: 13, fontFamily: 'Inter, system-ui, sans-serif', outline: 'none', textAlign: 'right', background: '#1c1c1c', color: '#f0f0f0' }} />
-                  </div>
-                </div>
-              )))}
-            </div>
-          );
-        })()}
-
-        {/* Project */}
-        <div style={{ background: '#282828', borderRadius: 14, border: '1px solid #383838', padding: 16, marginBottom: 12 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#f0f0f0', marginBottom: 10 }}>Project</div>
-          {projects.length === 0 ? (
-            <div style={{ fontSize: 13, color: '#6b6b6b' }}>No projects yet — <span onClick={() => router.push('/projects')} style={{ color: '#2563eb', cursor: 'pointer', fontWeight: 600 }}>create one</span></div>
-          ) : (
-            <select value={projectId || ''} onChange={e => setProjectId(e.target.value || null)}
-              style={{ width: '100%', padding: '9px 12px', border: '1px solid #383838', borderRadius: 10, fontSize: 14, fontFamily: 'Inter, system-ui, sans-serif', color: '#f0f0f0', outline: 'none', background: '#282828' }}>
-              <option value="">No project</option>
-              {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-          )}
-        </div>
-
-        {/* Payment */}
-        <div style={{ background: '#282828', borderRadius: 14, border: '1px solid #383838', padding: 16, marginBottom: 12 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#f0f0f0', marginBottom: 12 }}>Payment</div>
-          
-          {/* Paid toggle */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: isPaid ? 12 : 0 }}>
-            <span style={{ fontSize: 14, fontWeight: 500, color: '#e5e5e5' }}>Paid?</span>
-            <button
-              onClick={() => { setIsPaid(!isPaid); if (isPaid) setPaymentMethod(''); }}
-              style={{ width: 48, height: 26, borderRadius: 13, border: 'none', cursor: 'pointer', position: 'relative', background: isPaid ? '#16a34a' : '#e2e8f0', transition: 'background 0.2s' }}
-            >
-              <span style={{ position: 'absolute', top: 3, left: isPaid ? 25 : 3, width: 20, height: 20, borderRadius: '50%', background: '#282828', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s' }} />
-            </button>
-          </div>
-
-          {/* Payment method */}
-          {isPaid && (
-            <div style={{ display: 'flex', gap: 8 }}>
-              {['cash', 'card', 'eft'].map((method) => (
-                <button
-                  key={method}
-                  onClick={() => setPaymentMethod(method)}
-                  style={{ flex: 1, padding: '8px 0', borderRadius: 10, border: '1.5px solid', borderColor: paymentMethod === method ? '#2563eb' : '#e2e8f0', background: paymentMethod === method ? '#eff6ff' : '#fff', color: paymentMethod === method ? '#2563eb' : '#64748b', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', textTransform: 'uppercase', letterSpacing: '0.3px' }}
-                >
-                  {method}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-        <div style={{ background: '#282828', borderRadius: 14, border: '1px solid #383838', padding: 16 }}>
-          <InvoiceForm
-            formData={formData}
-            onChange={setFormData}
-            onSubmit={handleSave}
-            onCancel={handleBack}
-            isLoading={saving}
-            submitLabel="Save Invoice"
-            imagePreview={fileType === 'application/pdf' ? null : capturedImage}
-            pdfPreview={fileType === 'application/pdf' ? capturedImage : null}
-          />
         </div>
       </main>
     </div>
