@@ -15,6 +15,7 @@ type Step = 'choose' | 'capture' | 'processing' | 'review';
 function CapturePageInner() {
   const [step, setStep] = useState<Step>('choose');
   const [showMore, setShowMore] = useState(false);
+  const [userCategories, setUserCategories] = useState<string[]>([]);
   const [showLines, setShowLines] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [formData, setFormData] = useState<InvoiceFormData>({
@@ -43,6 +44,17 @@ function CapturePageInner() {
   const supabase = createClient();
 
   useEffect(() => {
+    const loadCategories = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const { data } = await supabase
+        .from('user_categories')
+        .select('name')
+        .eq('user_id', session?.user?.id || '')
+        .order('sort_order');
+      if (data && data.length > 0) setUserCategories(data.map((r: any) => r.name));
+    };
+    loadCategories();
+
     const loadProjects = async () => {
       // getSession reads from local storage — works offline
       const { data: { session } } = await supabase.auth.getSession();
@@ -522,7 +534,7 @@ function CapturePageInner() {
               <div>
                 <div style={{ fontSize: 12, fontWeight: 700, color: '#8a8a8a', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 8 }}>Category</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {['Travel & Transport','Utilities','Materials & Supplies','Subscriptions & Software','Professional Services','Food & Entertainment','Equipment','Marketing','Other'].map(cat => (
+                  {(userCategories.length > 0 ? userCategories : ['Travel & Transport','Utilities','Materials & Supplies','Subscriptions & Software','Professional Services','Food & Entertainment','Equipment','Marketing','Other']).map(cat => (
                     <button key={cat} onClick={() => setCategory(prev => prev === cat ? null : cat)}
                       style={{ padding: '6px 12px', borderRadius: 20, border: '1.5px solid', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
                         borderColor: category === cat ? '#2563eb' : '#383838', background: category === cat ? 'rgba(37,99,235,0.15)' : 'transparent', color: category === cat ? '#60a5fa' : '#8a8a8a' }}>

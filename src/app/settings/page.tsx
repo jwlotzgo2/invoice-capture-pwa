@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { User, Building2, Phone, Mail, LogOut, Shield, ChevronRight, Loader2, Check, FolderOpen, Bell, BellOff } from 'lucide-react';
+import { User, Building2, Phone, Mail, LogOut, Shield, ChevronRight, Loader2, Check, FolderOpen, Bell, BellOff, Tag } from 'lucide-react';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 interface Profile {
@@ -286,6 +286,20 @@ export default function SettingsPage() {
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 13, color: T.text }}>Projects</div>
                   <div style={{ fontSize: 11, color: T.textMuted, marginTop: 2 }}>Create and manage project tags</div>
+                </div>
+                <ChevronRight size={14} color={T.textMuted} />
+              </div>
+            </button>
+          </div>
+
+          {/* Categories */}
+          <div className="t-card">
+            <button onClick={() => router.push('/settings/categories')} style={{ width: '100%', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
+              <div className="t-row last" style={{ border: 'none' }}>
+                <Tag size={16} color={T.textMuted} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, color: T.text }}>Categories</div>
+                  <div style={{ fontSize: 11, color: T.textMuted, marginTop: 2 }}>Manage your invoice categories</div>
                 </div>
                 <ChevronRight size={14} color={T.textMuted} />
               </div>
