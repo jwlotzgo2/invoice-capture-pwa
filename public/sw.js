@@ -1,4 +1,4 @@
-const CACHE_NAME = 'go-capture-v3';
+const CACHE_NAME = 'go-capture-v4';
 
 const PRECACHE_URLS = [
   '/',
