@@ -106,7 +106,7 @@ export default function CategoriesPage() {
     <div style={{ fontFamily: 'Inter, system-ui, sans-serif', minHeight: '100svh', background: T.bg, color: T.text }}>
       {/* Header */}
       <header style={{ background: T.surface, borderBottom: `1px solid ${T.border}`, padding: '14px 16px', position: 'sticky', top: 0, zIndex: 40, display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button onClick={() => router.back()}
+        <button onClick={() => router.push('/settings')}
           style={{ width: 34, height: 34, border: `1px solid ${T.border}`, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: 'none', color: T.textDim }}>
           <ArrowLeft size={16} />
         </button>

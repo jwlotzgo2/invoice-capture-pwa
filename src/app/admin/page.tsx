@@ -86,7 +86,7 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     fetch('/api/admin/stats').then(async (res) => {
-      if (res.status === 403) { router.push('/invoices'); return; }
+      if (res.status === 403) { router.push('/'); return; }
       if (!res.ok) throw new Error('Failed to fetch stats');
       setStats(await res.json());
     }).catch((err) => setError(err.message)).finally(() => setLoading(false));
@@ -102,7 +102,7 @@ export default function AdminDashboardPage() {
     <div style={{ minHeight: '100svh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: 'DM Sans, sans-serif' }}>
       <AlertTriangle size={48} color="#e11d48" />
       <p style={{ fontSize: 17, fontWeight: 700, color: '#0f172a', margin: '16px 0 8px' }}>{error}</p>
-      <button onClick={() => router.push('/invoices')} style={{ color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>Back to app</button>
+      <button onClick={() => router.push('/')} style={{ color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>Back to app</button>
     </div>
   );
 
@@ -126,7 +126,7 @@ export default function AdminDashboardPage() {
               <div className="adm-logo-mark"><Shield size={18} color="#fff" /></div>
               <div className="adm-title">Admin Console</div>
             </div>
-            <Link href="/invoices" className="adm-back">← App</Link>
+            <Link href="/" className="adm-back">← App</Link>
           </div>
           <select className="adm-org-select" value={orgFilter} onChange={e => setOrgFilter(e.target.value)}>
             <option value="all">All Organisations</option>

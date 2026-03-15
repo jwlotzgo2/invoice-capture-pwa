@@ -163,7 +163,7 @@ export default function OpenInvoicesPage() {
       <style>{css}</style>
 
       <header className="oi-header">
-        <button className="oi-back" onClick={() => router.back()}><ArrowLeft size={16} /></button>
+        <button className="oi-back" onClick={() => router.push('/invoices/list')}><ArrowLeft size={16} /></button>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 16, fontWeight: 700 }}>Open Invoices</div>
           <div style={{ fontSize: 11, color: T.textMuted, marginTop: 1 }}>Unpaid · outstanding</div>
