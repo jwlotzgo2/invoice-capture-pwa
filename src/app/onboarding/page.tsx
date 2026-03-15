@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Camera, Zap, BarChart2, Check } from 'lucide-react';
 
@@ -120,10 +121,18 @@ export default function OnboardingPage() {
   const [bizType, setBizType] = useState('');
   const router = useRouter();
 
-  const finish = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('go_capture_onboarded', '1');
-      if (bizType) localStorage.setItem('go_capture_biztype', bizType);
+  const finish = async () => {
+    try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        await supabase.from('user_profiles').update({
+          onboarded_at: new Date().toISOString(),
+          ...(bizType ? { biz_type: bizType } : {}),
+        }).eq('id', session.user.id);
+      }
+    } catch (e) {
+      // non-blocking
     }
     router.replace('/');
   };

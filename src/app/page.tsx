@@ -81,6 +81,24 @@ export default function InvoicesPage() {
   };
 
   useEffect(() => {
+    const checkOnboarding = async () => {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('onboarded_at')
+        .eq('id', session.user.id)
+        .single();
+      if (!profile?.onboarded_at) {
+        router.replace('/onboarding');
+        return;
+      }
+    };
+    checkOnboarding();
+  }, []);
+
+  useEffect(() => {
     const checkAdmin = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       const user = session?.user;
