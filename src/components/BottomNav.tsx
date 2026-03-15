@@ -28,7 +28,7 @@ export default function BottomNav() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  if (pathname.startsWith('/admin') || pathname.startsWith('/auth') || pathname === '/capture' || pathname === '/onboarding') return null;
+  if (pathname.startsWith('/admin') || pathname.startsWith('/auth') || pathname === '/capture' || pathname === '/onboarding' || pathname === '/offline') return null;
 
   const menuActive = menuItems.some(m => pathname === m.href || pathname.startsWith(m.href + '/'));
 

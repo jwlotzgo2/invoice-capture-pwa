@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Camera, FileImage, Upload, Wifi, WifiOff, Clock } from 'lucide-react';
 import { queueInvoice, getPendingCount, requestSync } from '@/lib/offlineQueue';
 import { createClient } from '@/lib/supabase/client';
@@ -15,8 +16,7 @@ export default function OfflinePage() {
   const [pendingCount, setPendingCount] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
   const [cachedUserId, setCachedUserId] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const imageInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
   const supabase = createClient();
 
   useEffect(() => {
@@ -45,28 +45,9 @@ export default function OfflinePage() {
     showToast('Saved — will upload and process when reconnected');
   };
 
-  const handleCamera = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.setAttribute('capture', 'environment');
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onloadend = () => queueImage(reader.result as string);
-      reader.readAsDataURL(file);
-    };
-    input.click();
-  };
+  const handleCamera = () => router.push('/capture?source=camera');
 
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => queueImage(reader.result as string);
-    reader.readAsDataURL(file);
-  };
+
 
   return (
     <div style={{ minHeight: '100svh', background: T.bg, fontFamily: 'Inter, system-ui, sans-serif', display: 'flex', flexDirection: 'column' }}>
@@ -99,9 +80,9 @@ export default function OfflinePage() {
           <div style={{ fontSize: 11, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 1 }}>Capture a document</div>
 
           {[
-            { label: 'Camera', sub: 'Take a photo of your document', icon: <Camera size={20} color={T.bg} />, bg: T.primary, onClick: handleCamera },
-            { label: 'Gallery', sub: 'Pick an image from your gallery', icon: <FileImage size={20} color={T.primary} />, bg: T.surfaceHigh, onClick: () => imageInputRef.current?.click() },
-            { label: 'Upload File', sub: 'PDF or document from your files', icon: <Upload size={20} color={T.primary} />, bg: T.surfaceHigh, onClick: () => fileInputRef.current?.click() },
+            { label: 'Camera', sub: 'Take a photo of your document', icon: <Camera size={20} color={T.bg} />, bg: T.primary, onClick: () => router.push('/capture?source=camera') },
+            { label: 'Gallery', sub: 'Pick an image from your gallery', icon: <FileImage size={20} color={T.primary} />, bg: T.surfaceHigh, onClick: () => router.push('/capture?source=gallery') },
+            { label: 'Upload File', sub: 'PDF or document from your files', icon: <Upload size={20} color={T.primary} />, bg: T.surfaceHigh, onClick: () => router.push('/capture?source=file') },
           ].map(({ label, sub, icon, bg, onClick }) => (
             <button key={label} onClick={onClick} style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', textAlign: 'left', width: '100%' }}>
               <div style={{ width: 44, height: 44, borderRadius: 10, background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{icon}</div>
@@ -118,9 +99,6 @@ export default function OfflinePage() {
           <span style={{ fontSize: 12, color: T.textMuted }}>You'll be taken back to the app automatically when reconnected.</span>
         </div>
       </div>
-
-      <input ref={imageInputRef} type="file" accept="image/*" onChange={handleFile} style={{ display: 'none' }} />
-      <input ref={fileInputRef} type="file" accept="application/pdf,.pdf,.heic,.heif" onChange={handleFile} style={{ display: 'none' }} />
 
       {toast && (
         <div style={{ position: 'fixed', bottom: 24, left: 16, right: 16, zIndex: 999, background: T.surface, border: `1px solid ${T.success}`, borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 4px 24px rgba(0,0,0,0.5)' }}>
