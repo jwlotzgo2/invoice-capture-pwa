@@ -16,8 +16,6 @@ function CapturePageInner() {
   const [step, setStep] = useState<Step>('choose');
   const [showMore, setShowMore] = useState(false);
   const [showLines, setShowLines] = useState(false);
-  const [showProject, setShowProject] = useState(false);
-  const [showPayment, setShowPayment] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [formData, setFormData] = useState<InvoiceFormData>({
     supplier: '', description: '', invoice_date: '',
@@ -384,6 +382,49 @@ function CapturePageInner() {
           />
         </div>
 
+        {/* Project — inline chips */}
+        <div style={{ background: '#282828', borderRadius: 14, border: '1px solid #383838', padding: '12px 16px', marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#f0f0f0', flexShrink: 0 }}>Project</span>
+            {projects.length === 0 ? (
+              <span style={{ fontSize: 12, color: '#6b6b6b' }}>No projects — <span onClick={() => router.push('/projects')} style={{ color: '#2563eb', cursor: 'pointer', fontWeight: 600 }}>create one</span></span>
+            ) : (
+              <>
+                <button onClick={() => setProjectId(null)}
+                  style={{ padding: '4px 10px', borderRadius: 20, border: '1.5px solid', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                    borderColor: !projectId ? '#2563eb' : '#383838', background: !projectId ? 'rgba(37,99,235,0.15)' : 'transparent', color: !projectId ? '#60a5fa' : '#6b6b6b' }}>
+                  None
+                </button>
+                {projects.map(p => (
+                  <button key={p.id} onClick={() => setProjectId(p.id)}
+                    style={{ padding: '4px 10px', borderRadius: 20, border: '1.5px solid', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                      borderColor: projectId === p.id ? '#2563eb' : '#383838', background: projectId === p.id ? 'rgba(37,99,235,0.15)' : 'transparent', color: projectId === p.id ? '#60a5fa' : '#8a8a8a' }}>
+                    {p.name}
+                  </button>
+                ))}
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Payment — inline toggle + chips */}
+        <div style={{ background: '#282828', borderRadius: 14, border: '1px solid #383838', padding: '12px 16px', marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#f0f0f0', flexShrink: 0 }}>Paid?</span>
+            <button onClick={() => { setIsPaid(!isPaid); if (isPaid) setPaymentMethod(''); }}
+              style={{ width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer', position: 'relative', background: isPaid ? '#16a34a' : '#383838', transition: 'background 0.2s', flexShrink: 0 }}>
+              <span style={{ position: 'absolute', top: 2, left: isPaid ? 22 : 2, width: 20, height: 20, borderRadius: '50%', background: '#f0f0f0', boxShadow: '0 1px 3px rgba(0,0,0,0.3)', transition: 'left 0.2s' }} />
+            </button>
+            {isPaid && ['cash','card','eft'].map(method => (
+              <button key={method} onClick={() => setPaymentMethod(method)}
+                style={{ padding: '4px 12px', borderRadius: 20, border: '1.5px solid', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', textTransform: 'uppercase', letterSpacing: '0.3px',
+                  borderColor: paymentMethod === method ? '#2563eb' : '#383838', background: paymentMethod === method ? 'rgba(37,99,235,0.15)' : 'transparent', color: paymentMethod === method ? '#60a5fa' : '#6b6b6b' }}>
+                {method}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Line Items — collapsible, highlights mismatch */}
         {(() => {
           const linesTotal = lineItems.reduce((s, i) => s + (i.line_total ?? 0), 0);
@@ -442,72 +483,6 @@ function CapturePageInner() {
             </div>
           );
         })()}
-
-        {/* Project — collapsible */}
-        <div style={{ background: '#282828', borderRadius: 14, border: '1px solid #383838', marginBottom: 12, overflow: 'hidden' }}>
-          <button onClick={() => setShowProject(v => !v)}
-            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#f0f0f0' }}>Project</span>
-              {projectId && projects.find(p => p.id === projectId) && (
-                <span style={{ fontSize: 10, background: 'rgba(96,165,250,0.12)', color: '#60a5fa', border: '1px solid rgba(96,165,250,0.3)', borderRadius: 4, padding: '1px 6px', fontWeight: 700 }}>
-                  {projects.find(p => p.id === projectId)?.name}
-                </span>
-              )}
-            </div>
-            {showProject ? <ChevronUp size={15} color="#8a8a8a" /> : <ChevronDown size={15} color="#8a8a8a" />}
-          </button>
-          {showProject && (
-            <div style={{ borderTop: '1px solid #383838', padding: 16 }}>
-              {projects.length === 0 ? (
-                <div style={{ fontSize: 13, color: '#6b6b6b' }}>No projects yet — <span onClick={() => router.push('/projects')} style={{ color: '#2563eb', cursor: 'pointer', fontWeight: 600 }}>create one</span></div>
-              ) : (
-                <select value={projectId || ''} onChange={e => setProjectId(e.target.value || null)}
-                  style={{ width: '100%', padding: '9px 12px', border: '1px solid #383838', borderRadius: 10, fontSize: 14, fontFamily: 'Inter, system-ui, sans-serif', color: '#f0f0f0', outline: 'none', background: '#1c1c1c' }}>
-                  <option value="">No project</option>
-                  {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Payment — collapsible */}
-        <div style={{ background: '#282828', borderRadius: 14, border: '1px solid #383838', marginBottom: 12, overflow: 'hidden' }}>
-          <button onClick={() => setShowPayment(v => !v)}
-            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#f0f0f0' }}>Payment</span>
-              {isPaid && (
-                <span style={{ fontSize: 10, background: 'rgba(134,239,172,0.12)', color: '#86efac', border: '1px solid rgba(134,239,172,0.3)', borderRadius: 4, padding: '1px 6px', fontWeight: 700 }}>
-                  Paid{paymentMethod ? ` · ${paymentMethod.toUpperCase()}` : ''}
-                </span>
-              )}
-            </div>
-            {showPayment ? <ChevronUp size={15} color="#8a8a8a" /> : <ChevronDown size={15} color="#8a8a8a" />}
-          </button>
-          {showPayment && (
-            <div style={{ borderTop: '1px solid #383838', padding: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: isPaid ? 12 : 0 }}>
-                <span style={{ fontSize: 14, fontWeight: 500, color: '#e5e5e5' }}>Paid?</span>
-                <button onClick={() => { setIsPaid(!isPaid); if (isPaid) setPaymentMethod(''); }}
-                  style={{ width: 48, height: 26, borderRadius: 13, border: 'none', cursor: 'pointer', position: 'relative', background: isPaid ? '#16a34a' : '#e2e8f0', transition: 'background 0.2s' }}>
-                  <span style={{ position: 'absolute', top: 3, left: isPaid ? 25 : 3, width: 20, height: 20, borderRadius: '50%', background: '#282828', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s' }} />
-                </button>
-              </div>
-              {isPaid && (
-                <div style={{ display: 'flex', gap: 8 }}>
-                  {['cash', 'card', 'eft'].map((method) => (
-                    <button key={method} onClick={() => setPaymentMethod(method)}
-                      style={{ flex: 1, padding: '8px 0', borderRadius: 10, border: '1.5px solid', borderColor: paymentMethod === method ? '#2563eb' : '#383838', background: paymentMethod === method ? 'rgba(37,99,235,0.15)' : 'transparent', color: paymentMethod === method ? '#60a5fa' : '#8a8a8a', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
-                      {method}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
 
         {/* More Options — collapsible */}
         <div style={{ background: '#282828', borderRadius: 14, border: '1px solid #383838', marginBottom: 12, overflow: 'hidden' }}>
