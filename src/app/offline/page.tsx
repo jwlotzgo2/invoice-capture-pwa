@@ -2,110 +2,86 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Camera, FileImage, Upload, Wifi, WifiOff, Clock } from 'lucide-react';
-import { queueInvoice, getPendingCount, requestSync } from '@/lib/offlineQueue';
-import { createClient } from '@/lib/supabase/client';
+import { WifiOff, Camera, Clock } from 'lucide-react';
+import { getPendingCount } from '@/lib/offlineQueue';
 
 const T = {
   bg: '#1c1c1c', surface: '#282828', surfaceHigh: '#323232', border: '#383838',
-  text: '#f0f0f0', textDim: '#8a8a8a', textMuted: '#6b6b6b',
-  primary: '#e5e5e5', warning: '#fdba74', success: '#86efac',
+  text: '#f0f0f0', textDim: '#a3a3a3', textMuted: '#6b6b6b',
+  warning: '#fdba74', success: '#86efac',
 };
+
+const css = `
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: ${T.bg}; }
+  .off { font-family: Inter, system-ui, sans-serif; min-height: 100svh; background: ${T.bg};
+    color: ${T.text}; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; padding: 32px 24px; text-align: center; gap: 0; }
+  .off-icon { width: 72px; height: 72px; border-radius: 20px; background: rgba(253,186,116,0.1);
+    border: 1px solid rgba(253,186,116,0.2); display: flex; align-items: center;
+    justify-content: center; margin-bottom: 24px; }
+  .off-title { font-size: 26px; font-weight: 800; color: ${T.text}; letter-spacing: -0.5px;
+    margin-bottom: 10px; }
+  .off-sub { font-size: 15px; color: ${T.textMuted}; line-height: 1.6; max-width: 280px;
+    margin-bottom: 32px; }
+  .off-queue { display: flex; align-items: center; gap: 8px; background: ${T.surface};
+    border: 1px solid ${T.border}; border-radius: 10px; padding: 12px 16px;
+    margin-bottom: 32px; font-size: 13px; color: ${T.textDim}; }
+  .off-queue-badge { background: rgba(253,186,116,0.15); color: ${T.warning};
+    border: 1px solid rgba(253,186,116,0.3); border-radius: 6px; padding: 2px 8px;
+    font-size: 12px; font-weight: 700; }
+  .off-btn { width: 100%; max-width: 320px; padding: 16px; background: ${T.text};
+    color: ${T.bg}; border: none; border-radius: 12px; font-size: 16px; font-weight: 700;
+    cursor: pointer; font-family: inherit; display: flex; align-items: center;
+    justify-content: center; gap: 10px; transition: opacity 0.15s; }
+  .off-btn:active { opacity: 0.85; }
+  .off-note { margin-top: 20px; font-size: 12px; color: ${T.textMuted}; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+  .pulse { animation: pulse 2s ease-in-out infinite; }
+`;
 
 export default function OfflinePage() {
   const [pendingCount, setPendingCount] = useState(0);
-  const [toast, setToast] = useState<string | null>(null);
-  const [cachedUserId, setCachedUserId] = useState<string | null>(null);
   const router = useRouter();
-  const supabase = createClient();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) setCachedUserId(session.user.id);
-    });
     getPendingCount().then(setPendingCount);
-    // No online/offline listeners here — SyncManager in layout handles those
+
+    // Redirect home when back online
+    const handleOnline = () => router.replace('/');
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
   }, []);
 
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3000);
-  };
-
-  const queueImage = async (dataUrl: string) => {
-    if (!cachedUserId) { showToast('Session expired — reconnect and log in again'); return; }
-    await queueInvoice({
-      image: dataUrl,
-      userId: cachedUserId,
-      formData: { document_type: 'invoice', doc_status: 'open', needs_ocr: true },
-    });
-    requestSync();
-    const count = await getPendingCount();
-    setPendingCount(count);
-    showToast('Saved — will upload and process when reconnected');
-  };
-
-  const handleCamera = () => router.push('/capture?source=camera');
-
-
-
   return (
-    <div style={{ minHeight: '100svh', background: T.bg, fontFamily: 'Inter, system-ui, sans-serif', display: 'flex', flexDirection: 'column' }}>
+    <div className="off">
+      <style>{css}</style>
 
-      <header style={{ background: T.surface, borderBottom: `1px solid ${T.border}`, padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ fontSize: 17, fontWeight: 600, color: T.text }}>Go Capture</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 20, background: 'rgba(253,186,116,0.1)', border: `1px solid rgba(253,186,116,0.3)` }}>
-          <WifiOff size={12} color={T.warning} />
-          <span style={{ fontSize: 11, color: T.warning }}>Offline</span>
-        </div>
-      </header>
-
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '32px 20px', gap: 20, maxWidth: 400, margin: '0 auto', width: '100%' }}>
-
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 18, fontWeight: 600, color: T.text, marginBottom: 6 }}>You're offline</div>
-          <div style={{ fontSize: 13, color: T.textDim, lineHeight: 1.6 }}>
-            Capture documents below — they'll upload and be OCR processed automatically when you reconnect.
-          </div>
-        </div>
-
-        {pendingCount > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: 'rgba(134,239,172,0.08)', border: `1px solid rgba(134,239,172,0.25)`, borderRadius: 10 }}>
-            <Clock size={15} color={T.success} />
-            <span style={{ fontSize: 13, color: T.success }}>{pendingCount} document{pendingCount > 1 ? 's' : ''} queued — waiting to upload</span>
-          </div>
-        )}
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ fontSize: 11, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 1 }}>Capture a document</div>
-
-          {[
-            { label: 'Camera', sub: 'Take a photo of your document', icon: <Camera size={20} color={T.bg} />, bg: T.primary, onClick: () => router.push('/capture?source=camera') },
-            { label: 'Gallery', sub: 'Pick an image from your gallery', icon: <FileImage size={20} color={T.primary} />, bg: T.surfaceHigh, onClick: () => router.push('/capture?source=gallery') },
-            { label: 'Upload File', sub: 'PDF or document from your files', icon: <Upload size={20} color={T.primary} />, bg: T.surfaceHigh, onClick: () => router.push('/capture?source=file') },
-          ].map(({ label, sub, icon, bg, onClick }) => (
-            <button key={label} onClick={onClick} style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', textAlign: 'left', width: '100%' }}>
-              <div style={{ width: 44, height: 44, borderRadius: 10, background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{icon}</div>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: T.text, marginBottom: 2 }}>{label}</div>
-                <div style={{ fontSize: 12, color: T.textDim }}>{sub}</div>
-              </div>
-            </button>
-          ))}
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', background: T.surface, border: `1px solid ${T.border}`, borderRadius: 10, marginTop: 4 }}>
-          <Wifi size={14} color={T.textMuted} />
-          <span style={{ fontSize: 12, color: T.textMuted }}>You'll be taken back to the app automatically when reconnected.</span>
-        </div>
+      <div className="off-icon pulse">
+        <WifiOff size={32} color={T.warning} strokeWidth={1.5}/>
       </div>
 
-      {toast && (
-        <div style={{ position: 'fixed', bottom: 24, left: 16, right: 16, zIndex: 999, background: T.surface, border: `1px solid ${T.success}`, borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 4px 24px rgba(0,0,0,0.5)' }}>
-          <Clock size={14} color={T.success} />
-          <span style={{ fontSize: 13, color: T.text }}>{toast}</span>
+      <h1 className="off-title">You're offline</h1>
+      <p className="off-sub">
+        No internet connection. You can still capture documents — they'll upload automatically when you reconnect.
+      </p>
+
+      {pendingCount > 0 && (
+        <div className="off-queue">
+          <Clock size={14} color={T.warning}/>
+          <span>
+            <span className="off-queue-badge">{pendingCount}</span>
+            {' '}document{pendingCount !== 1 ? 's' : ''} queued — waiting to upload
+          </span>
         </div>
       )}
+
+      <button className="off-btn" onClick={() => router.push('/capture')}>
+        <Camera size={18}/>
+        Capture a document
+      </button>
+
+      <p className="off-note">You'll be taken back to the app automatically when reconnected</p>
     </div>
   );
 }
