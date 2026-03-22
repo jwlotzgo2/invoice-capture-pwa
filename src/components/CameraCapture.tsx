@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import Webcam from 'react-webcam';
-import { Camera, X, RotateCcw, Check, Upload, Focus } from 'lucide-react';
+import { Camera, X, RotateCcw, Check, Upload } from 'lucide-react';
 
 interface CameraCaptureProps {
   onCapture: (imageData: string) => void;
@@ -10,82 +9,160 @@ interface CameraCaptureProps {
 }
 
 export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
-  const webcamRef = useRef<Webcam>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const trackRef = useRef<MediaStreamTrack | null>(null);
+
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [focusPoint, setFocusPoint] = useState<{ x: number; y: number } | null>(null);
-  const [focusSupported, setFocusSupported] = useState(false);
+  const [capturing, setCapturing] = useState(false);
+  const [streamReady, setStreamReady] = useState(false);
 
-  // FIX: add focusMode continuous + advanced constraints for Samsung S25+
-  const videoConstraints = {
-    width: { ideal: 1920 },
-    height: { ideal: 1080 },
-    facingMode,
-    // These advanced constraints enable continuous autofocus on supported browsers
-    advanced: [{ focusMode: 'continuous' }] as any,
-  };
+  // Start camera stream
+  const startStream = useCallback(async (facing: 'user' | 'environment') => {
+    // Stop any existing stream first
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+      trackRef.current = null;
+    }
+    setStreamReady(false);
 
-  // FIX: once stream is active, apply continuous autofocus via ImageCapture API
-  const handleUserMedia = useCallback((stream: MediaStream) => {
-    setHasPermission(true);
-    setError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: facing,
+          width: { ideal: 4096 },   // request max resolution
+          height: { ideal: 3072 },
+        },
+        audio: false,
+      });
 
-    const track = stream.getVideoTracks()[0];
-    if (!track) return;
+      streamRef.current = stream;
+      const track = stream.getVideoTracks()[0];
+      trackRef.current = track;
 
-    // Check if focus is supported on this device
-    const caps = track.getCapabilities?.() as any;
-    if (caps?.focusMode) {
-      setFocusSupported(true);
-      // Apply continuous autofocus immediately
-      track.applyConstraints?.({ advanced: [{ focusMode: 'continuous' }] } as any)
-        .catch(() => {}); // silently ignore if not supported
+      // Log actual resolution for debugging
+      const settings = track.getSettings();
+      console.log('[Camera] stream resolution:', settings.width, 'x', settings.height);
+
+      // Apply continuous autofocus if supported
+      const caps = track.getCapabilities?.() as any;
+      if (caps?.focusMode?.includes('continuous')) {
+        await track.applyConstraints?.({ advanced: [{ focusMode: 'continuous' }] } as any)
+          .catch(() => {});
+        console.log('[Camera] continuous autofocus applied');
+      }
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+
+      setHasPermission(true);
+      setError(null);
+      setStreamReady(true);
+    } catch (err: any) {
+      console.error('[Camera] stream error:', err);
+      setHasPermission(false);
+      setError(err?.message || 'Camera access denied');
     }
   }, []);
 
-  // FIX: tap to focus — converts tap coordinates to focusDistance point
-  const handleTapToFocus = useCallback((e: React.TouchEvent<HTMLDivElement> | React.MouseEvent<HTMLDivElement>) => {
-    const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    const x = (clientX - rect.left) / rect.width;
-    const y = (clientY - rect.top) / rect.height;
+  useEffect(() => {
+    startStream(facingMode);
+    return () => {
+      streamRef.current?.getTracks().forEach(t => t.stop());
+    };
+  }, [facingMode]);
 
-    setFocusPoint({ x: clientX - rect.left, y: clientY - rect.top });
+  // FIX: use ImageCapture API to grab a full-resolution still from hardware
+  // This bypasses the compressed video stream and gets the actual sensor output
+  const capture = useCallback(async () => {
+    if (!trackRef.current || capturing) return;
+    setCapturing(true);
+
+    try {
+      // Prefer ImageCapture API (full hardware resolution)
+      if (typeof (window as any).ImageCapture !== 'undefined') {
+        const imageCapture = new (window as any).ImageCapture(trackRef.current);
+
+        // grabFrame gives a full-res VideoFrame / ImageBitmap
+        const bitmap: ImageBitmap = await imageCapture.grabFrame();
+        const canvas = document.createElement('canvas');
+        canvas.width = bitmap.width;
+        canvas.height = bitmap.height;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(bitmap, 0, 0);
+        bitmap.close();
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+        console.log('[Camera] ImageCapture resolution:', bitmap.width, 'x', bitmap.height);
+        setCapturedImage(dataUrl);
+      } else {
+        // Fallback: draw current video frame to canvas at full video resolution
+        const video = videoRef.current;
+        if (!video) return;
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+        console.log('[Camera] canvas fallback resolution:', canvas.width, 'x', canvas.height);
+        setCapturedImage(dataUrl);
+      }
+    } catch (err) {
+      console.error('[Camera] capture error:', err);
+      // Last resort fallback
+      const video = videoRef.current;
+      if (video) {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d')!.drawImage(video, 0, 0);
+        setCapturedImage(canvas.toDataURL('image/jpeg', 0.95));
+      }
+    } finally {
+      setCapturing(false);
+    }
+  }, [capturing]);
+
+  const switchCamera = () => setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
+
+  // Tap to focus
+  const handleTapToFocus = useCallback((e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
+    const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+    const clientX = 'touches' in e ? e.touches[0]?.clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0]?.clientY : e.clientY;
+    if (!clientX || !clientY) return;
+
+    const relX = clientX - rect.left;
+    const relY = clientY - rect.top;
+    const normX = relX / rect.width;
+    const normY = relY / rect.height;
+
+    setFocusPoint({ x: relX, y: relY });
     setTimeout(() => setFocusPoint(null), 1200);
 
-    // Try to apply focus via track constraints
-    if (webcamRef.current) {
-      const stream = (webcamRef.current as any).stream as MediaStream | undefined;
-      const track = stream?.getVideoTracks()[0];
-      if (track) {
-        // Try manual point-of-interest focus, fall back to continuous
-        track.applyConstraints?.({
-          advanced: [{ focusMode: 'manual', pointsOfInterest: [{ x, y }] }] as any,
-        }).catch(() => {
-          // If manual not supported, just force a continuous re-lock
-          track.applyConstraints?.({ advanced: [{ focusMode: 'continuous' }] } as any).catch(() => {});
-        });
-        // Return to continuous after 1.5s so it doesn't stay locked
-        setTimeout(() => {
-          track.applyConstraints?.({ advanced: [{ focusMode: 'continuous' }] } as any).catch(() => {});
-        }, 1500);
-      }
-    }
-  }, []);
+    const track = trackRef.current;
+    if (!track) return;
 
-  const capture = useCallback(() => {
-    if (webcamRef.current) {
-      const imageSrc = webcamRef.current.getScreenshot();
-      if (imageSrc) setCapturedImage(imageSrc);
-    }
-  }, []);
+    track.applyConstraints?.({
+      advanced: [{ focusMode: 'manual', pointsOfInterest: [{ x: normX, y: normY }] }] as any,
+    }).catch(() => {
+      // If manual not supported, nudge continuous focus
+      track.applyConstraints?.({ advanced: [{ focusMode: 'continuous' }] } as any).catch(() => {});
+    });
 
-  const switchCamera = () => setFacingMode((prev) => prev === 'user' ? 'environment' : 'user');
+    // Return to continuous after 1.5s
+    setTimeout(() => {
+      track.applyConstraints?.({ advanced: [{ focusMode: 'continuous' }] } as any).catch(() => {});
+    }, 1500);
+  }, []);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -96,7 +173,7 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
     }
   };
 
-  // ── Preview (after capture) ────────────────────────────────────────────────
+  // ── Preview ────────────────────────────────────────────────────────────────
   if (capturedImage) {
     return (
       <div style={{ position: 'fixed', inset: 0, background: '#000', zIndex: 100, display: 'flex', flexDirection: 'column' }}>
@@ -152,12 +229,12 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
   return (
     <div style={{ position: 'fixed', inset: 0, background: '#000', zIndex: 100, display: 'flex', flexDirection: 'column' }}>
       <style>{`
-        .go-capture-webcam { position: absolute; inset: 0; width: 100% !important; height: 100% !important; object-fit: cover !important; display: block; }
-        @keyframes focusRing { 0% { transform: scale(1.4); opacity: 1; } 100% { transform: scale(1); opacity: 0.6; } }
+        @keyframes focusRing { 0%{transform:scale(1.5);opacity:1} 100%{transform:scale(1);opacity:0.5} }
+        @keyframes shutterFlash { 0%{opacity:0} 50%{opacity:0.4} 100%{opacity:0} }
       `}</style>
 
       {/* Top bar */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, padding: '16px 16px', paddingTop: 'max(16px, env(safe-area-inset-top))', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'linear-gradient(to bottom, rgba(0,0,0,0.7), transparent)' }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, padding: '16px', paddingTop: 'max(16px, env(safe-area-inset-top))', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'linear-gradient(to bottom, rgba(0,0,0,0.7), transparent)' }}>
         {onClose ? (
           <button onClick={onClose} style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer' }}>
             <X size={22} />
@@ -169,67 +246,55 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
         </button>
       </div>
 
-      {/* Webcam — tap to focus enabled */}
+      {/* Video preview — tap to focus */}
       <div
         style={{ flex: 1, position: 'relative', overflow: 'hidden', minHeight: 0 }}
         onClick={handleTapToFocus}
-        onTouchStart={handleTapToFocus}
+        onTouchEnd={handleTapToFocus}
       >
-        <Webcam
-          ref={webcamRef}
-          audio={false}
-          screenshotFormat="image/jpeg"
-          screenshotQuality={0.92}
-          videoConstraints={videoConstraints}
-          onUserMedia={handleUserMedia}
-          onUserMediaError={(err) => { setHasPermission(false); setError(typeof err === 'string' ? err : (err as DOMException).message); }}
-          className="go-capture-webcam"
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
         />
 
-        {/* Tap to focus ring — shows where user tapped */}
+        {/* Shutter flash */}
+        {capturing && (
+          <div style={{ position: 'absolute', inset: 0, background: '#fff', animation: 'shutterFlash 0.3s ease-out', pointerEvents: 'none' }} />
+        )}
+
+        {/* Tap to focus ring */}
         {focusPoint && (
           <div style={{
             position: 'absolute',
-            left: focusPoint.x - 28,
-            top: focusPoint.y - 28,
-            width: 56,
-            height: 56,
+            left: focusPoint.x - 30,
+            top: focusPoint.y - 30,
+            width: 60, height: 60,
             borderRadius: '50%',
             border: '2px solid #fff',
             pointerEvents: 'none',
             animation: 'focusRing 1.2s ease-out forwards',
-            boxShadow: '0 0 0 1px rgba(0,0,0,0.3)',
+            boxShadow: '0 0 0 1px rgba(0,0,0,0.4)',
           }} />
         )}
 
-        {/* Frame guide */}
-        <div style={{ position: 'absolute', inset: 48, border: '2px solid rgba(255,255,255,0.25)', borderRadius: 12, pointerEvents: 'none' }}>
-          {[['top', 'left', 'borderTop', 'borderLeft', 'borderTopLeftRadius'], ['top', 'right', 'borderTop', 'borderRight', 'borderTopRightRadius'], ['bottom', 'left', 'borderBottom', 'borderLeft', 'borderBottomLeftRadius'], ['bottom', 'right', 'borderBottom', 'borderRight', 'borderBottomRightRadius']].map(([v, h, b1, b2, r], i) => (
-            <div key={i} style={{ position: 'absolute', [v]: -2, [h]: -2, width: 28, height: 28, [b1]: '3px solid #fff', [b2]: '3px solid #fff', [r]: 6 }} />
+        {/* Frame guide corners */}
+        <div style={{ position: 'absolute', inset: 48, border: '2px solid rgba(255,255,255,0.2)', borderRadius: 12, pointerEvents: 'none' }}>
+          {([['top','left','borderTop','borderLeft','borderTopLeftRadius'],['top','right','borderTop','borderRight','borderTopRightRadius'],['bottom','left','borderBottom','borderLeft','borderBottomLeftRadius'],['bottom','right','borderBottom','borderRight','borderBottomRightRadius']] as const).map(([v,h,b1,b2,r],i)=>(
+            <div key={i} style={{ position:'absolute',[v]:-2,[h]:-2,width:28,height:28,[b1]:'3px solid #fff',[b2]:'3px solid #fff',[r]:6 }}/>
           ))}
         </div>
 
-        {/* Tap to focus hint */}
+        {/* Hint */}
         <div style={{ position: 'absolute', bottom: 16, left: 0, right: 0, textAlign: 'center', pointerEvents: 'none' }}>
-          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', fontFamily: 'DM Sans, sans-serif', letterSpacing: 0.3 }}>
-            Tap to focus
-          </span>
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', fontFamily: 'DM Sans, sans-serif' }}>Tap to focus</span>
         </div>
       </div>
 
       {/* Controls */}
-      <div style={{
-        height: 140,
-        paddingBottom: 'env(safe-area-inset-bottom)',
-        background: 'rgba(0,0,0,0.85)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 40,
-        flexShrink: 0,
-      }}>
-        {/* Upload */}
+      <div style={{ height: 140, paddingBottom: 'env(safe-area-inset-bottom)', background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 40, flexShrink: 0 }}>
         <button
           onClick={() => fileInputRef.current?.click()}
           style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer' }}
@@ -237,15 +302,14 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
           <Upload size={22} />
         </button>
 
-        {/* Shutter */}
         <button
           onClick={capture}
-          style={{ width: 72, height: 72, borderRadius: '50%', background: '#fff', border: '4px solid rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 0 0 6px rgba(255,255,255,0.2)' }}
+          disabled={capturing || !streamReady}
+          style={{ width: 72, height: 72, borderRadius: '50%', background: capturing ? '#555' : '#fff', border: '4px solid rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: capturing ? 'default' : 'pointer', boxShadow: '0 0 0 6px rgba(255,255,255,0.2)', transition: 'background 0.15s' }}
         >
-          <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#fff', border: '3px solid #1a1a1a' }} />
+          <div style={{ width: 56, height: 56, borderRadius: '50%', background: capturing ? '#888' : '#fff', border: '3px solid #1a1a1a' }} />
         </button>
 
-        {/* Spacer */}
         <div style={{ width: 48 }} />
       </div>
 
