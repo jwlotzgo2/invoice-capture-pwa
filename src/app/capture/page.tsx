@@ -43,6 +43,9 @@ function CapturePageInner() {
   const searchParams = useSearchParams();
   const supabase = createClient();
 
+  // FIX: capture the returnTo param on mount so we know where to go after save
+  const returnTo = searchParams.get('returnTo') || '/';
+
   useEffect(() => {
     const loadCategories = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -56,10 +59,9 @@ function CapturePageInner() {
     loadCategories();
 
     const loadProjects = async () => {
-      // getSession reads from local storage — works offline
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) setCachedUserId(session.user.id);
-      if (!navigator.onLine) return; // skip network fetch when offline
+      if (!navigator.onLine) return;
       const { data } = await supabase.from('projects').select('id, name').eq('user_id', session?.user?.id || '').order('name');
       setProjects(data || []);
     };
@@ -90,7 +92,6 @@ function CapturePageInner() {
     setCapturedImage(imageData);
     setError(null);
 
-    // Offline — skip OCR and review entirely, queue image immediately
     if (!navigator.onLine) {
       const uid = cachedUserId;
       if (!uid) { setError('Cannot save offline — open the app while connected first.'); return; }
@@ -145,7 +146,6 @@ function CapturePageInner() {
     const reader = new FileReader();
     reader.onloadend = async () => {
       const data = reader.result as string;
-      // Offline — queue immediately, no OCR
       if (!navigator.onLine) {
         const uid = cachedUserId;
         if (!uid) { setError('Cannot save offline — open the app while connected first.'); return; }
@@ -169,7 +169,6 @@ function CapturePageInner() {
     setSaving(true);
     setError(null);
 
-    // ── Offline: queue locally and return ────────────────────────────
     if (!navigator.onLine) {
       const uid = cachedUserId;
       if (!uid) { setError('Cannot save offline — please reload the app while connected first.'); setSaving(false); return; }
@@ -246,7 +245,9 @@ function CapturePageInner() {
       }).select().single();
 
       if (insertError) throw insertError;
-      router.push('/invoices');
+
+      // FIX: navigate back to where the user came from, not hardcoded /invoices
+      router.push(returnTo);
     } catch (err) {
       console.error('Save error:', err);
       setError(err instanceof Error ? err.message : 'Failed to save invoice');
@@ -260,7 +261,8 @@ function CapturePageInner() {
       setStep('choose');
       setCapturedImage(null);
     } else {
-      router.push('/invoices');
+      // FIX: go back to returnTo, not hardcoded /invoices
+      router.push(returnTo);
     }
   };
 
@@ -268,7 +270,7 @@ function CapturePageInner() {
     return (
       <div style={{ minHeight: '100svh', background: '#1c1c1c', fontFamily: 'Inter, system-ui, sans-serif', display: 'flex', flexDirection: 'column' }}>
         <header style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: '#282828', borderBottom: '1px solid #383838' }}>
-          <button onClick={() => router.push('/')} style={{ width: 36, height: 36, borderRadius: 8, border: 'none', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8a8a8a', cursor: 'pointer' }}>
+          <button onClick={() => router.push(returnTo)} style={{ width: 36, height: 36, borderRadius: 8, border: 'none', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8a8a8a', cursor: 'pointer' }}>
             <ArrowLeft size={20} />
           </button>
           <span style={{ fontSize: 17, fontWeight: 600, color: '#f0f0f0' }}>Add Document</span>
@@ -378,7 +380,6 @@ function CapturePageInner() {
             <AlertCircle size={18} />{error}
           </div>
         )}
-
 
         {/* Main fields */}
         <div style={{ background: '#282828', borderRadius: 14, border: '1px solid #383838', padding: 16, marginBottom: 12 }}>

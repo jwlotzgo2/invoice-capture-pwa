@@ -50,7 +50,7 @@ const fmtZAR = (n:number)=>`R ${Math.round(n).toLocaleString('en-ZA')}`;
 const css = `
   * { box-sizing:border-box; }
   body { background:${T.bg};margin:0; }
-  .rep-page { min-height:100svh;background:${T.bg};font-family:Inter, system-ui, sans-serif,Inter, system-ui, sans-serif;color:${T.text};
+  .rep-page { min-height:100svh;background:${T.bg};font-family:Inter, system-ui, sans-serif;color:${T.text};
     background-image:radial-gradient(ellipse at 20% 20%,rgba(99,102,241,0.06) 0%,transparent 50%),radial-gradient(ellipse at 80% 80%,rgba(250,204,21,0.04) 0%,transparent 50%); }
   .scanline { position:fixed;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px);pointer-events:none;z-index:1000; }
   .rep-header { background:${T.surface};border-bottom:1px solid ${T.border};padding:14px 16px;position:sticky;top:0;z-index:40;box-shadow:0 0 20px rgba(138,138,138,0.08); }
@@ -90,6 +90,12 @@ const css = `
   .legend-dot { width:10px;height:10px;border-radius:2px;flex-shrink:0; }
   .t-cursor { animation:tblink 1s step-end infinite;color:${T.yellow}; }
   @keyframes tblink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  /* FIX: Project filter dropdown */
+  .project-filter-wrap { padding:10px 16px;background:${T.surface};border-top:1px solid ${T.border}; }
+  .project-filter-label { font-size:10px;font-weight:600;color:${T.textMuted};text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px; }
+  .project-filter-select { width:100%;padding:8px 12px;background:${T.bg};border:1px solid ${T.border};border-radius:6px;font-size:13px;color:${T.text};font-family:Inter, system-ui, sans-serif;outline:none;cursor:pointer;appearance:auto; }
+  .project-filter-select:focus { border-color:${T.yellow}; }
 `;
 
 export default function ReportsPage() {
@@ -100,15 +106,17 @@ export default function ReportsPage() {
   const [customTo, setCustomTo] = useState('');
   const [view, setView] = useState<View>('category');
   const [projects, setProjects] = useState<{id:string;name:string}[]>([]);
+  // FIX: project filter state — 'all' means no filter
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('all');
   const supabase = createClient();
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     const { data: { session: _sess } } = await supabase.auth.getSession();
-      const user = _sess?.user;
+    const user = _sess?.user;
     const { data } = await supabase.from('invoices').select('*').eq('user_id', user?.id||'').order('invoice_date');
     setInvoices(data || []);
-    const { data: proj } = await supabase.from('projects').select('id,name').eq('user_id', user?.id||'');
+    const { data: proj } = await supabase.from('projects').select('id,name').eq('user_id', user?.id||'').order('name');
     setProjects(proj || []);
     setLoading(false);
   }, []);
@@ -118,29 +126,36 @@ export default function ReportsPage() {
   const { from: pFrom, to: pTo } = getPeriodRange(period);
   const from = period === 'custom' ? (customFrom ? new Date(customFrom) : null) : pFrom;
   const to   = period === 'custom' ? (customTo   ? new Date(customTo)   : null) : pTo;
+
+  // FIX: apply period filter first, then project filter
   const periodInvoices = from && to
     ? invoices.filter(i => { const d = i.invoice_date ? new Date(i.invoice_date) : new Date(i.created_at); return d >= from! && d <= to!; })
     : invoices;
 
-  const totalAmount = periodInvoices.reduce((s,i)=>s+(i.amount??0),0);
-  const totalVAT = periodInvoices.reduce((s,i)=>s+(i.vat_amount??0),0);
+  const filteredInvoices = selectedProjectId === 'all'
+    ? periodInvoices
+    : periodInvoices.filter(i => (i as any).project_id === selectedProjectId);
+
+  // FIX: all KPI calculations now use filteredInvoices so they respect the project filter
+  const totalAmount = filteredInvoices.reduce((s,i)=>s+(i.amount??0),0);
+  const totalVAT = filteredInvoices.reduce((s,i)=>s+(i.vat_amount??0),0);
   const totalExcl = totalAmount - totalVAT;
 
   // Category breakdown
   const catMap: Record<string,number> = {};
-  periodInvoices.forEach(i => { const c = i.category||'Uncategorised'; catMap[c]=(catMap[c]||0)+(i.amount??0); });
+  filteredInvoices.forEach(i => { const c = i.category||'Uncategorised'; catMap[c]=(catMap[c]||0)+(i.amount??0); });
   const cats = Object.entries(catMap).sort((a,b)=>b[1]-a[1]);
   const catTotal = cats.reduce((s,[,v])=>s+v,0)||1;
 
   // Supplier breakdown
   const supMap: Record<string,{total:number;count:number}> = {};
-  periodInvoices.forEach(i => { const s=i.supplier||'Unknown'; if(!supMap[s])supMap[s]={total:0,count:0}; supMap[s].total+=(i.amount??0); supMap[s].count++; });
+  filteredInvoices.forEach(i => { const s=i.supplier||'Unknown'; if(!supMap[s])supMap[s]={total:0,count:0}; supMap[s].total+=(i.amount??0); supMap[s].count++; });
   const sups = Object.entries(supMap).sort((a,b)=>b[1].total-a[1].total).slice(0,10);
   const supMax = sups[0]?.[1]?.total || 1;
 
   // Project breakdown
   const projMap: Record<string,number> = {};
-  periodInvoices.forEach(i => {
+  filteredInvoices.forEach(i => {
     const projId = (i as any).project_id;
     const projName = projId ? (projects.find(p=>p.id===projId)?.name||'Unknown') : 'No Project';
     projMap[projName]=(projMap[projName]||0)+(i.amount??0);
@@ -148,12 +163,12 @@ export default function ReportsPage() {
   const projs = Object.entries(projMap).sort((a,b)=>b[1]-a[1]);
   const projMax = projs[0]?.[1]||1;
 
-  // Monthly trend (last 12 months)
+  // Monthly trend (last 12 months) — uses project-filtered invoices
   const months: {label:string;total:number}[] = [];
   for (let i=11;i>=0;i--) {
     const d = subMonths(new Date(), i);
     const mFrom = startOfMonth(d); const mTo = endOfMonth(d);
-    const total = invoices.filter(inv => { const dd = inv.invoice_date ? new Date(inv.invoice_date) : new Date(inv.created_at); return dd>=mFrom&&dd<=mTo; }).reduce((s,inv)=>s+(inv.amount??0),0);
+    const total = filteredInvoices.filter(inv => { const dd = inv.invoice_date ? new Date(inv.invoice_date) : new Date(inv.created_at); return dd>=mFrom&&dd<=mTo; }).reduce((s,inv)=>s+(inv.amount??0),0);
     months.push({label:format(d,'MMM'),total});
   }
   const trendMax = Math.max(...months.map(m=>m.total),1);
@@ -233,6 +248,23 @@ export default function ReportsPage() {
           </div>
         </div>
 
+        {/* FIX: Project filter dropdown — sits between KPI cards and view tabs */}
+        {projects.length > 0 && (
+          <div className="project-filter-wrap">
+            <div className="project-filter-label">Filter by Project</div>
+            <select
+              className="project-filter-select"
+              value={selectedProjectId}
+              onChange={e => setSelectedProjectId(e.target.value)}
+            >
+              <option value="all">All Projects</option>
+              {projects.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {/* View tabs */}
         <div className="view-tabs">
           {VIEWS.map(({key,label})=>(
@@ -243,10 +275,9 @@ export default function ReportsPage() {
         <div style={{padding:'12px 16px 100px'}}>
           {loading ? (
             <div style={{textAlign:'center',padding:40,color:T.textMuted,letterSpacing:0.5}}>LOADING…</div>
-          ) : periodInvoices.length === 0 ? (
+          ) : filteredInvoices.length === 0 ? (
             <div style={{textAlign:'center',padding:40,color:T.textMuted,letterSpacing:0.5}}>[ NO DATA FOR THIS PERIOD ]</div>
           ) : (
-
             <>
               {/* ── CATEGORY ── */}
               {view === 'category' && (
@@ -268,7 +299,6 @@ export default function ReportsPage() {
                       ))}
                     </div>
                   </div>
-                  {/* Full bar chart */}
                   <div style={{marginTop:20}}>
                     {cats.map(([cat,val],i)=>(
                       <div key={cat} style={{marginBottom:10}}>
@@ -366,12 +396,12 @@ export default function ReportsPage() {
                   </div>
                 </div>
               )}
+
               {/* ── LINES ── */}
               {view === 'lines' && (() => {
-                // Flatten all line items across period invoices
                 type LineRow = { description: string; qty: number; totalQty: number; totalAmt: number; avgUnit: number; count: number; };
                 const lineMap: Record<string, LineRow> = {};
-                periodInvoices.forEach(inv => {
+                filteredInvoices.forEach(inv => {
                   const items = Array.isArray((inv as any).line_items) ? (inv as any).line_items : [];
                   items.forEach((item: any) => {
                     const desc = (item.description || 'Unknown').trim();
@@ -440,7 +470,6 @@ export default function ReportsPage() {
                             </tfoot>
                           </table>
                         </div>
-                        {/* Bar chart */}
                         <div style={{marginTop:20}}>
                           {lines.slice(0,10).map((row,i)=>(
                             <div key={row.description} style={{marginBottom:10}}>
@@ -459,7 +488,6 @@ export default function ReportsPage() {
                   </div>
                 );
               })()}
-
             </>
           )}
         </div>

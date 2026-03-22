@@ -88,6 +88,7 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
             </button>
           )}
         </div>
+        {/* FIX: removed capture="environment" — caused Samsung S25+ focus issues in PWA */}
         <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} style={{ display: 'none' }} />
       </div>
     );
@@ -165,7 +166,8 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
         <div style={{ width: 48 }} />
       </div>
 
-      <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handleFileUpload} style={{ display: 'none' }} />
+      {/* FIX: removed capture="environment" — caused Samsung S25+ focus issues in PWA */}
+      <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} style={{ display: 'none' }} />
     </div>
   );
 }

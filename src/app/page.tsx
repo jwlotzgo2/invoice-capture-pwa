@@ -54,7 +54,6 @@ function SupplierRow({ name, count, total, rank }: { name: string; count: number
       <span className="supplier-rank">{rank}</span>
       <div className="supplier-info">
         <span className="supplier-name">{name}</span>
-  
       </div>
       <span className="supplier-total">{formatZAR(total)}</span>
     </div>
@@ -111,7 +110,6 @@ export default function InvoicesPage() {
           .eq('user_id', user.id)
           .eq('source', 'email')
           .eq('status', 'pending_review');
-        // Also count offline queued docs
         const offlineCount = await getPendingCount().catch(() => 0);
         setPendingCount((count || 0) + offlineCount);
       }
@@ -141,7 +139,6 @@ export default function InvoicesPage() {
 
   useEffect(() => { fetchInvoices(); }, [fetchInvoices]);
 
-
   // ── KPI calculations filtered by period ──────────────────────────────────
   const { from: periodFrom, to: periodTo } = getPeriodRange(period);
 
@@ -155,7 +152,12 @@ export default function InvoicesPage() {
   const totalDocs = periodInvoices.length;
   const totalAmount = periodInvoices.reduce((s, i) => s + (i.amount ?? 0), 0);
   const totalVAT = periodInvoices.reduce((s, i) => s + (i.vat_amount ?? 0), 0);
-  const totalExclVAT = totalAmount - totalVAT;
+
+  // FIX: Open invoices — ignores period filter, always shows full outstanding balance
+  const openInvoicesTotal = invoices
+    .filter(i => i.doc_status === 'open' && !i.is_paid)
+    .reduce((s, i) => s + (i.amount ?? 0), 0);
+  const openInvoicesCount = invoices.filter(i => i.doc_status === 'open' && !i.is_paid).length;
 
   const periodLabel = period === 'all' ? 'All time' : PERIODS.find(p => p.key === period)?.label || '';
 
@@ -212,8 +214,6 @@ export default function InvoicesPage() {
         .bell-wrap { position: relative; display: inline-flex; }
         .bell-badge { position: absolute; top: -4px; right: -4px; min-width: 16px; height: 16px; border-radius: 8px; background: var(--rose); color: #fff; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; padding: 0 4px; pointer-events: none; border: 2px solid var(--card); line-height: 1; }
 
-
-        /* Period Filter */
         .period-strip { display: flex; gap: 6px; padding: 12px 16px 0; overflow-x: auto; scrollbar-width: none; }
         .period-strip::-webkit-scrollbar { display: none; }
         .period-btn { flex-shrink: 0; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1.5px solid var(--border); background: var(--card); color: var(--ink-3); cursor: pointer; font-family: inherit; white-space: nowrap; transition: all 0.15s; }
@@ -319,117 +319,117 @@ export default function InvoicesPage() {
         </header>
 
         <main>
-            {/* Capture Hero */}
-            <div className="capture-hero">
-              <div className="capture-hero-text">
-                <h2>Add Invoice</h2>
-                <p>Choose how to capture</p>
+          {/* Capture Hero */}
+          <div className="capture-hero">
+            <div className="capture-hero-text">
+              <h2>Add Invoice</h2>
+              <p>Choose how to capture</p>
+            </div>
+            <div className="capture-hero-actions">
+              <Link href="/capture" className="capture-btn"><Camera size={15} />Camera</Link>
+              <button className="capture-btn capture-btn-sec" onClick={() => fileInputRef.current?.click()}><Upload size={15} />Upload</button>
+            </div>
+          </div>
+          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} style={{ display: 'none' }} />
+
+          {/* Period Filter Strip */}
+          <div className="period-strip">
+            {PERIODS.map(({ key, label }) => (
+              <button key={key} className={`period-btn ${period === key ? 'active' : ''}`} onClick={() => setPeriod(key)}>
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* KPI Cards */}
+          <div className="kpi-grid">
+            <KPICard label="Documents" value={totalDocs.toString()} sub={periodLabel} icon={<FileText size={18} />} accent="blue" />
+            <KPICard label="Total Spend" value={formatZAR(totalAmount)} sub={periodLabel} icon={<TrendingUp size={18} />} accent="green" />
+            {/* FIX: replaced Excl. VAT with Open Invoices — always shows full outstanding, ignores period filter */}
+            <KPICard label="Open Invoices" value={formatZAR(openInvoicesTotal)} sub={`${openInvoicesCount} unpaid`} icon={<Receipt size={18} />} accent="amber" />
+            <KPICard label="VAT" value={formatZAR(totalVAT)} sub={periodLabel} icon={<Building2 size={18} />} accent="rose" />
+          </div>
+
+          {/* Top Suppliers */}
+          {topSuppliers.length > 0 && (
+            <>
+              <div className="section-header">
+                <span className="section-title">Top Suppliers · {periodLabel}</span>
+                <button className="section-link" onClick={() => router.push('/invoices/list')}>View all <ChevronRight size={14} /></button>
               </div>
-              <div className="capture-hero-actions">
-                <Link href="/capture" className="capture-btn"><Camera size={15} />Camera</Link>
-                <button className="capture-btn capture-btn-sec" onClick={() => fileInputRef.current?.click()}><Upload size={15} />Upload</button>
+              <div className="suppliers-card">
+                {topSuppliers.map(([name, stats], i) => (
+                  <SupplierRow key={name} name={name} count={stats.count} total={stats.total} rank={i + 1} />
+                ))}
               </div>
-            </div>
-            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} style={{ display: 'none' }} />
+            </>
+          )}
 
-            {/* Period Filter Strip */}
-            <div className="period-strip">
-              {PERIODS.map(({ key, label }) => (
-                <button key={key} className={`period-btn ${period === key ? 'active' : ''}`} onClick={() => setPeriod(key)}>
-                  {label}
-                </button>
-              ))}
-            </div>
-
-            {/* KPI Cards */}
-            <div className="kpi-grid">
-              <KPICard label="Documents" value={totalDocs.toString()} sub={periodLabel} icon={<FileText size={18} />} accent="blue" />
-              <KPICard label="Total Spend" value={formatZAR(totalAmount)} sub={periodLabel} icon={<TrendingUp size={18} />} accent="green" />
-              <KPICard label="Excl. VAT" value={formatZAR(totalExclVAT)} sub={periodLabel} icon={<Receipt size={18} />} accent="amber" />
-              <KPICard label="VAT" value={formatZAR(totalVAT)} sub={periodLabel} icon={<Building2 size={18} />} accent="rose" />
-            </div>
-
-            {/* Top Suppliers */}
-            {topSuppliers.length > 0 && (
-              <>
-                <div className="section-header">
-                  <span className="section-title">Top Suppliers · {periodLabel}</span>
-                  <button className="section-link" onClick={() => router.push('/invoices/list')}>View all <ChevronRight size={14} /></button>
-                </div>
-                <div className="suppliers-card">
-                  {topSuppliers.map(([name, stats], i) => (
-                    <SupplierRow key={name} name={name} count={stats.count} total={stats.total} rank={i + 1} />
-                  ))}
-                </div>
-              </>
-            )}
-
-
-            {/* Category Breakdown */}
-            {topCategories.length > 0 && (
-              <>
-                <div className="section-header">
-                  <span className="section-title">By Category · {periodLabel}</span>
-                </div>
-                <div className="cat-card">
-                  {topCategories.map(([cat, stats]) => (
-                    <div key={cat} className="cat-bar-row">
-                      <div className="cat-bar-top">
-                        <span style={{ color: 'var(--ink-2)', fontWeight: 600 }}>{cat}</span>
-                        <span style={{ fontFamily: 'DM Mono, monospace', fontWeight: 700, color: 'var(--ink)' }}>{formatZAR(stats.total)}</span>
-                      </div>
-                      <div className="cat-bar-track">
-                        <div className="cat-bar-fill" style={{ width: `${(stats.total / catTotal) * 100}%`, background: CAT_COLORS[cat] || '#94a3b8' }} />
-                      </div>
+          {/* Category Breakdown */}
+          {topCategories.length > 0 && (
+            <>
+              <div className="section-header">
+                <span className="section-title">By Category · {periodLabel}</span>
+              </div>
+              <div className="cat-card">
+                {topCategories.map(([cat, stats]) => (
+                  <div key={cat} className="cat-bar-row">
+                    <div className="cat-bar-top">
+                      <span style={{ color: 'var(--ink-2)', fontWeight: 600 }}>{cat}</span>
+                      <span style={{ fontFamily: 'DM Mono, monospace', fontWeight: 700, color: 'var(--ink)' }}>{formatZAR(stats.total)}</span>
                     </div>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {/* Recent Invoices */}
-            {invoices.length > 0 && (
-              <>
-                <div className="section-header">
-                  <span className="section-title">Recent Invoices</span>
-                  <button className="section-link" onClick={() => router.push('/invoices/list')}>View all <ChevronRight size={14} /></button>
-                </div>
-                <div className="recent-list">
-                  {loading
-                    ? [...Array(3)].map((_, i) => (
-                        <div key={i} className="skel-card skeleton">
-                          <div className="skel-img" />
-                          <div className="skel-body">
-                            <div className="skel-line" style={{ width: '70%' }} />
-                            <div className="skel-line" style={{ width: '45%' }} />
-                          </div>
-                        </div>
-                      ))
-                    : invoices.slice(0, 5).map((inv) => (
-                        <div key={inv.id} onClick={() => router.push(`/invoices/${inv.id}`)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}>
-                          <div style={{ minWidth: 0 }}>
-                            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{inv.supplier || 'Unknown'}</div>
-                            {inv.document_number && <div style={{ fontSize: 11, color: 'var(--ink-3)', fontFamily: 'DM Mono, monospace' }}>#{inv.document_number}</div>}
-                          </div>
-                          <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 16 }}>
-                            <div style={{ fontSize: 14, fontWeight: 700, fontFamily: 'DM Mono, monospace', color: 'var(--ink)' }}>{inv.amount ? formatZAR(inv.amount) : '—'}</div>
-                            {inv.invoice_date && <div style={{ fontSize: 11, color: 'var(--ink-3)' }}>{new Date(inv.invoice_date).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' })}</div>}
-                          </div>
-                        </div>
-                      ))
-                  }
-                </div>
-              </>
-            )}
-
-            {!loading && invoices.length === 0 && (
-              <div className="empty-state">
-                <div className="empty-icon"><Camera size={28} color="#2563eb" /></div>
-                <h2 className="empty-title">No invoices yet</h2>
-                <p className="empty-sub">Capture your first invoice to get started</p>
-                <Link href="/capture" className="empty-cta"><Camera size={18} />Capture Invoice</Link>
+                    <div className="cat-bar-track">
+                      <div className="cat-bar-fill" style={{ width: `${(stats.total / catTotal) * 100}%`, background: CAT_COLORS[cat] || '#94a3b8' }} />
+                    </div>
+                  </div>
+                ))}
               </div>
-            )}
+            </>
+          )}
+
+          {/* Recent Invoices */}
+          {invoices.length > 0 && (
+            <>
+              <div className="section-header">
+                <span className="section-title">Recent Invoices</span>
+                <button className="section-link" onClick={() => router.push('/invoices/list')}>View all <ChevronRight size={14} /></button>
+              </div>
+              <div className="recent-list">
+                {loading
+                  ? [...Array(3)].map((_, i) => (
+                      <div key={i} className="skel-card skeleton">
+                        <div className="skel-img" />
+                        <div className="skel-body">
+                          <div className="skel-line" style={{ width: '70%' }} />
+                          <div className="skel-line" style={{ width: '45%' }} />
+                        </div>
+                      </div>
+                    ))
+                  : invoices.slice(0, 5).map((inv) => (
+                      <div key={inv.id} onClick={() => router.push(`/invoices/${inv.id}`)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{inv.supplier || 'Unknown'}</div>
+                          {inv.document_number && <div style={{ fontSize: 11, color: 'var(--ink-3)', fontFamily: 'DM Mono, monospace' }}>#{inv.document_number}</div>}
+                        </div>
+                        <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 16 }}>
+                          <div style={{ fontSize: 14, fontWeight: 700, fontFamily: 'DM Mono, monospace', color: 'var(--ink)' }}>{inv.amount ? formatZAR(inv.amount) : '—'}</div>
+                          {inv.invoice_date && <div style={{ fontSize: 11, color: 'var(--ink-3)' }}>{new Date(inv.invoice_date).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' })}</div>}
+                        </div>
+                      </div>
+                    ))
+                }
+              </div>
+            </>
+          )}
+
+          {!loading && invoices.length === 0 && (
+            <div className="empty-state">
+              <div className="empty-icon"><Camera size={28} color="#2563eb" /></div>
+              <h2 className="empty-title">No invoices yet</h2>
+              <p className="empty-sub">Capture your first invoice to get started</p>
+              <Link href="/capture" className="empty-cta"><Camera size={18} />Capture Invoice</Link>
+            </div>
+          )}
         </main>
       </div>
     </>
