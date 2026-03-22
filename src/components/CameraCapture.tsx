@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
 import Webcam from 'react-webcam';
-import { Camera, X, RotateCcw, Check, Upload } from 'lucide-react';
+import { Camera, X, RotateCcw, Check, Upload, Focus } from 'lucide-react';
 
 interface CameraCaptureProps {
   onCapture: (imageData: string) => void;
@@ -12,16 +12,71 @@ interface CameraCaptureProps {
 export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
   const webcamRef = useRef<Webcam>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [focusPoint, setFocusPoint] = useState<{ x: number; y: number } | null>(null);
+  const [focusSupported, setFocusSupported] = useState(false);
 
+  // FIX: add focusMode continuous + advanced constraints for Samsung S25+
   const videoConstraints = {
     width: { ideal: 1920 },
     height: { ideal: 1080 },
     facingMode,
+    // These advanced constraints enable continuous autofocus on supported browsers
+    advanced: [{ focusMode: 'continuous' }] as any,
   };
+
+  // FIX: once stream is active, apply continuous autofocus via ImageCapture API
+  const handleUserMedia = useCallback((stream: MediaStream) => {
+    setHasPermission(true);
+    setError(null);
+
+    const track = stream.getVideoTracks()[0];
+    if (!track) return;
+
+    // Check if focus is supported on this device
+    const caps = track.getCapabilities?.() as any;
+    if (caps?.focusMode) {
+      setFocusSupported(true);
+      // Apply continuous autofocus immediately
+      track.applyConstraints?.({ advanced: [{ focusMode: 'continuous' }] } as any)
+        .catch(() => {}); // silently ignore if not supported
+    }
+  }, []);
+
+  // FIX: tap to focus — converts tap coordinates to focusDistance point
+  const handleTapToFocus = useCallback((e: React.TouchEvent<HTMLDivElement> | React.MouseEvent<HTMLDivElement>) => {
+    const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    const x = (clientX - rect.left) / rect.width;
+    const y = (clientY - rect.top) / rect.height;
+
+    setFocusPoint({ x: clientX - rect.left, y: clientY - rect.top });
+    setTimeout(() => setFocusPoint(null), 1200);
+
+    // Try to apply focus via track constraints
+    if (webcamRef.current) {
+      const stream = (webcamRef.current as any).stream as MediaStream | undefined;
+      const track = stream?.getVideoTracks()[0];
+      if (track) {
+        // Try manual point-of-interest focus, fall back to continuous
+        track.applyConstraints?.({
+          advanced: [{ focusMode: 'manual', pointsOfInterest: [{ x, y }] }] as any,
+        }).catch(() => {
+          // If manual not supported, just force a continuous re-lock
+          track.applyConstraints?.({ advanced: [{ focusMode: 'continuous' }] } as any).catch(() => {});
+        });
+        // Return to continuous after 1.5s so it doesn't stay locked
+        setTimeout(() => {
+          track.applyConstraints?.({ advanced: [{ focusMode: 'continuous' }] } as any).catch(() => {});
+        }, 1500);
+      }
+    }
+  }, []);
 
   const capture = useCallback(() => {
     if (webcamRef.current) {
@@ -88,7 +143,6 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
             </button>
           )}
         </div>
-        {/* FIX: removed capture="environment" — caused Samsung S25+ focus issues in PWA */}
         <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} style={{ display: 'none' }} />
       </div>
     );
@@ -99,7 +153,9 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
     <div style={{ position: 'fixed', inset: 0, background: '#000', zIndex: 100, display: 'flex', flexDirection: 'column' }}>
       <style>{`
         .go-capture-webcam { position: absolute; inset: 0; width: 100% !important; height: 100% !important; object-fit: cover !important; display: block; }
+        @keyframes focusRing { 0% { transform: scale(1.4); opacity: 1; } 100% { transform: scale(1); opacity: 0.6; } }
       `}</style>
+
       {/* Top bar */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, padding: '16px 16px', paddingTop: 'max(16px, env(safe-area-inset-top))', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'linear-gradient(to bottom, rgba(0,0,0,0.7), transparent)' }}>
         {onClose ? (
@@ -113,19 +169,39 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
         </button>
       </div>
 
-      {/* Webcam */}
-      <div style={{ flex: 1, position: 'relative', overflow: 'hidden', minHeight: 0 }}>
+      {/* Webcam — tap to focus enabled */}
+      <div
+        style={{ flex: 1, position: 'relative', overflow: 'hidden', minHeight: 0 }}
+        onClick={handleTapToFocus}
+        onTouchStart={handleTapToFocus}
+      >
         <Webcam
           ref={webcamRef}
           audio={false}
           screenshotFormat="image/jpeg"
           screenshotQuality={0.92}
           videoConstraints={videoConstraints}
-          onUserMedia={() => { setHasPermission(true); setError(null); }}
+          onUserMedia={handleUserMedia}
           onUserMediaError={(err) => { setHasPermission(false); setError(typeof err === 'string' ? err : (err as DOMException).message); }}
           className="go-capture-webcam"
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
         />
+
+        {/* Tap to focus ring — shows where user tapped */}
+        {focusPoint && (
+          <div style={{
+            position: 'absolute',
+            left: focusPoint.x - 28,
+            top: focusPoint.y - 28,
+            width: 56,
+            height: 56,
+            borderRadius: '50%',
+            border: '2px solid #fff',
+            pointerEvents: 'none',
+            animation: 'focusRing 1.2s ease-out forwards',
+            boxShadow: '0 0 0 1px rgba(0,0,0,0.3)',
+          }} />
+        )}
 
         {/* Frame guide */}
         <div style={{ position: 'absolute', inset: 48, border: '2px solid rgba(255,255,255,0.25)', borderRadius: 12, pointerEvents: 'none' }}>
@@ -133,9 +209,16 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
             <div key={i} style={{ position: 'absolute', [v]: -2, [h]: -2, width: 28, height: 28, [b1]: '3px solid #fff', [b2]: '3px solid #fff', [r]: 6 }} />
           ))}
         </div>
+
+        {/* Tap to focus hint */}
+        <div style={{ position: 'absolute', bottom: 16, left: 0, right: 0, textAlign: 'center', pointerEvents: 'none' }}>
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', fontFamily: 'DM Sans, sans-serif', letterSpacing: 0.3 }}>
+            Tap to focus
+          </span>
+        </div>
       </div>
 
-      {/* Controls — fixed height, guaranteed visible */}
+      {/* Controls */}
       <div style={{
         height: 140,
         paddingBottom: 'env(safe-area-inset-bottom)',
@@ -166,7 +249,6 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
         <div style={{ width: 48 }} />
       </div>
 
-      {/* FIX: removed capture="environment" — caused Samsung S25+ focus issues in PWA */}
       <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} style={{ display: 'none' }} />
     </div>
   );
