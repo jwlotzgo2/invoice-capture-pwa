@@ -4,59 +4,113 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import {
-  ArrowLeft, Search, Filter, RefreshCw, LogIn, LogOut,
+  Search, RefreshCw, LogIn, LogOut,
   Camera, WifiOff, Upload, Mail, Eye, Edit2, Trash2,
-  Download, Bell, CheckCircle, ChevronDown, User
+  Download, Bell, CheckCircle, User
 } from 'lucide-react';
+import AdminShell from '@/components/AdminShell';
 
-const css = `
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #0f1117; }
-  .jn { font-family: 'Inter', system-ui, sans-serif; min-height: 100svh; background: #0f1117; color: #f0f0f0; }
-  .jn-header { background: #1c1c1c; border-bottom: 1px solid #2a2a2a; padding: 14px 16px; position: sticky; top: 0; z-index: 40; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-  .jn-back { width: 34px; height: 34px; border: 1px solid #383838; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: none; color: #a3a3a3; flex-shrink: 0; }
-  .jn-title { font-size: 16px; font-weight: 700; color: #f0f0f0; }
-  .jn-subtitle { font-size: 11px; color: #6b6b6b; margin-top: 1px; }
-  .jn-refresh { width: 34px; height: 34px; border: 1px solid #383838; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: none; color: #a3a3a3; flex-shrink: 0; }
-  .jn-toolbar { background: #1c1c1c; border-bottom: 1px solid #2a2a2a; padding: 10px 16px; display: flex; gap: 8px; flex-wrap: wrap; }
-  .jn-search { flex: 1; min-width: 160px; display: flex; align-items: center; gap: 8px; background: #282828; border: 1px solid #383838; border-radius: 8px; padding: 0 10px; }
-  .jn-search input { background: none; border: none; outline: none; color: #f0f0f0; font-size: 13px; padding: 8px 0; width: 100%; }
-  .jn-search input::placeholder { color: #6b6b6b; }
-  .jn-select { background: #282828; border: 1px solid #383838; border-radius: 8px; color: #f0f0f0; font-size: 12px; padding: 8px 10px; outline: none; cursor: pointer; }
-  .jn-main { max-width: 900px; margin: 0 auto; padding: 16px; }
-  .jn-feed { display: flex; flex-direction: column; gap: 1px; }
-  .jn-day-header { font-size: 11px; font-weight: 700; color: #6b6b6b; text-transform: uppercase; letter-spacing: 0.8px; padding: 18px 0 8px; }
-  .jn-event { display: flex; align-items: flex-start; gap: 12px; padding: 10px 12px; background: #1c1c1c; border-radius: 10px; margin-bottom: 4px; border: 1px solid #252525; transition: border-color 0.15s; }
-  .jn-event:hover { border-color: #383838; }
-  .jn-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
-  .jn-body { flex: 1; min-width: 0; }
-  .jn-action { font-size: 13px; font-weight: 600; color: #e5e5e5; }
-  .jn-meta { font-size: 11px; color: #6b6b6b; margin-top: 2px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-  .jn-user { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #a3a3a3; }
-  .jn-time { font-size: 11px; color: #6b6b6b; white-space: nowrap; flex-shrink: 0; font-variant-numeric: tabular-nums; }
-  .jn-chip { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 99px; }
-  .jn-empty { text-align: center; padding: 60px 20px; color: #6b6b6b; font-size: 14px; }
-  .jn-load-more { width: 100%; padding: 12px; background: #282828; border: 1px solid #383838; border-radius: 10px; color: #a3a3a3; font-size: 13px; cursor: pointer; margin-top: 8px; font-family: inherit; }
-  .jn-load-more:hover { background: #323232; }
-  .jn-count { font-size: 11px; color: #6b6b6b; text-align: center; padding: 8px 0 4px; }
+const C = {
+  bg:           '#070e1a',
+  surface:      '#0c1628',
+  surfaceHi:    '#0f1e35',
+  border:       '#142a45',
+  borderHi:     '#1d3f63',
+  accent:       '#0096c7',
+  accentBright: '#22d3ee',
+  accentGlow:   'rgba(0,150,199,0.1)',
+  green:        '#10b981',
+  amber:        '#f59e0b',
+  red:          '#ef4444',
+  purple:       '#a855f7',
+  text:         '#d4e5f5',
+  dim:          '#6890b0',
+  muted:        '#2d4a65',
+};
+
+const pageCss = `
+  .jn-page { padding: 0; }
+
+  .jn-feed-wrap { padding: 16px 24px 40px; }
+  @media (max-width: 768px) { .jn-feed-wrap { padding: 12px 16px 40px; } }
+
+  .jn-day-header {
+    font-size: 10px; font-weight: 700; color: ${C.muted};
+    text-transform: uppercase; letter-spacing: 1px;
+    padding: 16px 0 8px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .jn-day-header::after {
+    content: ''; flex: 1; height: 1px; background: ${C.border};
+  }
+
+  .jn-event {
+    display: flex; align-items: center; gap: 14px; padding: 10px 14px;
+    background: ${C.surface}; border-radius: 8px; margin-bottom: 3px;
+    border: 1px solid ${C.border}; transition: border-color 0.15s;
+  }
+  .jn-event:hover { border-color: ${C.borderHi}; }
+
+  .jn-icon { width: 30px; height: 30px; border-radius: 7px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+  .jn-action { font-size: 13px; font-weight: 600; color: ${C.text}; }
+  .jn-user-pill { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: ${C.dim}; background: ${C.surfaceHi}; padding: 2px 8px; border-radius: 99px; flex-shrink: 0; }
+  .jn-detail-chip { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 99px; flex-shrink: 0; }
+  .jn-time { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: ${C.muted}; white-space: nowrap; flex-shrink: 0; font-variant-numeric: tabular-nums; margin-left: auto; }
+
+  .jn-empty { text-align: center; padding: 60px 20px; color: ${C.muted}; font-size: 14px; }
+  .jn-load-more {
+    width: 100%; padding: 11px; background: ${C.surfaceHi}; border: 1px solid ${C.border};
+    border-radius: 8px; color: ${C.dim}; font-size: 13px; cursor: pointer; margin-top: 8px;
+    font-family: 'IBM Plex Sans', system-ui, sans-serif; transition: background 0.12s, border-color 0.12s;
+  }
+  .jn-load-more:hover { background: ${C.surface}; border-color: ${C.borderHi}; }
+  .jn-count { font-size: 11px; color: ${C.muted}; text-align: center; padding: 8px 0 4px; }
+
+  .jn-search {
+    display: flex; align-items: center; gap: 6px;
+    background: ${C.bg}; border: 1px solid ${C.border}; border-radius: 7px;
+    padding: 0 10px; transition: border-color 0.15s;
+  }
+  .jn-search:focus-within { border-color: ${C.accent}; }
+  .jn-search input {
+    background: none; border: none; outline: none; color: ${C.text};
+    font-size: 13px; padding: 7px 0; width: 180px;
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  }
+  .jn-search input::placeholder { color: ${C.muted}; }
+
+  .jn-select {
+    padding: 7px 10px; border: 1px solid ${C.border}; border-radius: 7px; font-size: 12px;
+    font-family: 'IBM Plex Sans', system-ui, sans-serif; color: ${C.text}; outline: none;
+    background: ${C.bg}; transition: border-color 0.15s;
+  }
+  .jn-select:focus { border-color: ${C.accent}; }
+
+  .jn-refresh-btn {
+    width: 32px; height: 32px; border: 1px solid ${C.border}; border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; background: none; color: ${C.dim};
+  }
+  .jn-refresh-btn:hover { border-color: ${C.borderHi}; color: ${C.text}; }
+
   .spin { animation: spin 0.8s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
 `;
 
 const ACTION_META: Record<string, { label: string; color: string; bg: string; icon: any }> = {
-  login:            { label: 'Logged in',        color: '#86efac', bg: 'rgba(134,239,172,0.12)', icon: LogIn },
-  logout:           { label: 'Logged out',        color: '#a3a3a3', bg: 'rgba(163,163,163,0.1)',  icon: LogOut },
-  capture_ocr:      { label: 'OCR Scan',          color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', icon: Camera },
-  capture_offline:  { label: 'Offline Capture',   color: '#fdba74', bg: 'rgba(253,186,116,0.12)', icon: WifiOff },
-  sync_upload:      { label: 'Synced Upload',     color: '#60a5fa', bg: 'rgba(96,165,250,0.12)',  icon: Upload },
-  email_received:   { label: 'Email Received',    color: '#f9a8d4', bg: 'rgba(249,168,212,0.12)', icon: Mail },
-  document_viewed:  { label: 'Viewed',            color: '#6b6b6b', bg: 'rgba(107,107,107,0.1)',  icon: Eye },
-  document_edited:  { label: 'Edited',            color: '#fde68a', bg: 'rgba(253,230,138,0.12)', icon: Edit2 },
-  document_deleted: { label: 'Deleted',           color: '#fca5a5', bg: 'rgba(252,165,165,0.12)', icon: Trash2 },
-  export_csv:       { label: 'CSV Export',        color: '#86efac', bg: 'rgba(134,239,172,0.1)',  icon: Download },
-  push_subscribed:  { label: 'Push Enabled',      color: '#86efac', bg: 'rgba(134,239,172,0.1)',  icon: Bell },
-  review_approved:  { label: 'Approved',          color: '#86efac', bg: 'rgba(134,239,172,0.12)', icon: CheckCircle },
-  page_view:        { label: 'Page View',         color: '#6b6b6b', bg: 'rgba(107,107,107,0.08)', icon: Eye },
+  login:            { label: 'Logged in',        color: '#10b981', bg: 'rgba(16,185,129,0.12)',  icon: LogIn },
+  logout:           { label: 'Logged out',        color: '#6890b0', bg: 'rgba(104,144,176,0.1)', icon: LogOut },
+  capture_ocr:      { label: 'OCR Scan',          color: '#a855f7', bg: 'rgba(168,85,247,0.12)', icon: Camera },
+  capture_offline:  { label: 'Offline Capture',   color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', icon: WifiOff },
+  sync_upload:      { label: 'Synced Upload',     color: '#0096c7', bg: 'rgba(0,150,199,0.12)',  icon: Upload },
+  email_received:   { label: 'Email Received',    color: '#f9a8d4', bg: 'rgba(249,168,212,0.12)',icon: Mail },
+  document_viewed:  { label: 'Viewed',            color: '#6890b0', bg: 'rgba(104,144,176,0.08)',icon: Eye },
+  document_edited:  { label: 'Edited',            color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', icon: Edit2 },
+  document_deleted: { label: 'Deleted',           color: '#ef4444', bg: 'rgba(239,68,68,0.12)',  icon: Trash2 },
+  export_csv:       { label: 'CSV Export',        color: '#10b981', bg: 'rgba(16,185,129,0.1)',  icon: Download },
+  push_subscribed:  { label: 'Push Enabled',      color: '#10b981', bg: 'rgba(16,185,129,0.1)',  icon: Bell },
+  review_approved:  { label: 'Approved',          color: '#10b981', bg: 'rgba(16,185,129,0.12)', icon: CheckCircle },
+  page_view:        { label: 'Page View',         color: '#2d4a65', bg: 'rgba(45,74,101,0.08)',  icon: Eye },
 };
 
 interface ActivityRow {
@@ -181,96 +235,90 @@ export default function AdminJournalPage() {
       })).filter(g => g.items.length > 0)
     : grouped;
 
+  const journalActions = (
+    <>
+      <div className="jn-search">
+        <Search size={13} color={C.muted} />
+        <input
+          placeholder="Search users, actions..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
+      </div>
+      <select className="jn-select" value={filterDays} onChange={e => setFilterDays(e.target.value)}>
+        <option value="1">Today</option>
+        <option value="7">Last 7 days</option>
+        <option value="30">Last 30 days</option>
+        <option value="90">Last 90 days</option>
+      </select>
+      <select className="jn-select" value={filterAction} onChange={e => setFilterAction(e.target.value)}>
+        <option value="">All actions</option>
+        {Object.entries(ACTION_META).map(([k, v]) => (
+          <option key={k} value={k}>{v.label}</option>
+        ))}
+      </select>
+      <select className="jn-select" value={filterUser} onChange={e => setFilterUser(e.target.value)}>
+        <option value="">All users</option>
+        {users.map(u => <option key={u.id} value={u.id}>{u.full_name || u.email}</option>)}
+      </select>
+      <button className="jn-refresh-btn" onClick={() => fetchActivity(true)} disabled={refreshing}>
+        <RefreshCw size={14} className={refreshing ? 'spin' : ''} />
+      </button>
+    </>
+  );
+
   return (
-    <div className="jn">
-      <style>{css}</style>
-
-      <header className="jn-header">
-        <button className="jn-back" onClick={() => router.push('/admin')}>
-          <ArrowLeft size={16} />
-        </button>
-        <div style={{ flex: 1 }}>
-          <div className="jn-title">Activity Journal</div>
-          <div className="jn-subtitle">{total.toLocaleString()} events</div>
-        </div>
-        <button className="jn-refresh" onClick={() => fetchActivity(true)} disabled={refreshing}>
-          <RefreshCw size={15} className={refreshing ? 'spin' : ''} />
-        </button>
-      </header>
-
-      <div className="jn-toolbar">
-        <div className="jn-search">
-          <Search size={13} color="#6b6b6b" />
-          <input
-            placeholder="Search users, actions..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-        </div>
-        <select className="jn-select" value={filterDays} onChange={e => setFilterDays(e.target.value)}>
-          <option value="1">Today</option>
-          <option value="7">Last 7 days</option>
-          <option value="30">Last 30 days</option>
-          <option value="90">Last 90 days</option>
-        </select>
-        <select className="jn-select" value={filterAction} onChange={e => setFilterAction(e.target.value)}>
-          <option value="">All actions</option>
-          {Object.entries(ACTION_META).map(([k, v]) => (
-            <option key={k} value={k}>{v.label}</option>
-          ))}
-        </select>
-        <select className="jn-select" value={filterUser} onChange={e => setFilterUser(e.target.value)}>
-          <option value="">All users</option>
-          {users.map(u => <option key={u.id} value={u.id}>{u.full_name || u.email}</option>)}
-        </select>
-      </div>
-
-      <div className="jn-main">
-        {loading ? (
-          <div className="jn-empty"><RefreshCw size={20} className="spin" style={{ margin: '0 auto 10px', display: 'block' }} />Loading...</div>
-        ) : filtered.length === 0 ? (
-          <div className="jn-empty">No activity found</div>
-        ) : (
-          <div className="jn-feed">
-            {filtered.map(({ day, items }) => (
-              <div key={day}>
-                <div className="jn-day-header">{day}</div>
-                {items.map(row => {
-                  const meta = ACTION_META[row.action] || { label: row.action, color: '#6b6b6b', bg: 'rgba(107,107,107,0.1)', icon: Eye };
-                  const Icon = meta.icon;
-                  const userName = (row.user_profiles as any)?.full_name || (row.user_profiles as any)?.email || 'Unknown';
-                  const detailLabel = getMetadataLabel(row.action, row.metadata);
-                  return (
-                    <div key={row.id} className="jn-event">
-                      <div className="jn-icon" style={{ background: meta.bg }}>
-                        <Icon size={15} color={meta.color} />
-                      </div>
-                      <div className="jn-body">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                          <span className="jn-action">{meta.label}</span>
-                          {detailLabel && (
-                            <span className="jn-chip" style={{ background: meta.bg, color: meta.color }}>{detailLabel}</span>
-                          )}
+    <>
+      <style>{pageCss}</style>
+      <AdminShell
+        title="Activity Journal"
+        subtitle={`${total.toLocaleString()} events`}
+        actions={journalActions}
+      >
+        <div className="jn-page">
+          {loading ? (
+            <div className="jn-empty">
+              <RefreshCw size={20} className="spin" style={{ margin: '0 auto 10px', display: 'block', color: C.accent }} />
+              Loading...
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="jn-empty">No activity found</div>
+          ) : (
+            <div className="jn-feed-wrap">
+              {filtered.map(({ day, items }) => (
+                <div key={day}>
+                  <div className="jn-day-header">{day}</div>
+                  {items.map(row => {
+                    const meta = ACTION_META[row.action] || { label: row.action, color: C.dim, bg: `rgba(104,144,176,0.1)`, icon: Eye };
+                    const Icon = meta.icon;
+                    const userName = (row.user_profiles as any)?.full_name || (row.user_profiles as any)?.email || 'Unknown';
+                    const detailLabel = getMetadataLabel(row.action, row.metadata);
+                    return (
+                      <div key={row.id} className="jn-event">
+                        <div className="jn-icon" style={{ background: meta.bg }}>
+                          <Icon size={14} color={meta.color} />
                         </div>
-                        <div className="jn-meta">
-                          <span className="jn-user"><User size={10} />{userName}</span>
-                        </div>
+                        <span className="jn-action">{meta.label}</span>
+                        {detailLabel && (
+                          <span className="jn-detail-chip" style={{ background: meta.bg, color: meta.color }}>{detailLabel}</span>
+                        )}
+                        <span className="jn-user-pill"><User size={10} />{userName}</span>
+                        <span className="jn-time">{formatTime(row.created_at)}</span>
                       </div>
-                      <div className="jn-time">{formatTime(row.created_at)}</div>
-                    </div>
-                  );
-                })}
-              </div>
-            ))}
-            {hasMore && (
-              <button className="jn-load-more" onClick={() => fetchActivity(false)} disabled={refreshing}>
-                {refreshing ? 'Loading...' : `Load more (${total - rows.length} remaining)`}
-              </button>
-            )}
-            <div className="jn-count">Showing {rows.length} of {total}</div>
-          </div>
-        )}
-      </div>
-    </div>
+                    );
+                  })}
+                </div>
+              ))}
+              {hasMore && (
+                <button className="jn-load-more" onClick={() => fetchActivity(false)} disabled={refreshing}>
+                  {refreshing ? 'Loading...' : `Load more (${total - rows.length} remaining)`}
+                </button>
+              )}
+              <div className="jn-count">Showing {rows.length} of {total}</div>
+            </div>
+          )}
+        </div>
+      </AdminShell>
+    </>
   );
 }

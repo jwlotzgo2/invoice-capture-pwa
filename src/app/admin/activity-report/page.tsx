@@ -4,50 +4,95 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import {
-  ArrowLeft, RefreshCw, Camera, WifiOff, Upload, Mail,
-  LogIn, Users, TrendingUp, Zap, Download, Bell, Activity,
-  CheckCircle, Edit2
+  RefreshCw, Camera, WifiOff, Upload, Mail,
+  LogIn, Users, TrendingUp, Activity,
 } from 'lucide-react';
+import AdminShell from '@/components/AdminShell';
 
-const css = `
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #0f1117; }
-  .ar { font-family: 'Inter', system-ui, sans-serif; min-height: 100svh; background: #0f1117; color: #f0f0f0; }
-  .ar-header { background: #1c1c1c; border-bottom: 1px solid #2a2a2a; padding: 14px 16px; position: sticky; top: 0; z-index: 40; display: flex; align-items: center; gap: 12px; }
-  .ar-back { width: 34px; height: 34px; border: 1px solid #383838; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: none; color: #a3a3a3; flex-shrink: 0; }
-  .ar-title { font-size: 16px; font-weight: 700; color: #f0f0f0; }
-  .ar-subtitle { font-size: 11px; color: #6b6b6b; margin-top: 1px; }
-  .ar-toolbar { background: #1c1c1c; border-bottom: 1px solid #2a2a2a; padding: 10px 16px; display: flex; gap: 8px; align-items: center; }
-  .ar-select { background: #282828; border: 1px solid #383838; border-radius: 8px; color: #f0f0f0; font-size: 12px; padding: 8px 10px; outline: none; cursor: pointer; }
-  .ar-main { max-width: 900px; margin: 0 auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
-  .ar-section { background: #1c1c1c; border: 1px solid #252525; border-radius: 14px; padding: 16px; }
-  .ar-section-title { font-size: 12px; font-weight: 700; color: #6b6b6b; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 14px; }
-  .ar-grid-3 { display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; }
-  @media(min-width:600px){ .ar-grid-3 { grid-template-columns: repeat(3,1fr); } }
-  .ar-grid-2 { display: grid; grid-template-columns: 1fr; gap: 10px; }
-  @media(min-width:600px){ .ar-grid-2 { grid-template-columns: 1fr 1fr; } }
-  .ar-kpi { background: #282828; border: 1px solid #2a2a2a; border-radius: 12px; padding: 14px; }
-  .ar-kpi-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
-  .ar-kpi-val { font-size: 26px; font-weight: 700; color: #f0f0f0; line-height: 1; font-variant-numeric: tabular-nums; }
-  .ar-kpi-label { font-size: 11px; color: #6b6b6b; margin-top: 5px; }
-  .ar-kpi-delta { font-size: 11px; margin-top: 3px; }
+const C = {
+  bg:           '#070e1a',
+  surface:      '#0c1628',
+  surfaceHi:    '#0f1e35',
+  border:       '#142a45',
+  borderHi:     '#1d3f63',
+  accent:       '#0096c7',
+  accentBright: '#22d3ee',
+  accentGlow:   'rgba(0,150,199,0.1)',
+  green:        '#10b981',
+  greenGlow:    'rgba(16,185,129,0.1)',
+  amber:        '#f59e0b',
+  amberGlow:    'rgba(245,158,11,0.1)',
+  red:          '#ef4444',
+  redGlow:      'rgba(239,68,68,0.1)',
+  purple:       '#a855f7',
+  purpleGlow:   'rgba(168,85,247,0.1)',
+  text:         '#d4e5f5',
+  dim:          '#6890b0',
+  muted:        '#2d4a65',
+};
+
+const pageCss = `
+  .ar-page { padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+  @media (max-width: 768px) { .ar-page { padding: 16px; } }
+
+  .ar-grid-6 { display: grid; grid-template-columns: repeat(2,1fr); gap: 12px; }
+  @media (min-width: 640px) { .ar-grid-6 { grid-template-columns: repeat(3,1fr); } }
+  @media (min-width: 1100px) { .ar-grid-6 { grid-template-columns: repeat(6,1fr); } }
+
+  .ar-row2 { display: grid; grid-template-columns: 1fr; gap: 16px; }
+  @media (min-width: 900px) { .ar-row2 { grid-template-columns: 1fr 1fr; } }
+
+  .ar-card {
+    background: ${C.surface};
+    border: 1px solid ${C.border};
+    border-top: 2px solid ${C.border};
+    border-radius: 10px;
+    padding: 18px;
+  }
+  .ar-card-accent  { border-top-color: ${C.accent}; }
+  .ar-card-green   { border-top-color: ${C.green}; }
+  .ar-card-purple  { border-top-color: ${C.purple}; }
+  .ar-card-amber   { border-top-color: ${C.amber}; }
+
+  .ar-kpi-icon { width: 30px; height: 30px; border-radius: 7px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
+  .ar-kpi-val { font-family: 'IBM Plex Mono', monospace; font-size: 22px; font-weight: 700; color: ${C.text}; line-height: 1; font-variant-numeric: tabular-nums; }
+  .ar-kpi-label { font-size: 10px; font-weight: 700; color: ${C.muted}; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px; }
+
+  .ar-section-label { font-size: 10px; font-weight: 700; color: ${C.muted}; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px; }
+
   .ar-bar-row { margin-bottom: 12px; }
-  .ar-bar-top { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px; color: #a3a3a3; }
-  .ar-bar-val { font-weight: 700; color: #f0f0f0; }
-  .ar-bar-track { height: 6px; background: #282828; border-radius: 99px; overflow: hidden; }
+  .ar-bar-top { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px; color: ${C.dim}; }
+  .ar-bar-val { font-family: 'IBM Plex Mono', monospace; font-weight: 700; color: ${C.text}; font-variant-numeric: tabular-nums; }
+  .ar-bar-track { height: 5px; background: ${C.bg}; border-radius: 99px; overflow: hidden; }
   .ar-bar-fill { height: 100%; border-radius: 99px; transition: width 0.6s ease; }
+
   .ar-table { width: 100%; border-collapse: collapse; }
-  .ar-table th { font-size: 10px; font-weight: 700; color: #6b6b6b; text-transform: uppercase; letter-spacing: 0.6px; padding: 0 0 10px; text-align: left; }
-  .ar-table td { font-size: 12px; color: #e5e5e5; padding: 8px 0; border-top: 1px solid #252525; vertical-align: middle; }
-  .ar-table tr:hover td { background: #222; }
-  .ar-avatar { width: 26px; height: 26px; border-radius: 7px; background: #323232; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #a3a3a3; flex-shrink: 0; }
-  .ar-badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 99px; }
+  .ar-table th { font-size: 10px; font-weight: 700; color: ${C.muted}; text-transform: uppercase; letter-spacing: 1px; padding: 0 0 10px; text-align: left; white-space: nowrap; }
+  .ar-table td { font-size: 12px; color: ${C.text}; padding: 8px 0; border-top: 1px solid ${C.border}; vertical-align: middle; }
+  .ar-table tr:hover td { background: ${C.surfaceHi}; }
+
+  .ar-avatar { width: 26px; height: 26px; border-radius: 6px; background: ${C.surfaceHi}; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: ${C.dim}; flex-shrink: 0; }
+
   .ar-heatmap { display: grid; grid-template-columns: repeat(24, 1fr); gap: 3px; }
   .ar-heatmap-cell { aspect-ratio: 1; border-radius: 3px; }
   .ar-heatmap-labels { display: flex; justify-content: space-between; margin-top: 4px; }
-  .ar-heatmap-label { font-size: 10px; color: #6b6b6b; }
+  .ar-heatmap-label { font-size: 10px; color: ${C.muted}; }
+
+  .ar-select {
+    padding: 7px 10px; border: 1px solid ${C.border}; border-radius: 7px; font-size: 12px;
+    font-family: 'IBM Plex Sans', system-ui, sans-serif; color: ${C.text}; outline: none;
+    background: ${C.bg}; transition: border-color 0.15s;
+  }
+  .ar-select:focus { border-color: ${C.accent}; }
+
+  .ar-refresh-btn {
+    width: 32px; height: 32px; border: 1px solid ${C.border}; border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; background: none; color: ${C.dim};
+  }
+  .ar-refresh-btn:hover { border-color: ${C.borderHi}; color: ${C.text}; }
+
   .spin { animation: spin 0.8s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
 `;
 
 interface Stats {
@@ -86,19 +131,19 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 const ACTION_COLORS: Record<string, string> = {
-  login: '#86efac', capture_ocr: '#a78bfa', capture_offline: '#fdba74',
-  sync_upload: '#60a5fa', email_received: '#f9a8d4', export_csv: '#86efac',
-  review_approved: '#86efac', document_deleted: '#fca5a5',
-  document_edited: '#fde68a', document_viewed: '#6b6b6b',
+  login: '#10b981', capture_ocr: '#a855f7', capture_offline: '#f59e0b',
+  sync_upload: '#0096c7', email_received: '#f9a8d4', export_csv: '#10b981',
+  review_approved: '#10b981', document_deleted: '#ef4444',
+  document_edited: '#f59e0b', document_viewed: '#6890b0',
 };
 
 function heatColor(val: number, max: number) {
-  if (val === 0) return '#282828';
+  if (val === 0) return C.surfaceHi;
   const intensity = val / max;
-  if (intensity < 0.25) return '#1e3a5f';
-  if (intensity < 0.5) return '#1d4ed8';
-  if (intensity < 0.75) return '#3b82f6';
-  return '#60a5fa';
+  if (intensity < 0.25) return '#0a2540';
+  if (intensity < 0.5) return '#0c4a80';
+  if (intensity < 0.75) return '#0070a8';
+  return C.accent;
 }
 
 export default function AdminActivityReport() {
@@ -193,180 +238,150 @@ export default function AdminActivityReport() {
   const maxUserCount = Math.max(...stats.userLeaderboard.map(u => u.count), 1);
 
   const kpis = [
-    { label: 'Total Events', val: stats.totalEvents, icon: Activity, color: '#a78bfa', bg: 'rgba(167,139,250,0.12)' },
-    { label: 'Login Sessions', val: stats.totalSessions, icon: LogIn, color: '#86efac', bg: 'rgba(134,239,172,0.12)' },
-    { label: 'Active Users', val: stats.uniqueUsers, icon: Users, color: '#60a5fa', bg: 'rgba(96,165,250,0.12)' },
-    { label: 'OCR Scans', val: stats.totalScans, icon: Camera, color: '#a78bfa', bg: 'rgba(167,139,250,0.12)' },
-    { label: 'Offline Captures', val: stats.offlineCaptures, icon: WifiOff, color: '#fdba74', bg: 'rgba(253,186,116,0.12)' },
+    { label: 'Total Events', val: stats.totalEvents, icon: Activity, color: C.purple, bg: C.purpleGlow },
+    { label: 'Login Sessions', val: stats.totalSessions, icon: LogIn, color: C.green, bg: C.greenGlow },
+    { label: 'Active Users', val: stats.uniqueUsers, icon: Users, color: C.accent, bg: C.accentGlow },
+    { label: 'OCR Scans', val: stats.totalScans, icon: Camera, color: C.purple, bg: C.purpleGlow },
+    { label: 'Offline Captures', val: stats.offlineCaptures, icon: WifiOff, color: C.amber, bg: C.amberGlow },
     { label: 'Emails In', val: stats.emailsReceived, icon: Mail, color: '#f9a8d4', bg: 'rgba(249,168,212,0.12)' },
   ];
 
+  const periodActions = (
+    <>
+      <span style={{ fontSize: 12, color: C.muted }}>Period:</span>
+      <select className="ar-select" value={filterDays} onChange={e => setFilterDays(e.target.value)}>
+        <option value="7">Last 7 days</option>
+        <option value="30">Last 30 days</option>
+        <option value="90">Last 90 days</option>
+        <option value="365">Last year</option>
+      </select>
+      <button className="ar-refresh-btn" onClick={fetchStats} disabled={loading}>
+        <RefreshCw size={14} className={loading ? 'spin' : ''} />
+      </button>
+    </>
+  );
+
   return (
-    <div className="ar">
-      <style>{css}</style>
+    <>
+      <style>{pageCss}</style>
+      <AdminShell title="Activity Report" subtitle="Usage stats across all users" actions={periodActions}>
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '60px 20px', color: C.muted }}>
+            <RefreshCw size={20} className="spin" style={{ margin: '0 auto 10px', display: 'block', color: C.accent }} />
+            Computing stats...
+          </div>
+        ) : (
+          <div className="ar-page">
 
-      <header className="ar-header">
-        <button className="ar-back" onClick={() => router.push('/admin')}>
-          <ArrowLeft size={16} />
-        </button>
-        <div style={{ flex: 1 }}>
-          <div className="ar-title">Activity Report</div>
-          <div className="ar-subtitle">Usage stats across all users</div>
-        </div>
-        <button className="ar-back" onClick={fetchStats} disabled={loading}>
-          <RefreshCw size={15} className={loading ? 'spin' : ''} />
-        </button>
-      </header>
-
-      <div className="ar-toolbar">
-        <TrendingUp size={13} color="#6b6b6b" />
-        <span style={{ fontSize: 12, color: '#6b6b6b', marginRight: 4 }}>Period:</span>
-        <select className="ar-select" value={filterDays} onChange={e => setFilterDays(e.target.value)}>
-          <option value="7">Last 7 days</option>
-          <option value="30">Last 30 days</option>
-          <option value="90">Last 90 days</option>
-          <option value="365">Last year</option>
-        </select>
-      </div>
-
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: '60px 20px', color: '#6b6b6b' }}>
-          <RefreshCw size={20} className="spin" style={{ margin: '0 auto 10px', display: 'block' }} />
-          Computing stats...
-        </div>
-      ) : (
-        <div className="ar-main">
-
-          {/* KPI grid */}
-          <div>
-            <div className="ar-section-title" style={{ padding: '0 0 10px', color: '#6b6b6b', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px' }}>Overview</div>
-            <div className="ar-grid-3">
+            {/* Row 1: 6 KPI tiles */}
+            <div className="ar-grid-6">
               {kpis.map(({ label, val, icon: Icon, color, bg }) => (
-                <div key={label} className="ar-kpi">
+                <div key={label} className="ar-card" style={{ borderTopColor: color }}>
                   <div className="ar-kpi-icon" style={{ background: bg }}>
-                    <Icon size={15} color={color} />
+                    <Icon size={14} color={color} />
                   </div>
                   <div className="ar-kpi-val">{val.toLocaleString()}</div>
                   <div className="ar-kpi-label">{label}</div>
                 </div>
               ))}
             </div>
-          </div>
 
-          <div className="ar-grid-2">
-            {/* Action breakdown */}
-            <div className="ar-section">
-              <div className="ar-section-title">Actions Breakdown</div>
-              {stats.actionBreakdown.map(({ action, count }) => (
-                <div key={action} className="ar-bar-row">
-                  <div className="ar-bar-top">
-                    <span>{ACTION_LABELS[action] || action}</span>
-                    <span className="ar-bar-val">{count.toLocaleString()}</span>
+            {/* Row 2: Action Breakdown bars + User Leaderboard table */}
+            <div className="ar-row2">
+              {/* Action breakdown */}
+              <div className="ar-card ar-card-accent">
+                <div className="ar-section-label">Actions Breakdown</div>
+                {stats.actionBreakdown.map(({ action, count }) => (
+                  <div key={action} className="ar-bar-row">
+                    <div className="ar-bar-top">
+                      <span>{ACTION_LABELS[action] || action}</span>
+                      <span className="ar-bar-val">{count.toLocaleString()}</span>
+                    </div>
+                    <div className="ar-bar-track">
+                      <div className="ar-bar-fill" style={{ width: `${(count / maxAction) * 100}%`, background: ACTION_COLORS[action] || C.dim }} />
+                    </div>
                   </div>
-                  <div className="ar-bar-track">
-                    <div className="ar-bar-fill" style={{ width: `${(count / maxAction) * 100}%`, background: ACTION_COLORS[action] || '#6b6b6b' }} />
-                  </div>
-                </div>
-              ))}
-              {stats.actionBreakdown.length === 0 && <div style={{ color: '#6b6b6b', fontSize: 13 }}>No data</div>}
-            </div>
-
-            {/* Daily trend */}
-            <div className="ar-section">
-              <div className="ar-section-title">Daily Activity</div>
-              {stats.dailyTrend.length === 0 ? (
-                <div style={{ color: '#6b6b6b', fontSize: 13 }}>No data</div>
-              ) : (
-                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 80 }}>
-                  {stats.dailyTrend.map(({ date, count }) => (
-                    <div key={date} title={`${date}: ${count}`} style={{ flex: 1, background: '#3b82f6', opacity: 0.3 + 0.7 * (count / maxDay), borderRadius: 3, height: `${Math.max(4, (count / maxDay) * 80)}px`, minWidth: 3 }} />
-                  ))}
-                </div>
-              )}
-              {stats.dailyTrend.length > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
-                  <span style={{ fontSize: 10, color: '#6b6b6b' }}>{stats.dailyTrend[0]?.date}</span>
-                  <span style={{ fontSize: 10, color: '#6b6b6b' }}>{stats.dailyTrend[stats.dailyTrend.length - 1]?.date}</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Hourly heatmap */}
-          <div className="ar-section">
-            <div className="ar-section-title">Activity by Hour of Day</div>
-            <div className="ar-heatmap">
-              {stats.hourlyDistribution.map((val, h) => (
-                <div key={h} className="ar-heatmap-cell" title={`${h}:00 — ${val} events`} style={{ background: heatColor(val, maxHour), borderRadius: 4 }} />
-              ))}
-            </div>
-            <div className="ar-heatmap-labels">
-              <span className="ar-heatmap-label">12am</span>
-              <span className="ar-heatmap-label">6am</span>
-              <span className="ar-heatmap-label">12pm</span>
-              <span className="ar-heatmap-label">6pm</span>
-              <span className="ar-heatmap-label">11pm</span>
-            </div>
-          </div>
-
-          {/* User leaderboard */}
-          <div className="ar-section">
-            <div className="ar-section-title">Top Users by Activity</div>
-            <table className="ar-table">
-              <thead>
-                <tr>
-                  <th style={{ width: 30 }}>#</th>
-                  <th>User</th>
-                  <th style={{ textAlign: 'right' }}>Events</th>
-                  <th style={{ textAlign: 'right' }}>Scans</th>
-                  <th style={{ textAlign: 'right' }}>Logins</th>
-                  <th style={{ width: '30%' }}></th>
-                </tr>
-              </thead>
-              <tbody>
-                {stats.userLeaderboard.map((u, i) => (
-                  <tr key={u.user_id}>
-                    <td style={{ color: '#6b6b6b', fontSize: 11 }}>{i + 1}</td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div className="ar-avatar">{(u.full_name || u.email || '?')[0].toUpperCase()}</div>
-                        <div>
-                          <div style={{ fontSize: 12, fontWeight: 600 }}>{u.full_name || '—'}</div>
-                          <div style={{ fontSize: 10, color: '#6b6b6b' }}>{u.email}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td style={{ textAlign: 'right', fontWeight: 700 }}>{u.count}</td>
-                    <td style={{ textAlign: 'right', color: '#a78bfa' }}>{u.scans}</td>
-                    <td style={{ textAlign: 'right', color: '#86efac' }}>{u.logins}</td>
-                    <td>
-                      <div style={{ height: 4, background: '#282828', borderRadius: 99, overflow: 'hidden' }}>
-                        <div style={{ height: '100%', width: `${(u.count / maxUserCount) * 100}%`, background: '#3b82f6', borderRadius: 99 }} />
-                      </div>
-                    </td>
-                  </tr>
                 ))}
-              </tbody>
-            </table>
-            {stats.userLeaderboard.length === 0 && <div style={{ color: '#6b6b6b', fontSize: 13 }}>No data</div>}
-          </div>
-
-          {/* Secondary stats */}
-          <div className="ar-grid-3">
-            {[
-              { label: 'CSV Exports', val: stats.csvExports, color: '#86efac' },
-              { label: 'Approvals', val: stats.approvals, color: '#86efac' },
-              { label: 'Deletions', val: stats.deletions, color: '#fca5a5' },
-            ].map(({ label, val, color }) => (
-              <div key={label} className="ar-kpi">
-                <div className="ar-kpi-val" style={{ color }}>{val}</div>
-                <div className="ar-kpi-label">{label}</div>
+                {stats.actionBreakdown.length === 0 && <div style={{ color: C.muted, fontSize: 13 }}>No data</div>}
               </div>
-            ))}
-          </div>
 
-        </div>
-      )}
-    </div>
+              {/* User leaderboard table */}
+              <div className="ar-card ar-card-purple">
+                <div className="ar-section-label">Top Users by Activity</div>
+                <table className="ar-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: 26 }}>#</th>
+                      <th>User</th>
+                      <th style={{ textAlign: 'right' }}>Events</th>
+                      <th style={{ textAlign: 'right' }}>Scans</th>
+                      <th style={{ textAlign: 'right' }}>Logins</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stats.userLeaderboard.map((u, i) => (
+                      <tr key={u.user_id}>
+                        <td style={{ color: C.muted, fontSize: 11, fontFamily: 'IBM Plex Mono', fontVariantNumeric: 'tabular-nums' }}>{i + 1}</td>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div className="ar-avatar">{(u.full_name || u.email || '?')[0].toUpperCase()}</div>
+                            <div>
+                              <div style={{ fontSize: 12, fontWeight: 600, color: C.text }}>{u.full_name || '—'}</div>
+                              <div style={{ fontSize: 10, color: C.muted }}>{u.email}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td style={{ textAlign: 'right', fontFamily: 'IBM Plex Mono', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{u.count}</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'IBM Plex Mono', color: C.purple, fontVariantNumeric: 'tabular-nums' }}>{u.scans}</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'IBM Plex Mono', color: C.green, fontVariantNumeric: 'tabular-nums' }}>{u.logins}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {stats.userLeaderboard.length === 0 && <div style={{ color: C.muted, fontSize: 13 }}>No data</div>}
+              </div>
+            </div>
+
+            {/* Row 3: Daily Trend bar chart (full width) */}
+            <div className="ar-card ar-card-accent">
+              <div className="ar-section-label">Daily Activity Trend</div>
+              {stats.dailyTrend.length === 0 ? (
+                <div style={{ color: C.muted, fontSize: 13 }}>No data</div>
+              ) : (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 80 }}>
+                    {stats.dailyTrend.map(({ date, count }) => (
+                      <div key={date} title={`${date}: ${count}`} style={{ flex: 1, background: C.accent, opacity: 0.3 + 0.7 * (count / maxDay), borderRadius: '3px 3px 0 0', height: `${Math.max(4, (count / maxDay) * 80)}px`, minWidth: 3 }} />
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
+                    <span style={{ fontSize: 10, color: C.muted }}>{stats.dailyTrend[0]?.date}</span>
+                    <span style={{ fontSize: 10, color: C.muted }}>{stats.dailyTrend[stats.dailyTrend.length - 1]?.date}</span>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Row 4: Hourly Heatmap (full width, 24 cells) */}
+            <div className="ar-card">
+              <div className="ar-section-label">Activity by Hour of Day</div>
+              <div className="ar-heatmap">
+                {stats.hourlyDistribution.map((val, h) => (
+                  <div key={h} className="ar-heatmap-cell" title={`${h}:00 — ${val} events`} style={{ background: heatColor(val, maxHour) }} />
+                ))}
+              </div>
+              <div className="ar-heatmap-labels">
+                <span className="ar-heatmap-label">12am</span>
+                <span className="ar-heatmap-label">6am</span>
+                <span className="ar-heatmap-label">12pm</span>
+                <span className="ar-heatmap-label">6pm</span>
+                <span className="ar-heatmap-label">11pm</span>
+              </div>
+            </div>
+
+          </div>
+        )}
+      </AdminShell>
+    </>
   );
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Users, FileText, TrendingUp, ArrowRight, Loader2, Shield, Camera, Upload, Mail, Zap, AlertTriangle, CheckCircle, Activity } from 'lucide-react';
+import AdminShell from '@/components/AdminShell';
 
 interface OrgStat {
   id: string;
@@ -28,63 +29,103 @@ interface DashboardStats {
   orgs: OrgStat[];
 }
 
-const T = {
-  bg: '#0f0f0f', surface: '#1c1c1c', surfaceHigh: '#242424', border: '#2a2a2a',
-  borderHigh: '#383838', text: '#f0f0f0', textDim: '#a3a3a3', textMuted: '#6b6b6b',
-  accent: '#38bdf8', accentGlow: 'rgba(56,189,248,0.1)',
-  success: '#86efac', successBg: 'rgba(134,239,172,0.08)',
-  warning: '#fdba74', warningBg: 'rgba(253,186,116,0.08)',
-  error: '#fca5a5', errorBg: 'rgba(252,165,165,0.08)',
-  purple: '#c084fc', purpleBg: 'rgba(192,132,252,0.08)',
+const C = {
+  bg:           '#070e1a',
+  surface:      '#0c1628',
+  surfaceHi:    '#0f1e35',
+  border:       '#142a45',
+  borderHi:     '#1d3f63',
+  accent:       '#0096c7',
+  accentBright: '#22d3ee',
+  accentGlow:   'rgba(0,150,199,0.1)',
+  green:        '#10b981',
+  greenGlow:    'rgba(16,185,129,0.1)',
+  amber:        '#f59e0b',
+  amberGlow:    'rgba(245,158,11,0.1)',
+  red:          '#ef4444',
+  redGlow:      'rgba(239,68,68,0.1)',
+  purple:       '#a855f7',
+  purpleGlow:   'rgba(168,85,247,0.1)',
+  text:         '#d4e5f5',
+  dim:          '#6890b0',
+  muted:        '#2d4a65',
 };
 
-const css = `
-  @keyframes spin { to { transform: rotate(360deg); } }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  .adm { font-family: Inter, system-ui, sans-serif; min-height: 100svh; background: ${T.bg}; color: ${T.text}; }
-  .adm-header { background: ${T.surface}; border-bottom: 1px solid ${T.border}; padding: 14px 16px; position: sticky; top: 0; z-index: 40; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-  .adm-logo { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
-  .adm-logo-dot { width: 10px; height: 10px; border-radius: 3px; background: ${T.accent}; flex-shrink: 0; }
-  .adm-logo-text { font-size: 17px; font-weight: 800; color: ${T.text}; letter-spacing: -0.3px; }
-  .adm-badge { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 4px; background: ${T.accentGlow}; color: ${T.accent}; border: 1px solid rgba(56,189,248,0.3); letter-spacing: 0.3px; text-transform: uppercase; }
-  .adm-back { font-size: 13px; font-weight: 600; color: ${T.textDim}; text-decoration: none; padding: 8px 12px; border: 1px solid ${T.border}; border-radius: 8px; transition: border-color 0.15s, color 0.15s; flex-shrink: 0; }
-  .adm-back:hover { border-color: ${T.borderHigh}; color: ${T.text}; }
-  .adm-org-select { padding: 8px 12px; border: 1px solid ${T.border}; border-radius: 8px; font-size: 13px; font-family: inherit; color: ${T.text}; outline: none; background: ${T.bg}; transition: border-color 0.15s; min-width: 160px; max-width: 260px; }
-  .adm-org-select:focus { border-color: ${T.accent}; }
-  .adm-main { max-width: 1280px; margin: 0 auto; padding: 20px 16px 80px; display: flex; flex-direction: column; gap: 20px; }
+const pageCss = `
+  .adm-page { padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+  @media (max-width: 768px) { .adm-page { padding: 16px; } }
+
   .adm-grid-4 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-  @media(min-width: 640px) { .adm-grid-4 { grid-template-columns: repeat(4, 1fr); } }
-  .adm-grid-2 { display: grid; grid-template-columns: 1fr; gap: 16px; }
-  @media(min-width: 768px) { .adm-grid-2 { grid-template-columns: 1fr 1fr; } }
-  .adm-grid-3 { display: grid; grid-template-columns: 1fr; gap: 12px; }
-  @media(min-width: 640px) { .adm-grid-3 { grid-template-columns: repeat(2, 1fr); } }
-  @media(min-width: 960px) { .adm-grid-3 { grid-template-columns: repeat(3, 1fr); } }
-  .adm-card { background: ${T.surface}; border-radius: 12px; border: 1px solid ${T.border}; padding: 18px; }
-  .adm-kpi-icon { width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; }
-  .adm-kpi-val { font-size: 26px; font-weight: 800; color: ${T.text}; letter-spacing: -0.8px; line-height: 1.1; font-variant-numeric: tabular-nums; }
-  .adm-kpi-label { font-size: 11px; font-weight: 700; color: ${T.textMuted}; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 5px; }
-  .adm-kpi-sub { font-size: 11px; color: ${T.textMuted}; margin-top: 3px; }
-  .adm-section-title { font-size: 13px; font-weight: 700; color: ${T.textDim}; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px; }
+  @media (min-width: 640px) { .adm-grid-4 { grid-template-columns: repeat(4, 1fr); } }
+
+  .adm-row2 { display: grid; grid-template-columns: 1fr; gap: 16px; }
+  @media (min-width: 900px) { .adm-row2 { grid-template-columns: 60fr 40fr; } }
+
+  .adm-row3 { display: grid; grid-template-columns: 1fr; gap: 16px; }
+
+  .adm-quick-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  @media (min-width: 640px) { .adm-quick-grid { grid-template-columns: repeat(3, 1fr); } }
+
+  .adm-card {
+    background: ${C.surface};
+    border-radius: 10px;
+    border: 1px solid ${C.border};
+    border-top: 2px solid ${C.border};
+    padding: 18px;
+  }
+  .adm-card-accent { border-top-color: ${C.accent}; }
+  .adm-card-green  { border-top-color: ${C.green}; }
+  .adm-card-amber  { border-top-color: ${C.amber}; }
+  .adm-card-purple { border-top-color: ${C.purple}; }
+
+  .adm-kpi-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; }
+  .adm-kpi-val { font-family: 'IBM Plex Mono', monospace; font-size: 26px; font-weight: 700; color: ${C.text}; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .adm-kpi-label { font-size: 10px; font-weight: 700; color: ${C.muted}; text-transform: uppercase; letter-spacing: 1px; margin-top: 6px; }
+  .adm-kpi-sub { font-size: 11px; color: ${C.dim}; margin-top: 3px; }
+
+  .adm-section-label { font-size: 10px; font-weight: 700; color: ${C.muted}; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px; }
+
   .adm-bar-row { margin-bottom: 14px; }
   .adm-bar-top { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
-  .adm-bar-label { color: ${T.textDim}; font-weight: 500; display: flex; align-items: center; gap: 6px; }
-  .adm-bar-val { color: ${T.text}; font-weight: 700; font-variant-numeric: tabular-nums; }
-  .adm-bar-track { height: 6px; background: ${T.bg}; border-radius: 99px; overflow: hidden; }
+  .adm-bar-label { color: ${C.dim}; font-weight: 500; display: flex; align-items: center; gap: 6px; }
+  .adm-bar-val { color: ${C.text}; font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .adm-bar-track { height: 5px; background: ${C.bg}; border-radius: 99px; overflow: hidden; }
   .adm-bar-fill { height: 100%; border-radius: 99px; transition: width 0.5s; }
-  .adm-stat-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-top: 1px solid ${T.border}; }
-  .adm-quick-card { background: ${T.surface}; border: 1px solid ${T.border}; border-radius: 12px; padding: 18px; text-decoration: none; display: flex; align-items: center; gap: 14px; transition: border-color 0.15s, background 0.15s; }
-  .adm-quick-card:hover { border-color: ${T.borderHigh}; background: ${T.surfaceHigh}; }
-  .adm-quick-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid ${T.border}; }
-  .adm-org-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid ${T.border}; }
+
+  .adm-stat-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-top: 1px solid ${C.border}; }
+  .adm-stat-row:first-child { border-top: none; }
+
+  .adm-org-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid ${C.border}; }
   .adm-org-row:last-child { border-bottom: none; padding-bottom: 0; }
-  .adm-divider { height: 1px; background: ${T.border}; }
+
+  .adm-quick-card {
+    background: ${C.surface};
+    border: 1px solid ${C.border};
+    border-radius: 10px;
+    padding: 20px;
+    text-decoration: none;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    min-height: 80px;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .adm-quick-card:hover { border-color: ${C.borderHi}; background: ${C.surfaceHi}; }
+  .adm-quick-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+  .adm-select {
+    padding: 7px 10px; border: 1px solid ${C.border}; border-radius: 7px; font-size: 12px;
+    font-family: 'IBM Plex Sans', system-ui, sans-serif; color: ${C.text}; outline: none;
+    background: ${C.bg}; transition: border-color 0.15s; min-width: 150px;
+  }
+  .adm-select:focus { border-color: ${C.accent}; }
 `;
 
 function confColor(c: number | null) {
-  if (!c) return T.textMuted;
-  if (c >= 0.85) return T.success;
-  if (c >= 0.65) return T.warning;
-  return T.error;
+  if (!c) return C.muted;
+  if (c >= 0.85) return C.green;
+  if (c >= 0.65) return C.amber;
+  return C.red;
 }
 
 function confLabel(c: number | null) {
@@ -110,17 +151,21 @@ export default function AdminDashboardPage() {
   }, [router]);
 
   if (loading) return (
-    <div style={{ minHeight: '100svh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: T.bg }}>
-      <Loader2 size={28} color={T.accent} style={{ animation: 'spin 1s linear infinite' }} />
-    </div>
+    <AdminShell title="Dashboard">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '80px 0' }}>
+        <Loader2 size={28} color={C.accent} style={{ animation: 'spin 1s linear infinite' }} />
+      </div>
+    </AdminShell>
   );
 
   if (error) return (
-    <div style={{ minHeight: '100svh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: 'Inter, system-ui, sans-serif', background: T.bg }}>
-      <AlertTriangle size={40} color={T.error} />
-      <p style={{ fontSize: 16, fontWeight: 700, color: T.text, margin: '16px 0 8px' }}>{error}</p>
-      <button onClick={() => router.push('/')} style={{ color: T.accent, background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>← Back to app</button>
-    </div>
+    <AdminShell title="Dashboard">
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 24px' }}>
+        <AlertTriangle size={40} color={C.red} />
+        <p style={{ fontSize: 16, fontWeight: 700, color: C.text, margin: '16px 0 8px' }}>{error}</p>
+        <button onClick={() => router.push('/')} style={{ color: C.accent, background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>← Back to app</button>
+      </div>
+    </AdminShell>
   );
 
   const orgs = stats?.orgs || [];
@@ -133,147 +178,148 @@ export default function AdminDashboardPage() {
 
   const srcTotal = (stats?.invoicesBySource.camera || 0) + (stats?.invoicesBySource.upload || 0) + (stats?.invoicesBySource.email || 0) || 1;
 
+  const orgFilterSelect = orgs.length > 0 ? (
+    <select
+      className="adm-select"
+      value={orgFilter}
+      onChange={e => setOrgFilter(e.target.value)}
+    >
+      <option value="all">All Organisations</option>
+      {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+    </select>
+  ) : null;
+
   return (
     <>
-      <style>{css}</style>
-      <div className="adm">
-        <header className="adm-header">
-          <div className="adm-logo">
-            <div className="adm-logo-dot" />
-            <div className="adm-logo-text">Admin Console</div>
-            <div className="adm-badge">Go Capture</div>
-          </div>
-          {orgs.length > 0 && (
-            <select className="adm-org-select" value={orgFilter} onChange={e => setOrgFilter(e.target.value)}>
-              <option value="all">All Organisations</option>
-              {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-            </select>
-          )}
-          <Link href="/" className="adm-back">← App</Link>
-        </header>
+      <style>{pageCss}</style>
+      <AdminShell title="Dashboard" actions={orgFilterSelect}>
+        <div className="adm-page">
 
-        <main className="adm-main">
-
-          {/* KPI row */}
+          {/* Row 1: 4 KPI tiles */}
           <div className="adm-grid-4">
             {[
               {
-                icon: <FileText size={17} color={T.accent} />, bg: T.accentGlow,
+                icon: <FileText size={17} color={C.accent} />, bg: C.accentGlow, topColor: 'adm-card-accent',
                 val: docsProcessed.toLocaleString(),
                 label: 'Docs Processed',
                 sub: filteredOrg ? filteredOrg.name : `+${stats?.invoicesThisWeek || 0} this week`,
               },
               {
-                icon: <Activity size={17} color={T.purple} />, bg: T.purpleBg,
+                icon: <Activity size={17} color={C.purple} />, bg: C.purpleGlow, topColor: 'adm-card-purple',
                 val: confPct !== null ? `${confPct}%` : '—',
                 label: 'Avg OCR Confidence',
                 sub: confLabel(avgConf),
                 valColor: confColor(avgConf),
               },
               {
-                icon: <AlertTriangle size={17} color={T.warning} />, bg: T.warningBg,
+                icon: <AlertTriangle size={17} color={C.amber} />, bg: C.amberGlow, topColor: 'adm-card-amber',
                 val: (stats?.lowConfidenceCount || 0).toString(),
                 label: 'Low Confidence',
                 sub: 'scans below 70%',
               },
               {
-                icon: <Users size={17} color={T.success} />, bg: T.successBg,
+                icon: <Users size={17} color={C.green} />, bg: C.greenGlow, topColor: 'adm-card-green',
                 val: usersCount.toLocaleString(),
                 label: 'Users',
                 sub: filteredOrg ? `in ${filteredOrg.name}` : `${stats?.activeUsers || 0} active`,
               },
             ].map((k) => (
-              <div key={k.label} className="adm-card">
+              <div key={k.label} className={`adm-card ${k.topColor}`}>
                 <div className="adm-kpi-icon" style={{ background: k.bg }}>{k.icon}</div>
-                <div className="adm-kpi-val" style={{ color: (k as any).valColor || T.text }}>{k.val}</div>
+                <div className="adm-kpi-val" style={{ color: (k as any).valColor || C.text }}>{k.val}</div>
                 <div className="adm-kpi-label">{k.label}</div>
                 <div className="adm-kpi-sub">{k.sub}</div>
               </div>
             ))}
           </div>
 
-          {/* Source + OCR Health */}
-          <div className="adm-grid-2">
-            <div className="adm-card">
-              <div className="adm-section-title">Capture Source</div>
-              {[
-                { icon: <Camera size={13} color={T.accent} />, label: 'Camera', val: stats?.invoicesBySource.camera || 0, color: T.accent },
-                { icon: <Upload size={13} color={T.success} />, label: 'Upload', val: stats?.invoicesBySource.upload || 0, color: T.success },
-                { icon: <Mail size={13} color={T.purple} />, label: 'Email', val: stats?.invoicesBySource.email || 0, color: T.purple },
-              ].map((b) => (
-                <div key={b.label} className="adm-bar-row">
-                  <div className="adm-bar-top">
-                    <span className="adm-bar-label">{b.icon}{b.label}</span>
-                    <span className="adm-bar-val">{b.val} <span style={{ color: T.textMuted, fontWeight: 400 }}>({Math.round((b.val / srcTotal) * 100)}%)</span></span>
+          {/* Row 2: Left 60% (Source + OCR Health), Right 40% (Org list) */}
+          <div className="adm-row2">
+            {/* Left column */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Capture Source */}
+              <div className="adm-card adm-card-accent">
+                <div className="adm-section-label">Capture Source</div>
+                {[
+                  { icon: <Camera size={13} color={C.accent} />, label: 'Camera', val: stats?.invoicesBySource.camera || 0, color: C.accent },
+                  { icon: <Upload size={13} color={C.green} />, label: 'Upload', val: stats?.invoicesBySource.upload || 0, color: C.green },
+                  { icon: <Mail size={13} color={C.purple} />, label: 'Email', val: stats?.invoicesBySource.email || 0, color: C.purple },
+                ].map((b) => (
+                  <div key={b.label} className="adm-bar-row">
+                    <div className="adm-bar-top">
+                      <span className="adm-bar-label">{b.icon}{b.label}</span>
+                      <span className="adm-bar-val">{b.val} <span style={{ color: C.muted, fontWeight: 400 }}>({Math.round((b.val / srcTotal) * 100)}%)</span></span>
+                    </div>
+                    <div className="adm-bar-track">
+                      <div className="adm-bar-fill" style={{ width: `${(b.val / srcTotal) * 100}%`, background: b.color }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* OCR Health */}
+              <div className="adm-card adm-card-purple">
+                <div className="adm-section-label">OCR Health</div>
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 6 }}>
+                    <span style={{ color: C.dim, fontWeight: 500 }}>Average Confidence</span>
+                    <span style={{ fontFamily: 'IBM Plex Mono', fontWeight: 700, color: confColor(avgConf), fontVariantNumeric: 'tabular-nums' }}>{confPct !== null ? `${confPct}%` : '—'}</span>
                   </div>
                   <div className="adm-bar-track">
-                    <div className="adm-bar-fill" style={{ width: `${(b.val / srcTotal) * 100}%`, background: b.color }} />
+                    <div className="adm-bar-fill" style={{ width: `${confPct || 0}%`, background: confColor(avgConf) }} />
                   </div>
                 </div>
-              ))}
+                {[
+                  { label: 'Manual Corrections', val: stats?.totalOCREdits || 0, warn: false },
+                  { label: 'Scans below 70%', val: stats?.lowConfidenceCount || 0, warn: (stats?.lowConfidenceCount || 0) > 0 },
+                  { label: 'Email Invoices', val: stats?.totalEmailInvoices || 0, warn: false },
+                  { label: 'Activity (24h)', val: stats?.recentActivity || 0, warn: false },
+                ].map(row => (
+                  <div key={row.label} className="adm-stat-row">
+                    <span style={{ fontSize: 13, color: C.dim }}>{row.label}</span>
+                    <span style={{ fontSize: 14, fontFamily: 'IBM Plex Mono', fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: row.warn ? C.amber : C.text }}>{row.val}</span>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            <div className="adm-card">
-              <div className="adm-section-title">OCR Health</div>
-              <div style={{ marginBottom: 16 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 6 }}>
-                  <span style={{ color: T.textDim, fontWeight: 500 }}>Average Confidence</span>
-                  <span style={{ fontWeight: 700, color: confColor(avgConf) }}>{confPct !== null ? `${confPct}%` : '—'}</span>
-                </div>
-                <div className="adm-bar-track">
-                  <div className="adm-bar-fill" style={{ width: `${confPct || 0}%`, background: confColor(avgConf) }} />
-                </div>
+            {/* Right column: Org list */}
+            {orgs.length > 0 && (
+              <div className="adm-card" style={{ borderTopColor: C.accentBright }}>
+                <div className="adm-section-label">Organisations · Usage</div>
+                {orgs.map((org) => (
+                  <div key={org.id} className="adm-org-row">
+                    <div style={{ width: 34, height: 34, borderRadius: 8, background: C.accentGlow, border: `1px solid rgba(0,150,199,0.2)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Zap size={14} color={C.accent} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{org.name}</div>
+                      <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{org.user_count} user{org.user_count !== 1 ? 's' : ''} · {org.invoice_count} invoices</div>
+                    </div>
+                    <div style={{ textAlign: 'right', marginRight: 8, flexShrink: 0 }}>
+                      <div style={{ fontSize: 13, fontFamily: 'IBM Plex Mono', fontWeight: 700, color: confColor(org.avg_confidence) }}>
+                        {org.avg_confidence ? `${Math.round(org.avg_confidence * 100)}%` : '—'}
+                      </div>
+                      <div style={{ fontSize: 10, color: C.muted }}>OCR</div>
+                    </div>
+                    {org.avg_confidence === null ? (
+                      <div style={{ width: 14, height: 14, borderRadius: '50%', background: C.border, flexShrink: 0 }} />
+                    ) : org.avg_confidence >= 0.85 ? (
+                      <CheckCircle size={14} color={C.green} style={{ flexShrink: 0 }} />
+                    ) : (
+                      <AlertTriangle size={14} color={org.avg_confidence >= 0.65 ? C.amber : C.red} style={{ flexShrink: 0 }} />
+                    )}
+                  </div>
+                ))}
               </div>
-              {[
-                { label: 'Manual Corrections', val: stats?.totalOCREdits || 0, warn: false },
-                { label: 'Scans below 70%', val: stats?.lowConfidenceCount || 0, warn: (stats?.lowConfidenceCount || 0) > 0 },
-                { label: 'Email Invoices', val: stats?.totalEmailInvoices || 0, warn: false },
-                { label: 'Activity (24h)', val: stats?.recentActivity || 0, warn: false },
-              ].map(row => (
-                <div key={row.label} className="adm-stat-row">
-                  <span style={{ fontSize: 13, color: T.textDim }}>{row.label}</span>
-                  <span style={{ fontSize: 14, fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: row.warn ? T.warning : T.text }}>{row.val}</span>
-                </div>
-              ))}
-            </div>
+            )}
           </div>
 
-          {/* Org breakdown */}
-          {orgs.length > 0 && (
-            <div className="adm-card">
-              <div className="adm-section-title">Organisations · Service Usage</div>
-              {orgs.map((org) => (
-                <div key={org.id} className="adm-org-row">
-                  <div style={{ width: 36, height: 36, borderRadius: 9, background: T.accentGlow, border: `1px solid rgba(56,189,248,0.2)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Zap size={15} color={T.accent} />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{org.name}</div>
-                    <div style={{ fontSize: 11, color: T.textMuted, marginTop: 2 }}>{org.user_count} user{org.user_count !== 1 ? 's' : ''} · {org.invoice_count} invoices</div>
-                  </div>
-                  <div style={{ textAlign: 'right', marginRight: 10, flexShrink: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: confColor(org.avg_confidence) }}>
-                      {org.avg_confidence ? `${Math.round(org.avg_confidence * 100)}%` : '—'}
-                    </div>
-                    <div style={{ fontSize: 10, color: T.textMuted }}>OCR</div>
-                  </div>
-                  {org.avg_confidence === null ? (
-                    <div style={{ width: 14, height: 14, borderRadius: '50%', background: T.border, flexShrink: 0 }} />
-                  ) : org.avg_confidence >= 0.85 ? (
-                    <CheckCircle size={15} color={T.success} style={{ flexShrink: 0 }} />
-                  ) : (
-                    <AlertTriangle size={15} color={org.avg_confidence >= 0.65 ? T.warning : T.error} style={{ flexShrink: 0 }} />
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Platform Costs */}
-          <div className="adm-card">
+          {/* Row 3: Platform Costs (full width) */}
+          <div className="adm-card" style={{ borderTopColor: C.dim }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <div className="adm-section-title" style={{ margin: 0 }}>Platform Costs · This Month</div>
-              <span style={{ fontSize: 11, color: T.textMuted }}>est.</span>
+              <div className="adm-section-label" style={{ margin: 0 }}>Platform Costs · This Month</div>
+              <span style={{ fontSize: 11, color: C.muted }}>est.</span>
             </div>
             {(() => {
               const scanCount = filteredOrg ? filteredOrg.invoice_count : (stats?.totalInvoices || 0);
@@ -283,59 +329,59 @@ export default function AdminDashboardPage() {
               const totalCost = claudeCost + supabaseCost + vercelCost;
               const costPerDoc = scanCount > 0 ? totalCost / scanCount : 0;
               const items = [
-                { label: 'Claude OCR', detail: `${scanCount} scans × $0.02`, cost: claudeCost, color: T.purple },
-                { label: 'Supabase Pro', detail: 'fixed monthly', cost: supabaseCost, color: T.accent },
-                { label: 'Vercel Pro', detail: 'fixed monthly', cost: vercelCost, color: T.textDim },
+                { label: 'Claude OCR', detail: `${scanCount} scans × $0.02`, cost: claudeCost, color: C.purple },
+                { label: 'Supabase Pro', detail: 'fixed monthly', cost: supabaseCost, color: C.accent },
+                { label: 'Vercel Pro', detail: 'fixed monthly', cost: vercelCost, color: C.dim },
               ];
               return (
                 <>
                   {items.map(item => (
-                    <div key={item.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: `1px solid ${T.border}` }}>
+                    <div key={item.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: `1px solid ${C.border}` }}>
                       <div>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: T.text }}>{item.label}</div>
-                        <div style={{ fontSize: 11, color: T.textMuted, marginTop: 2 }}>{item.detail}</div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{item.label}</div>
+                        <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{item.detail}</div>
                       </div>
-                      <div style={{ fontSize: 14, fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: item.color }}>${item.cost.toFixed(2)}</div>
+                      <div style={{ fontFamily: 'IBM Plex Mono', fontSize: 14, fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: item.color }}>${item.cost.toFixed(2)}</div>
                     </div>
                   ))}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 12 }}>
                     <div>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>Total</div>
-                      {costPerDoc > 0 && <div style={{ fontSize: 11, color: T.textMuted, marginTop: 2 }}>${costPerDoc.toFixed(3)} per document</div>}
+                      <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Total</div>
+                      {costPerDoc > 0 && <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>${costPerDoc.toFixed(3)} per document</div>}
                     </div>
-                    <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: -0.5, color: T.text }}>${totalCost.toFixed(2)}</div>
+                    <div style={{ fontFamily: 'IBM Plex Mono', fontSize: 18, fontWeight: 700, letterSpacing: -0.5, color: C.text }}>${totalCost.toFixed(2)}</div>
                   </div>
                 </>
               );
             })()}
           </div>
 
-          {/* Quick links */}
+          {/* Row 4: Quick Links — 3x2 grid */}
           <div>
-            <div className="adm-section-title" style={{ marginBottom: 12 }}>Quick Links</div>
-            <div className="adm-grid-3">
+            <div className="adm-section-label" style={{ marginBottom: 12 }}>Quick Links</div>
+            <div className="adm-quick-grid">
               {[
-                { href: '/admin/users', icon: <Users size={17} color={T.accent} />, bg: T.accentGlow, border: 'rgba(56,189,248,0.2)', title: 'User Management', desc: 'Manage users, roles, organisations' },
-                { href: '/admin/orgs', icon: <Shield size={17} color={T.purple} />, bg: T.purpleBg, border: 'rgba(192,132,252,0.2)', title: 'Organisations', desc: 'Org codes, member assignment' },
-                { href: '/admin/analytics', icon: <TrendingUp size={17} color={T.success} />, bg: T.successBg, border: 'rgba(134,239,172,0.2)', title: 'OCR Analytics', desc: 'Field accuracy and correction patterns' },
-                { href: '/invoices/list', icon: <FileText size={17} color={T.warning} />, bg: T.warningBg, border: 'rgba(253,186,116,0.2)', title: 'All Invoices', desc: 'Browse and export all invoices' },
-                { href: '/admin/journal', icon: <Activity size={17} color={T.accent} />, bg: T.accentGlow, border: 'rgba(56,189,248,0.2)', title: 'Activity Journal', desc: 'Live feed of all user events' },
-                { href: '/admin/activity-report', icon: <Zap size={17} color={T.warning} />, bg: T.warningBg, border: 'rgba(253,186,116,0.2)', title: 'Activity Report', desc: 'Usage stats, heatmaps, leaderboard' },
+                { href: '/admin/users', icon: <Users size={20} color={C.accent} />, bg: C.accentGlow, title: 'User Management', desc: 'Manage users, roles, organisations' },
+                { href: '/admin/orgs', icon: <Shield size={20} color={C.purple} />, bg: C.purpleGlow, title: 'Organisations', desc: 'Org codes, member assignment' },
+                { href: '/admin/analytics', icon: <TrendingUp size={20} color={C.green} />, bg: C.greenGlow, title: 'OCR Analytics', desc: 'Field accuracy and correction patterns' },
+                { href: '/invoices/list', icon: <FileText size={20} color={C.amber} />, bg: C.amberGlow, title: 'All Invoices', desc: 'Browse and export all invoices' },
+                { href: '/admin/journal', icon: <Activity size={20} color={C.accent} />, bg: C.accentGlow, title: 'Activity Journal', desc: 'Live feed of all user events' },
+                { href: '/admin/activity-report', icon: <Zap size={20} color={C.amber} />, bg: C.amberGlow, title: 'Activity Report', desc: 'Usage stats, heatmaps, leaderboard' },
               ].map((q) => (
                 <Link key={q.href} href={q.href} className="adm-quick-card">
-                  <div className="adm-quick-icon" style={{ background: q.bg, borderColor: q.border }}>{q.icon}</div>
+                  <div className="adm-quick-icon" style={{ background: q.bg }}>{q.icon}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>{q.title}</div>
-                    <div style={{ fontSize: 12, color: T.textMuted, marginTop: 3 }}>{q.desc}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{q.title}</div>
+                    <div style={{ fontSize: 12, color: C.dim, marginTop: 4 }}>{q.desc}</div>
                   </div>
-                  <ArrowRight size={15} color={T.textMuted} style={{ flexShrink: 0 }} />
+                  <ArrowRight size={14} color={C.muted} style={{ flexShrink: 0, marginTop: 2 }} />
                 </Link>
               ))}
             </div>
           </div>
 
-        </main>
-      </div>
+        </div>
+      </AdminShell>
     </>
   );
 }
