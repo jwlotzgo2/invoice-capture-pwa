@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import {
   User, Building2, Phone, Mail, LogOut, Shield, ChevronRight, Loader2, Check,
   FolderOpen, Bell, BellOff, Tag, Users, Copy, RefreshCw, Crown, UserMinus,
-  ChevronDown, ChevronUp,
+  ChevronDown, ChevronUp, Send,
 } from 'lucide-react';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 
@@ -115,6 +115,9 @@ export default function SettingsPage() {
 
   // Team management state
   const [orgJoinCode, setOrgJoinCode] = useState<string>('');
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteSending, setInviteSending] = useState(false);
+  const [inviteMsg, setInviteMsg] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
   const [copiedCode, setCopiedCode] = useState(false);
   const [regenLoading, setRegenLoading] = useState(false);
   const [members, setMembers] = useState<OrgMember[]>([]);
@@ -222,6 +225,27 @@ export default function SettingsPage() {
       else setTeamMsg({ type: 'error', text: json.error || 'Failed to regenerate' });
     } catch { setTeamMsg({ type: 'error', text: 'Network error' }); }
     setRegenLoading(false);
+  };
+
+  const handleInvite = async () => {
+    if (!profile?.org_id || !inviteEmail.trim()) return;
+    setInviteSending(true);
+    setInviteMsg(null);
+    try {
+      const res = await fetch(`/api/org/${profile.org_id}/invite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: inviteEmail.trim() }),
+      });
+      const json = await res.json();
+      if (res.ok) {
+        setInviteMsg({ type: 'success', text: `Invite sent to ${inviteEmail.trim()}` });
+        setInviteEmail('');
+      } else {
+        setInviteMsg({ type: 'error', text: json.error || 'Failed to send invite' });
+      }
+    } catch { setInviteMsg({ type: 'error', text: 'Network error' }); }
+    setInviteSending(false);
   };
 
   const handleUpdateMember = async (memberId: string, updates: Partial<OrgMember>) => {
@@ -462,6 +486,38 @@ export default function SettingsPage() {
                   <RefreshCw size={12} style={regenLoading ? { animation: 'tspin 1s linear infinite' } : {}} />
                   New
                 </button>
+              </div>
+
+              {/* Invite by email */}
+              <div className="t-row">
+                <div style={{ flex: 1 }}>
+                  <div className="t-row-label">Invite Member</div>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                    <input
+                      type="email"
+                      className="t-input"
+                      placeholder="colleague@example.com"
+                      value={inviteEmail}
+                      onChange={e => setInviteEmail(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && handleInvite()}
+                      style={{ fontSize: 13 }}
+                    />
+                    <button
+                      onClick={handleInvite}
+                      disabled={inviteSending || !inviteEmail.trim()}
+                      style={{ padding: '8px 14px', borderRadius: 6, border: 'none', background: T.primary, color: T.bg, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+                      {inviteSending
+                        ? <Loader2 size={13} style={{ animation: 'tspin 1s linear infinite' }} />
+                        : <Send size={13} />}
+                      Send
+                    </button>
+                  </div>
+                  {inviteMsg && (
+                    <div style={{ fontSize: 11, marginTop: 6, color: inviteMsg.type === 'error' ? T.error : T.success }}>
+                      {inviteMsg.type === 'success' ? '✓ ' : ''}{inviteMsg.text}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Team message */}

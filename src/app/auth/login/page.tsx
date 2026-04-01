@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader2, Users } from 'lucide-react';
 
 const css = `
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -36,6 +36,11 @@ const css = `
   .lp-success { background: rgba(134,239,172,0.08); border: 1px solid rgba(134,239,172,0.25);
     border-radius: 8px; padding: 10px 13px; font-size: 13px; color: #86efac;
     margin-bottom: 16px; line-height: 1.4; }
+  .lp-invite-banner { background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.3);
+    border-radius: 10px; padding: 12px 14px; margin-bottom: 24px;
+    display: flex; align-items: flex-start; gap: 10px; }
+  .lp-invite-banner-text { font-size: 13px; color: #a3a3a3; line-height: 1.5; }
+  .lp-invite-banner-text strong { color: #f0f0f0; }
   .lp-btn { width: 100%; padding: 15px; background: #f0f0f0; color: #0f0f0f; border: none;
     border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer;
     font-family: inherit; display: flex; align-items: center; justify-content: center;
@@ -63,6 +68,7 @@ const css = `
     font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
     color: #555; transition: all 0.15s; }
   .lp-tab.active { background: #282828; color: #f0f0f0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
 `;
 
 export default function LoginPage() {
@@ -74,8 +80,30 @@ export default function LoginPage() {
   const [magicLoading, setMagicLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
+  const [inviteOrg, setInviteOrg] = useState('');
   const router = useRouter();
   const supabase = createClient();
+
+  // Detect invite params on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('invite');
+    const invitedEmail = params.get('email');
+    const org = params.get('org');
+    if (code) {
+      setInviteCode(code);
+      setMode('signup');
+      sessionStorage.setItem('pendingInvite', code);
+      if (invitedEmail) setEmail(decodeURIComponent(invitedEmail));
+      if (org) setInviteOrg(decodeURIComponent(org));
+    }
+  }, []);
+
+  // Build the post-auth redirect URL, threading the invite code through
+  const callbackNext = inviteCode
+    ? `/?invite=${encodeURIComponent(inviteCode)}`
+    : '/';
 
   const handleSubmit = async () => {
     setError(''); setSuccess('');
@@ -85,12 +113,12 @@ export default function LoginPage() {
       if (mode === 'signin') {
         const { error: e } = await supabase.auth.signInWithPassword({ email, password });
         if (e) throw e;
-        router.push('/');
+        router.push(inviteCode ? `/?invite=${encodeURIComponent(inviteCode)}` : '/');
         router.refresh();
       } else {
         const { error: e } = await supabase.auth.signUp({
           email, password,
-          options: { emailRedirectTo: `${window.location.origin}/auth/callback` }
+          options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(callbackNext)}` }
         });
         if (e) throw e;
         setSuccess('Account created! Check your email to confirm before signing in.');
@@ -110,7 +138,7 @@ export default function LoginPage() {
     try {
       const { error: e } = await supabase.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: `${window.location.origin}/auth/callback` }
+        options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(callbackNext)}` }
       });
       if (e) throw e;
       setSuccess('Magic link sent! Check your email and tap the link to sign in.');
@@ -132,12 +160,27 @@ export default function LoginPage() {
           <span className="lp-logo-text">Go Capture</span>
         </div>
 
+        {/* Invite banner */}
+        {inviteCode && (
+          <div className="lp-invite-banner">
+            <Users size={16} color="#38bdf8" style={{ flexShrink: 0, marginTop: 1 }} />
+            <div className="lp-invite-banner-text">
+              {inviteOrg
+                ? <>You've been invited to join <strong>{inviteOrg}</strong>. Create an account or sign in to accept.</>
+                : <>You've been invited to join a team on Go Capture. Create an account or sign in to accept.</>
+              }
+            </div>
+          </div>
+        )}
+
         {/* Heading */}
         <h1 className="lp-heading">
-          {mode === 'signin' ? 'Welcome back.' : 'Create account.'}
+          {inviteCode ? 'Join your team.' : mode === 'signin' ? 'Welcome back.' : 'Create account.'}
         </h1>
         <p className="lp-sub">
-          {mode === 'signin'
+          {inviteCode
+            ? 'Sign in or create a free account to get started.'
+            : mode === 'signin'
             ? 'Sign in to your Go Capture account.'
             : 'Start capturing invoices in under a minute.'}
         </p>

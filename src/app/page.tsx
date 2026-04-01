@@ -88,12 +88,27 @@ export default function InvoicesPage() {
       if (!session?.user) return;
       const { data: profile } = await supabase
         .from('user_profiles')
-        .select('onboarded_at')
+        .select('onboarded_at, org_id')
         .eq('id', session.user.id)
         .single();
       if (!profile?.onboarded_at) {
         router.replace('/onboarding');
         return;
+      }
+
+      // Auto-join org from invite code if present in URL or sessionStorage
+      if (!profile.org_id) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const inviteCode = urlParams.get('invite') || sessionStorage.getItem('pendingInvite');
+        if (inviteCode) {
+          sessionStorage.removeItem('pendingInvite');
+          await supabase.rpc('join_org_by_code', { p_code: inviteCode.toUpperCase() });
+          // Clean URL and let PermissionsContext refresh
+          window.history.replaceState({}, '', '/');
+        }
+      } else {
+        // Already in an org — clear any stale invite from storage
+        sessionStorage.removeItem('pendingInvite');
       }
     };
     checkOnboarding();
