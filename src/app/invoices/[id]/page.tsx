@@ -7,6 +7,7 @@ import { Invoice, InvoiceFormData, LineItem, InvoiceCategory, DocumentType, DocS
 import InvoiceForm from '@/components/InvoiceForm';
 import { ArrowLeft, Trash2, Edit2, Loader2, AlertCircle, ScanLine, CheckCircle, ZoomIn, X } from 'lucide-react';
 import { logActivity } from '@/lib/logActivity';
+import { usePermissions } from '@/context/PermissionsContext';
 
 const T = {
   bg: '#1c1c1c', surface: '#282828', surfaceHigh: '#323232', border: '#383838',
@@ -70,6 +71,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   const [rescanDone, setRescanDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
+  const { canCapture } = usePermissions();
   const [category, setCategory] = useState<InvoiceCategory | null>(null);
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [projects, setProjects] = useState<{id:string;name:string}[]>([]);
@@ -234,7 +236,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
               {invoice.document_number && <div style={{fontSize:11,color:T.textMuted,letterSpacing:1}}>#{invoice.document_number}</div>}
             </div>
           </div>
-          {!editing && (
+          {!editing && canCapture && (
             <div style={{display:'flex',gap:6,alignItems:'center',flexShrink:0}}>
               {(invoice.image_url||invoice.image_path) && (
                 <button onClick={handleRescan} disabled={rescanning} className={`btn-icon${rescanDone?' ok':''}`}>

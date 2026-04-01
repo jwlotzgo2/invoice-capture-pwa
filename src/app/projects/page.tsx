@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { ArrowLeft, Plus, Trash2, Pencil, Check, X, FolderOpen, Loader2, FileText } from 'lucide-react';
+import { usePermissions } from '@/context/PermissionsContext';
 
 const T = {
   bg: '#1c1c1c', surface: '#282828', surfaceHigh: '#323232', border: '#383838',
@@ -34,6 +35,9 @@ export default function ProjectsPage() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const supabase = createClient();
+  const { isCapturer, isBookkeeper, inOrg } = usePermissions();
+  // Only full members (preset=member) and solo users can create/edit/delete projects
+  const canManageProjects = !inOrg || (!isCapturer && !isBookkeeper);
 
   const fetchProjects = async () => {
     setLoading(true);
@@ -128,11 +132,13 @@ export default function ProjectsPage() {
           <div style={{ fontSize: 17, fontWeight: 600, color: T.text }}>Projects</div>
           <div style={{ fontSize: 12, color: T.textMuted }}>{projects.length} project{projects.length !== 1 ? 's' : ''}</div>
         </div>
-        <button
-          onClick={() => { setAdding(true); setEditId(null); setTimeout(() => document.getElementById('new-project-input')?.focus(), 50); }}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, border: 'none', background: T.primary, color: T.bg, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-          <Plus size={15} /> New
-        </button>
+        {canManageProjects && (
+          <button
+            onClick={() => { setAdding(true); setEditId(null); setTimeout(() => document.getElementById('new-project-input')?.focus(), 50); }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, border: 'none', background: T.primary, color: T.bg, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+            <Plus size={15} /> New
+          </button>
+        )}
       </header>
 
       <main style={{ padding: 16 }}>
@@ -141,7 +147,7 @@ export default function ProjectsPage() {
         )}
 
         {/* Add new project */}
-        {adding && (
+        {adding && canManageProjects && (
           <div style={{ background: T.surface, borderRadius: 12, border: `1.5px solid ${T.primary}`, padding: 14, marginBottom: 12, display: 'flex', gap: 8, alignItems: 'center' }}>
             <input
               id="new-project-input"
@@ -209,15 +215,17 @@ export default function ProjectsPage() {
                         )}
                       </div>
                     </div>
-                    {/* Actions */}
-                    <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                      <button onClick={() => { setEditId(project.id); setEditName(project.name); setAdding(false); }} style={iconBtnStyle('ghost')}>
-                        <Pencil size={15} />
-                      </button>
-                      <button onClick={() => handleDelete(project.id)} disabled={deleting === project.id} style={iconBtnStyle('danger')}>
-                        {deleting === project.id ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> : <Trash2 size={15} />}
-                      </button>
-                    </div>
+                    {/* Actions — hidden for capturers and bookkeepers in an org */}
+                    {canManageProjects && (
+                      <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                        <button onClick={() => { setEditId(project.id); setEditName(project.name); setAdding(false); }} style={iconBtnStyle('ghost')}>
+                          <Pencil size={15} />
+                        </button>
+                        <button onClick={() => handleDelete(project.id)} disabled={deleting === project.id} style={iconBtnStyle('danger')}>
+                          {deleting === project.id ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> : <Trash2 size={15} />}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

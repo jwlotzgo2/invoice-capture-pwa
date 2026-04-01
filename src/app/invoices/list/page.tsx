@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { Invoice, DocumentType, DOCUMENT_TYPE_LABELS } from '@/types/invoice';
 import { Search, X, Download, ChevronUp, ChevronDown, SlidersHorizontal } from 'lucide-react';
 import { logActivity } from '@/lib/logActivity';
+import { usePermissions } from '@/context/PermissionsContext';
 
 type SortField = 'created_at' | 'invoice_date' | 'amount' | 'supplier';
 
@@ -100,6 +101,9 @@ export default function InvoiceListPage() {
   const [sortDir, setSortDir] = useState<'asc'|'desc'>('desc');
   const router = useRouter();
   const supabase = createClient();
+  const { isOrgOwner, inOrg, canCapture } = usePermissions();
+  // Only org owners can mark invoices as paid; solo users can always do it
+  const canMarkPaid = !inOrg || isOrgOwner;
 
   const fetchInvoices = useCallback(async () => {
     setLoading(true);
@@ -281,16 +285,20 @@ export default function InvoiceListPage() {
                     </span>
                   )}
                   {inv.category && <span className="badge" style={{background:T.blueGlow,color:T.blue,borderColor:T.blue}}>{inv.category}</span>}
-                  <button
-                    onClick={async e => {
-                      e.stopPropagation();
-                      const supabase = createClient();
-                      const newPaid = !inv.is_paid;
-                      await supabase.from('invoices').update({ is_paid: newPaid }).eq('id', inv.id);
-                      setInvoices(prev => prev.map(i => i.id === inv.id ? { ...i, is_paid: newPaid } : i));
-                    }}
-                    style={{ marginLeft:'auto', padding:'2px 10px', borderRadius:4, border:`1px solid ${inv.is_paid?T.success:T.border}`, background: inv.is_paid?'rgba(134,239,172,0.1)':'transparent', color: inv.is_paid?T.success:T.textMuted, fontSize:10, fontWeight:700, cursor:'pointer', fontFamily:'inherit', letterSpacing:'0.3px' }}
-                  >{inv.is_paid ? '✓ Paid' : 'Mark Paid'}</button>
+                  {canMarkPaid ? (
+                    <button
+                      onClick={async e => {
+                        e.stopPropagation();
+                        const supabase = createClient();
+                        const newPaid = !inv.is_paid;
+                        await supabase.from('invoices').update({ is_paid: newPaid }).eq('id', inv.id);
+                        setInvoices(prev => prev.map(i => i.id === inv.id ? { ...i, is_paid: newPaid } : i));
+                      }}
+                      style={{ marginLeft:'auto', padding:'2px 10px', borderRadius:4, border:`1px solid ${inv.is_paid?T.success:T.border}`, background: inv.is_paid?'rgba(134,239,172,0.1)':'transparent', color: inv.is_paid?T.success:T.textMuted, fontSize:10, fontWeight:700, cursor:'pointer', fontFamily:'inherit', letterSpacing:'0.3px' }}
+                    >{inv.is_paid ? '✓ Paid' : 'Mark Paid'}</button>
+                  ) : inv.is_paid ? (
+                    <span style={{ marginLeft:'auto', padding:'2px 10px', borderRadius:4, border:`1px solid ${T.success}`, color: T.success, fontSize:10, fontWeight:700, letterSpacing:'0.3px' }}>✓ Paid</span>
+                  ) : null}
                 </div>
               </div>
             );

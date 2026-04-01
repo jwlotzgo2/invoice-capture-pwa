@@ -8,6 +8,7 @@ import { Invoice, InvoiceFilters } from '@/types/invoice';
 import { Camera, Shield, TrendingUp, FileText, Receipt, Building2, ChevronRight, Upload, Bell, HelpCircle } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, startOfYear, endOfYear, subMonths } from 'date-fns';
 import { getPendingCount } from '@/lib/offlineQueue';
+import { usePermissions } from '@/context/PermissionsContext';
 
 type Period = 'this_month' | 'last_month' | 'this_year' | 'last_year' | 'all';
 
@@ -70,6 +71,7 @@ export default function InvoicesPage() {
   const router = useRouter();
   const supabase = createClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { canCapture } = usePermissions();
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -319,18 +321,22 @@ export default function InvoicesPage() {
         </header>
 
         <main>
-          {/* Capture Hero */}
-          <div className="capture-hero">
-            <div className="capture-hero-text">
-              <h2>Add Invoice</h2>
-              <p>Choose how to capture</p>
-            </div>
-            <div className="capture-hero-actions">
-              <Link href="/capture" className="capture-btn"><Camera size={15} />Camera</Link>
-              <button className="capture-btn capture-btn-sec" onClick={() => fileInputRef.current?.click()}><Upload size={15} />Upload</button>
-            </div>
-          </div>
-          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} style={{ display: 'none' }} />
+          {/* Capture Hero — hidden for bookkeepers / non-capture org members */}
+          {canCapture && (
+            <>
+              <div className="capture-hero">
+                <div className="capture-hero-text">
+                  <h2>Add Invoice</h2>
+                  <p>Choose how to capture</p>
+                </div>
+                <div className="capture-hero-actions">
+                  <Link href="/capture" className="capture-btn"><Camera size={15} />Camera</Link>
+                  <button className="capture-btn capture-btn-sec" onClick={() => fileInputRef.current?.click()}><Upload size={15} />Upload</button>
+                </div>
+              </div>
+              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} style={{ display: 'none' }} />
+            </>
+          )}
 
           {/* Period Filter Strip */}
           <div className="period-strip">

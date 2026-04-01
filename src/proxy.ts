@@ -27,7 +27,7 @@ async function updateSession(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  const protectedPaths = ['/invoices', '/capture', '/settings', '/api/invoices', '/api/ocr'];
+  const protectedPaths = ['/invoices', '/capture', '/review', '/documents', '/projects', '/reports', '/settings', '/api/invoices', '/api/ocr', '/api/ocr-edits', '/api/push/subscribe', '/api/org'];
   const isProtectedPath = protectedPaths.some((path) =>
     request.nextUrl.pathname.startsWith(path)
   );
@@ -43,17 +43,47 @@ async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && isAdminPath) {
+  if (user && (isAdminPath || isProtectedPath)) {
     const { data: profile } = await supabase
       .from('user_profiles')
-      .select('role')
+      .select('role, org_id, can_capture, can_view_reports, can_view_documents')
       .eq('id', user.id)
       .single();
 
-    if (profile?.role !== 'admin') {
+    // Admin gate
+    if (isAdminPath && profile?.role !== 'admin') {
       const url = request.nextUrl.clone();
       url.pathname = '/';
       return NextResponse.redirect(url);
+    }
+
+    // Org permission gates — only apply when user is in an org
+    if (profile?.org_id) {
+      const path = request.nextUrl.pathname;
+
+      // Bookkeepers cannot capture or review
+      if (!profile.can_capture && (path.startsWith('/capture') || path.startsWith('/review'))) {
+        const url = request.nextUrl.clone();
+        url.pathname = '/';
+        url.searchParams.set('blocked', 'capture');
+        return NextResponse.redirect(url);
+      }
+
+      // Users without report access cannot view reports
+      if (!profile.can_view_reports && path.startsWith('/reports')) {
+        const url = request.nextUrl.clone();
+        url.pathname = '/';
+        url.searchParams.set('blocked', 'reports');
+        return NextResponse.redirect(url);
+      }
+
+      // Users without document access cannot view documents
+      if (!profile.can_view_documents && path.startsWith('/documents')) {
+        const url = request.nextUrl.clone();
+        url.pathname = '/';
+        url.searchParams.set('blocked', 'documents');
+        return NextResponse.redirect(url);
+      }
     }
   }
 

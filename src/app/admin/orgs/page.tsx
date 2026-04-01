@@ -111,11 +111,29 @@ export default function AdminOrgsPage() {
     else await fetchData();
   };
 
-  const handleAssignUser = async (userId: string, orgId: string | null) => {
+  const handleAssignUser = async (userId: string, orgId: string | null, currentOrgId?: string | null) => {
     setAssigningUser(userId);
-    const { error: err } = await supabase.from('user_profiles').update({ org_id: orgId }).eq('id', userId);
-    if (err) setError(err.message);
-    else await fetchData();
+    setError(null);
+    try {
+      if (orgId) {
+        // Add user to the specified org
+        const res = await fetch(`/api/admin/orgs/${orgId}/members`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId }),
+        });
+        if (!res.ok) { const j = await res.json(); throw new Error(j.error || 'Failed to add member'); }
+      } else if (currentOrgId) {
+        // Remove user from their current org
+        const res = await fetch(`/api/admin/orgs/${currentOrgId}/members`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId }),
+        });
+        if (!res.ok) { const j = await res.json(); throw new Error(j.error || 'Failed to remove member'); }
+      }
+      await fetchData();
+    } catch (e: any) { setError(e.message); }
     setAssigningUser(null);
   };
 
@@ -273,7 +291,7 @@ export default function AdminOrgsPage() {
                                 <div style={{ fontSize: 13, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.full_name || user.email}</div>
                                 <div style={{ fontSize: 11, color: T.textMuted }}>{user.email} · {user.role}</div>
                               </div>
-                              <button onClick={() => handleAssignUser(user.id, null)} style={iconBtn('danger')} title="Remove from org" disabled={assigningUser === user.id}>
+                              <button onClick={() => handleAssignUser(user.id, null, org.id)} style={iconBtn('danger')} title="Remove from org" disabled={assigningUser === user.id}>
                                 {assigningUser === user.id ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <X size={12} />}
                               </button>
                             </div>
@@ -329,7 +347,7 @@ export default function AdminOrgsPage() {
                       {orgs.length > 0 && (
                         <select
                           defaultValue=""
-                          onChange={e => e.target.value && handleAssignUser(user.id, e.target.value)}
+                          onChange={e => e.target.value && handleAssignUser(user.id, e.target.value, null)}
                           style={{ padding: '5px 8px', background: T.bg, border: `1px solid ${T.border}`, borderRadius: 8, color: T.textDim, fontSize: 12, fontFamily: 'inherit', cursor: 'pointer' }}>
                           <option value="">Assign to org…</option>
                           {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}

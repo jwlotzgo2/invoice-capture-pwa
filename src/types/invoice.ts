@@ -65,6 +65,8 @@ export interface Invoice {
   updated_at: string;
 }
 
+export type OrgRole = 'member' | 'capturer' | 'bookkeeper';
+
 export interface UserProfile {
   id: string;
   email: string;
@@ -74,6 +76,33 @@ export interface UserProfile {
   last_login_at: string | null;
   created_at: string;
   updated_at: string;
+  // Org membership (denormalised from org_members for fast reads)
+  org_id: string | null;
+  org_role: OrgRole | null;
+  is_org_owner: boolean;
+  // Permission flags (synced by DB trigger from org_members)
+  can_capture: boolean;
+  can_view_all_invoices: boolean;
+  can_view_reports: boolean;
+  can_view_documents: boolean;
+}
+
+export interface OrgMember {
+  id: string;
+  org_id: string;
+  user_id: string;
+  is_owner: boolean;
+  preset: OrgRole;
+  can_capture: boolean;
+  can_view_all_org_invoices: boolean;
+  can_view_reports: boolean;
+  can_view_documents: boolean;
+  is_active: boolean;
+  joined_at: string;
+  updated_at: string;
+  // Joined from user_profiles
+  full_name?: string | null;
+  email?: string;
 }
 
 export interface OCREdit {

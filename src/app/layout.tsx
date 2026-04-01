@@ -4,6 +4,7 @@ import './globals.css';
 import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 import SyncManager from '@/components/SyncManager';
 import BottomNav from '@/components/BottomNav';
+import { PermissionsProvider } from '@/context/PermissionsContext';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -42,10 +43,12 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
       </head>
       <body className={`${inter.className} antialiased`} style={{ background: '#1c1c1c' }}>
-        {children}
-        <BottomNav />
-        <PWAInstallPrompt />
-        <SyncManager />
+        <PermissionsProvider>
+          {children}
+          <BottomNav />
+          <PWAInstallPrompt />
+          <SyncManager />
+        </PermissionsProvider>
         <script
           dangerouslySetInnerHTML={{
             __html: `
