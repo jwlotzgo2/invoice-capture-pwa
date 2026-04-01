@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Invoice, DocumentType, DOCUMENT_TYPE_LABELS } from '@/types/invoice';
 import { Search, X, Download, ChevronUp, ChevronDown, SlidersHorizontal } from 'lucide-react';
+import { logActivity } from '@/lib/logActivity';
 
 type SortField = 'created_at' | 'invoice_date' | 'amount' | 'supplier';
 
@@ -105,20 +106,25 @@ export default function InvoiceListPage() {
     try {
       const { data: { session: _sess } } = await supabase.auth.getSession();
       const user = _sess?.user;
-      const { data } = await supabase.from('invoices').select('*').eq('user_id', user?.id || '').order(sortBy, { ascending: sortDir === 'asc' });
-      setInvoices(data || []);
+      const { data } = await supabase.from('invoices').select('id,supplier,description,invoice_date,amount,vat_amount,document_number,document_type,project_id,status,category,is_paid,payment_method,line_items,image_path,created_at').eq('user_id', user?.id || '').order(sortBy, { ascending: sortDir === 'asc' });
+      setInvoices((data as unknown as Invoice[]) || []);
     } finally { setLoading(false); }
   }, [sortBy, sortDir]);
 
   useEffect(() => { fetchInvoices(); }, [fetchInvoices]);
 
-  // Refetch when user returns to this tab/page (e.g. after editing in detail)
+  // Refetch when user returns to this tab/page (debounced to avoid storms)
+  const lastFetchRef = useRef(Date.now());
   useEffect(() => {
-    const onFocus = () => fetchInvoices();
-    const onVisible = () => { if (document.visibilityState === 'visible') fetchInvoices(); };
-    window.addEventListener('focus', onFocus);
+    const refetchIfStale = () => {
+      if (Date.now() - lastFetchRef.current > 5000) {
+        lastFetchRef.current = Date.now();
+        fetchInvoices();
+      }
+    };
+    const onVisible = () => { if (document.visibilityState === 'visible') refetchIfStale(); };
     document.addEventListener('visibilitychange', onVisible);
-    return () => { window.removeEventListener('focus', onFocus); document.removeEventListener('visibilitychange', onVisible); };
+    return () => { document.removeEventListener('visibilitychange', onVisible); };
   }, [fetchInvoices]);
   useEffect(() => {
     const load = async () => {
@@ -130,7 +136,7 @@ export default function InvoiceListPage() {
     load();
   }, []);
 
-  const filtered = invoices.filter(inv => {
+  const filtered = useMemo(() => invoices.filter(inv => {
     if (filterSupplier && !(inv.supplier||'').toLowerCase().includes(filterSupplier.toLowerCase())) return false;
     if (filterProject && (inv as any).project_id !== filterProject) return false;
     if (filterDateFrom && inv.invoice_date && inv.invoice_date < filterDateFrom) return false;
@@ -144,11 +150,11 @@ export default function InvoiceListPage() {
       if (!(inv.supplier||'').toLowerCase().includes(q) && !(inv.description||'').toLowerCase().includes(q) && !(inv.document_number||'').toLowerCase().includes(q)) return false;
     }
     return true;
-  });
+  }), [invoices, filterSupplier, filterProject, filterDateFrom, filterDateTo, filterMatched, filterDuplicates, filterPaid, search]);
 
-  const total = filtered.reduce((s, i) => s + (i.amount || 0), 0);
-  const suppliers = [...new Set(invoices.map(i => i.supplier).filter(Boolean))];
-  const dupeCount = invoices.filter(i => findDuplicate(i, invoices) !== null).length;
+  const total = useMemo(() => filtered.reduce((s, i) => s + (i.amount || 0), 0), [filtered]);
+  const suppliers = useMemo(() => [...new Set(invoices.map(i => i.supplier).filter(Boolean))], [invoices]);
+  const dupeCount = useMemo(() => invoices.filter(i => findDuplicate(i, invoices) !== null).length, [invoices]);
 
   const toggleSort = (field: SortField) => {
     if (sortBy === field) setSortDir(d => d === 'desc' ? 'asc' : 'desc');
@@ -169,6 +175,7 @@ export default function InvoiceListPage() {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
     a.download = `documents-${new Date().toISOString().slice(0,10)}.csv`; a.click();
+    logActivity('export_csv', { count: filtered.length });
   };
 
   const fmtZAR = (n: number) => `R ${Math.round(n).toLocaleString('en-ZA')}`;

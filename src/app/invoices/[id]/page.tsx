@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { Invoice, InvoiceFormData, LineItem, InvoiceCategory, DocumentType, DocStatus, DOCUMENT_TYPE_LABELS, DOC_STATUS_LABELS } from '@/types/invoice';
 import InvoiceForm from '@/components/InvoiceForm';
 import { ArrowLeft, Trash2, Edit2, Loader2, AlertCircle, ScanLine, CheckCircle, ZoomIn, X } from 'lucide-react';
+import { logActivity } from '@/lib/logActivity';
 
 const T = {
   bg: '#1c1c1c', surface: '#282828', surfaceHigh: '#323232', border: '#383838',
@@ -92,6 +93,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
         setFormData({ supplier:data.supplier||'', description:data.description||'', invoice_date:data.invoice_date||'', amount:data.amount?.toString()||'', vat_amount:data.vat_amount?.toString()||'', products_services:data.products_services||'', business_name:data.business_name||'' });
         // Check for duplicates
         checkDuplicate(data);
+        logActivity('document_viewed', { supplier: data.supplier, document_type: data.document_type }, 'invoice', id);
       } catch { setError('Failed to load invoice'); }
       finally { setLoading(false); }
     };
@@ -160,6 +162,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
         project_id:projectId||null, status:'reviewed', updated_at:new Date().toISOString(),
       }).eq('id', id);
       if (updateError) throw updateError;
+      logActivity('document_edited', { invoice_id: id }, 'invoice', id);
       router.push('/');
     } catch (err) { setError(err instanceof Error ? err.message : 'Failed to save'); setSaving(false); }
   };
@@ -171,6 +174,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       if (invoice?.image_path) await supabase.storage.from('invoices').remove([invoice.image_path]);
       const { error: deleteError } = await supabase.from('invoices').delete().eq('id', id);
       if (deleteError) throw deleteError;
+      logActivity('document_deleted', { invoice_id: id }, 'invoice', id);
       router.push('/');
     } catch (err) { setError(err instanceof Error ? err.message : 'Failed to delete'); setDeleting(false); }
   };

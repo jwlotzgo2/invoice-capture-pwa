@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Invoice, InvoiceFormData, InvoiceCategory, LineItem } from '@/types/invoice';
 import { Search, X, ZoomIn, ZoomOut, RotateCcw, ChevronRight, AlertCircle, Loader2, CheckCircle, ScanLine } from 'lucide-react';
+import { logActivity } from '@/lib/logActivity';
 
 const T = {
   bg: '#1c1c1c', surface: '#282828', surfaceHigh: '#323232', border: '#383838',
@@ -247,6 +248,7 @@ export default function ReviewPage() {
       setInvoices(prev => prev.map(i => i.id === selected.id ? updated : i));
       setSelected(updated);
       setSavedFlash(true);
+      logActivity('review_approved', { invoice_id: selected.id, supplier: selected.supplier }, 'invoice', selected.id);
       setTimeout(() => router.push('/invoices/list'), 1200);
     } catch (err) { setSaveError(err instanceof Error ? err.message : 'Save failed'); }
     finally { setSaving(false); }
