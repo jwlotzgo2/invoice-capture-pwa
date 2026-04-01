@@ -12,6 +12,16 @@ interface User {
   organisation_name: string | null; organisation_id: string | null;
 }
 
+const T = {
+  bg: '#0f0f0f', surface: '#1c1c1c', surfaceHigh: '#242424', border: '#2a2a2a',
+  borderHigh: '#383838', text: '#f0f0f0', textDim: '#a3a3a3', textMuted: '#6b6b6b',
+  accent: '#38bdf8', accentGlow: 'rgba(56,189,248,0.1)',
+  success: '#86efac', successBg: 'rgba(134,239,172,0.08)',
+  warning: '#fdba74', warningBg: 'rgba(253,186,116,0.08)',
+  error: '#fca5a5', errorBg: 'rgba(252,165,165,0.08)',
+  purple: '#c084fc', purpleBg: 'rgba(192,132,252,0.08)',
+};
+
 function formatTime(date: string | null) {
   if (!date) return 'Never';
   const diff = Date.now() - new Date(date).getTime();
@@ -28,18 +38,18 @@ function ActionsDropdown({ user, onToggleActive, onToggleAdmin, isUpdating }: {
   const [open, setOpen] = useState(false);
   return (
     <div style={{ position: 'relative' }}>
-      <button onClick={() => setOpen(!open)} disabled={isUpdating} style={{ width: 32, height: 32, borderRadius: 8, border: '1.5px solid #e2e8f0', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', cursor: 'pointer' }}>
+      <button onClick={() => setOpen(!open)} disabled={isUpdating} style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${T.border}`, background: T.surfaceHigh, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.textDim, cursor: 'pointer', transition: 'border-color 0.15s' }}>
         {isUpdating ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <ChevronDown size={14} />}
       </button>
       {open && (
         <>
           <div style={{ position: 'fixed', inset: 0, zIndex: 40 }} onClick={() => setOpen(false)} />
-          <div style={{ position: 'absolute', right: 0, top: 36, width: 180, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.1)', zIndex: 50, overflow: 'hidden' }}>
-            <button onClick={() => { onToggleActive(); setOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', fontSize: 13, fontWeight: 500, color: '#334155', cursor: 'pointer', border: 'none', background: 'transparent', width: '100%', textAlign: 'left', fontFamily: 'inherit' }}>
-              {user.is_active ? <><UserX size={14} color="#e11d48" />Deactivate</> : <><UserCheck size={14} color="#16a34a" />Activate</>}
+          <div style={{ position: 'absolute', right: 0, top: 36, width: 180, background: T.surface, border: `1px solid ${T.borderHigh}`, borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', zIndex: 50, overflow: 'hidden' }}>
+            <button onClick={() => { onToggleActive(); setOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', fontSize: 13, fontWeight: 500, color: T.textDim, cursor: 'pointer', border: 'none', background: 'transparent', width: '100%', textAlign: 'left', fontFamily: 'inherit', transition: 'background 0.12s' }}>
+              {user.is_active ? <><UserX size={14} color={T.error} />Deactivate</> : <><UserCheck size={14} color={T.success} />Activate</>}
             </button>
-            <button onClick={() => { onToggleAdmin(); setOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', fontSize: 13, fontWeight: 500, color: '#334155', cursor: 'pointer', border: 'none', background: 'transparent', width: '100%', textAlign: 'left', fontFamily: 'inherit' }}>
-              {user.role === 'admin' ? <><Shield size={14} color="#64748b" />Remove Admin</> : <><ShieldCheck size={14} color="#7c3aed" />Make Admin</>}
+            <button onClick={() => { onToggleAdmin(); setOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', fontSize: 13, fontWeight: 500, color: T.textDim, cursor: 'pointer', border: 'none', background: 'transparent', width: '100%', textAlign: 'left', fontFamily: 'inherit', transition: 'background 0.12s' }}>
+              {user.role === 'admin' ? <><Shield size={14} color={T.textMuted} />Remove Admin</> : <><ShieldCheck size={14} color={T.purple} />Make Admin</>}
             </button>
           </div>
         </>
@@ -89,97 +99,107 @@ export default function AdminUsersPage() {
     } finally { setUpdating(null); }
   };
 
-  const orgs = Array.from(new Set(users.map((u) => u.organisation_name || 'No Organisation')));
+  const orgNames = Array.from(new Set(users.map((u) => u.organisation_name || 'No Organisation')));
   const filteredUsers = orgFilter === 'all' ? users : users.filter((u) => (u.organisation_name || 'No Organisation') === orgFilter);
   const grouped: Record<string, User[]> = {};
-  orgs.forEach((org) => { grouped[org] = filteredUsers.filter((u) => (u.organisation_name || 'No Organisation') === org); });
-
-  const inputStyle: React.CSSProperties = { padding: '9px 12px 9px 34px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 14, color: '#0f172a', outline: 'none', fontFamily: 'inherit', background: '#f8fafc', boxSizing: 'border-box' as const, width: '100%' };
+  orgNames.forEach((org) => { grouped[org] = filteredUsers.filter((u) => (u.organisation_name || 'No Organisation') === org); });
 
   if (error) return (
-    <div style={{ minHeight: '100svh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: 'DM Sans, sans-serif' }}>
-      <AlertCircle size={48} color="#e11d48" />
-      <p style={{ fontSize: 17, fontWeight: 700, color: '#0f172a', margin: '16px 0 8px' }}>{error}</p>
-      <button onClick={() => router.push('/admin')} style={{ color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>Back to admin</button>
+    <div style={{ minHeight: '100svh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: 'Inter, system-ui, sans-serif', background: T.bg }}>
+      <AlertCircle size={40} color={T.error} />
+      <p style={{ fontSize: 16, fontWeight: 700, color: T.text, margin: '16px 0 8px' }}>{error}</p>
+      <button onClick={() => router.push('/admin')} style={{ color: T.accent, background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>Back to admin</button>
     </div>
   );
 
   return (
-    <div style={{ minHeight: '100svh', background: '#f8fafc', fontFamily: 'DM Sans, sans-serif' }}>
-      <header style={{ background: '#fff', borderBottom: '1px solid #e2e8f0', padding: '14px 16px', position: 'sticky', top: 0, zIndex: 40 }}>
+    <div style={{ minHeight: '100svh', background: T.bg, fontFamily: 'Inter, system-ui, sans-serif', color: T.text }}>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <header style={{ background: T.surface, borderBottom: `1px solid ${T.border}`, padding: '14px 16px', position: 'sticky', top: 0, zIndex: 40 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-          <Link href="/admin" style={{ width: 36, height: 36, borderRadius: 8, border: 'none', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', cursor: 'pointer' }}>
+          <Link href="/admin" style={{ width: 36, height: 36, borderRadius: 8, border: `1px solid ${T.border}`, background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.textDim, cursor: 'pointer' }}>
             <ArrowLeft size={18} />
           </Link>
           <div>
-            <div style={{ fontSize: 17, fontWeight: 700, color: '#0f172a' }}>User Management</div>
-            <div style={{ fontSize: 13, color: '#64748b' }}>{users.length} users · {orgs.length} organisations</div>
+            <div style={{ fontSize: 17, fontWeight: 700, color: T.text }}>User Management</div>
+            <div style={{ fontSize: 12, color: T.textMuted }}>{users.length} users · {orgNames.length} organisation{orgNames.length !== 1 ? 's' : ''}</div>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <div style={{ position: 'relative', flex: 1 }}>
-            <Search size={15} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' }} />
-            <input style={inputStyle} placeholder="Search users…" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: T.textMuted, pointerEvents: 'none' }} />
+            <input
+              style={{ width: '100%', padding: '9px 12px 9px 32px', border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 14, color: T.text, outline: 'none', fontFamily: 'inherit', background: T.bg, boxSizing: 'border-box' }}
+              placeholder="Search users…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
-          <select value={orgFilter} onChange={(e) => setOrgFilter(e.target.value)} style={{ padding: '9px 10px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 13, fontFamily: 'inherit', color: '#334155', outline: 'none', background: '#fff' }}>
+          <select
+            value={orgFilter}
+            onChange={(e) => setOrgFilter(e.target.value)}
+            style={{ padding: '9px 10px', border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 13, fontFamily: 'inherit', color: T.text, outline: 'none', background: T.bg }}
+          >
             <option value="all">All Orgs</option>
-            {orgs.map((o) => <option key={o} value={o}>{o}</option>)}
+            {orgNames.map((o) => <option key={o} value={o}>{o}</option>)}
           </select>
         </div>
       </header>
 
-      <main style={{ maxWidth: 960, margin: '0 auto', padding: 16 }}>
+      <main style={{ maxWidth: 1280, margin: '0 auto', padding: '20px 16px 80px' }}>
         {loading ? (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>
-            <Loader2 size={28} color="#2563eb" style={{ animation: 'spin 1s linear infinite' }} />
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
+            <Loader2 size={28} color={T.accent} style={{ animation: 'spin 1s linear infinite' }} />
           </div>
         ) : filteredUsers.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '48px 24px' }}>
-            <Users size={40} color="#cbd5e1" />
-            <p style={{ fontSize: 16, fontWeight: 600, color: '#0f172a', margin: '12px 0 4px' }}>No users found</p>
+          <div style={{ textAlign: 'center', padding: '60px 24px', color: T.textMuted }}>
+            <Users size={36} style={{ marginBottom: 12, opacity: 0.3 }} />
+            <p style={{ fontSize: 15, fontWeight: 600, color: T.textDim }}>No users found</p>
           </div>
         ) : (
           Object.entries(grouped).map(([org, orgUsers]) => orgUsers.length === 0 ? null : (
-            <div key={org} style={{ marginBottom: 24 }}>
+            <div key={org} style={{ marginBottom: 28 }}>
               {/* Org header */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, paddingBottom: 8, borderBottom: '1.5px solid #e2e8f0' }}>
-                <div style={{ width: 28, height: 28, borderRadius: 7, background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Building2 size={14} color="#2563eb" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, paddingBottom: 10, borderBottom: `1px solid ${T.border}` }}>
+                <div style={{ width: 28, height: 28, borderRadius: 7, background: T.accentGlow, border: `1px solid rgba(56,189,248,0.2)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Building2 size={13} color={T.accent} />
                 </div>
-                <span style={{ fontSize: 14, fontWeight: 700, color: '#334155' }}>{org}</span>
-                <span style={{ fontSize: 12, color: '#94a3b8', background: '#f1f5f9', padding: '2px 7px', borderRadius: 6, fontWeight: 600 }}>{orgUsers.length}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: T.textDim, textTransform: 'uppercase', letterSpacing: '0.4px' }}>{org}</span>
+                <span style={{ fontSize: 11, color: T.textMuted, background: T.surfaceHigh, padding: '2px 7px', borderRadius: 6, fontWeight: 600 }}>{orgUsers.length}</span>
               </div>
 
-              {/* Users in org */}
-              {orgUsers.map((user) => (
-                <div key={user.id} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, padding: 16, marginBottom: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                    <div>
-                      <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a' }}>{user.full_name || 'No name'}</div>
-                      <div style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>{user.email}</div>
-                      {user.phone && <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 1 }}>{user.phone}</div>}
+              {/* Users grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 10 }}>
+                {orgUsers.map((user) => (
+                  <div key={user.id} style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 12, padding: 16 }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.full_name || 'No name'}</div>
+                        <div style={{ fontSize: 12, color: T.textMuted, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.email}</div>
+                        {user.phone && <div style={{ fontSize: 11, color: T.textMuted, marginTop: 1 }}>{user.phone}</div>}
+                      </div>
+                      <ActionsDropdown
+                        user={user}
+                        onToggleActive={() => updateUser(user.id, { is_active: !user.is_active })}
+                        onToggleAdmin={() => updateUser(user.id, { role: user.role === 'admin' ? 'user' : 'admin' })}
+                        isUpdating={updating === user.id}
+                      />
                     </div>
-                    <ActionsDropdown
-                      user={user}
-                      onToggleActive={() => updateUser(user.id, { is_active: !user.is_active })}
-                      onToggleAdmin={() => updateUser(user.id, { role: user.role === 'admin' ? 'user' : 'admin' })}
-                      isUpdating={updating === user.id}
-                    />
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 10 }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 5, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px', background: user.role === 'admin' ? T.purpleBg : T.surfaceHigh, color: user.role === 'admin' ? T.purple : T.textDim, border: `1px solid ${user.role === 'admin' ? 'rgba(192,132,252,0.3)' : T.border}` }}>
+                        {user.role === 'admin' ? <ShieldCheck size={10} /> : <Users size={10} />}{user.role}
+                      </span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 5, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px', background: user.is_active ? T.successBg : T.errorBg, color: user.is_active ? T.success : T.error, border: `1px solid ${user.is_active ? 'rgba(134,239,172,0.3)' : 'rgba(252,165,165,0.3)'}` }}>
+                        {user.is_active ? <UserCheck size={10} /> : <UserX size={10} />}{user.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 14, fontSize: 12, color: T.textMuted }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><FileText size={12} />{user.invoice_count} docs</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Clock size={12} />{formatTime(user.last_activity)}</div>
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px', background: user.role === 'admin' ? '#f5f3ff' : '#f1f5f9', color: user.role === 'admin' ? '#7c3aed' : '#475569' }}>
-                      {user.role === 'admin' ? <ShieldCheck size={11} /> : <Users size={11} />}{user.role}
-                    </span>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px', background: user.is_active ? '#f0fdf4' : '#fff1f2', color: user.is_active ? '#16a34a' : '#e11d48' }}>
-                      {user.is_active ? <UserCheck size={11} /> : <UserX size={11} />}{user.is_active ? 'Active' : 'Inactive'}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', gap: 16, marginTop: 10, fontSize: 13, color: '#64748b', flexWrap: 'wrap' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><FileText size={13} />{user.invoice_count} invoices</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><Clock size={13} />{formatTime(user.last_activity)}</div>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           ))
         )}

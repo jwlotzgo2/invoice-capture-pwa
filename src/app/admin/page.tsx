@@ -28,46 +28,63 @@ interface DashboardStats {
   orgs: OrgStat[];
 }
 
+const T = {
+  bg: '#0f0f0f', surface: '#1c1c1c', surfaceHigh: '#242424', border: '#2a2a2a',
+  borderHigh: '#383838', text: '#f0f0f0', textDim: '#a3a3a3', textMuted: '#6b6b6b',
+  accent: '#38bdf8', accentGlow: 'rgba(56,189,248,0.1)',
+  success: '#86efac', successBg: 'rgba(134,239,172,0.08)',
+  warning: '#fdba74', warningBg: 'rgba(253,186,116,0.08)',
+  error: '#fca5a5', errorBg: 'rgba(252,165,165,0.08)',
+  purple: '#c084fc', purpleBg: 'rgba(192,132,252,0.08)',
+};
+
 const css = `
-  .adm { font-family: 'DM Sans', sans-serif; min-height: 100svh; background: #f8fafc; }
-  .adm-header { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 14px 16px; position: sticky; top: 0; z-index: 40; }
-  .adm-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-  .adm-logo { display: flex; align-items: center; gap: 10px; }
-  .adm-logo-mark { width: 36px; height: 36px; background: linear-gradient(135deg,#7c3aed,#a855f7); border-radius: 9px; display: flex; align-items: center; justify-content: center; }
-  .adm-title { font-size: 17px; font-weight: 700; color: #0f172a; }
-  .adm-back { font-size: 13px; font-weight: 600; color: #2563eb; text-decoration: none; }
-  .adm-org-select { padding: 8px 12px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 13px; font-family: inherit; color: #334155; outline: none; background: #fff; width: 100%; max-width: 280px; }
-  .adm-main { max-width: 960px; margin: 0 auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
-  .adm-grid-4 { display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; }
-  @media(min-width:640px){ .adm-grid-4 { grid-template-columns: repeat(4,1fr); } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  .adm { font-family: Inter, system-ui, sans-serif; min-height: 100svh; background: ${T.bg}; color: ${T.text}; }
+  .adm-header { background: ${T.surface}; border-bottom: 1px solid ${T.border}; padding: 14px 16px; position: sticky; top: 0; z-index: 40; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .adm-logo { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+  .adm-logo-dot { width: 10px; height: 10px; border-radius: 3px; background: ${T.accent}; flex-shrink: 0; }
+  .adm-logo-text { font-size: 17px; font-weight: 800; color: ${T.text}; letter-spacing: -0.3px; }
+  .adm-badge { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 4px; background: ${T.accentGlow}; color: ${T.accent}; border: 1px solid rgba(56,189,248,0.3); letter-spacing: 0.3px; text-transform: uppercase; }
+  .adm-back { font-size: 13px; font-weight: 600; color: ${T.textDim}; text-decoration: none; padding: 8px 12px; border: 1px solid ${T.border}; border-radius: 8px; transition: border-color 0.15s, color 0.15s; flex-shrink: 0; }
+  .adm-back:hover { border-color: ${T.borderHigh}; color: ${T.text}; }
+  .adm-org-select { padding: 8px 12px; border: 1px solid ${T.border}; border-radius: 8px; font-size: 13px; font-family: inherit; color: ${T.text}; outline: none; background: ${T.bg}; transition: border-color 0.15s; min-width: 160px; max-width: 260px; }
+  .adm-org-select:focus { border-color: ${T.accent}; }
+  .adm-main { max-width: 1280px; margin: 0 auto; padding: 20px 16px 80px; display: flex; flex-direction: column; gap: 20px; }
+  .adm-grid-4 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  @media(min-width: 640px) { .adm-grid-4 { grid-template-columns: repeat(4, 1fr); } }
   .adm-grid-2 { display: grid; grid-template-columns: 1fr; gap: 16px; }
-  @media(min-width:640px){ .adm-grid-2 { grid-template-columns: 1fr 1fr; } }
+  @media(min-width: 768px) { .adm-grid-2 { grid-template-columns: 1fr 1fr; } }
   .adm-grid-3 { display: grid; grid-template-columns: 1fr; gap: 12px; }
-  @media(min-width:640px){ .adm-grid-3 { grid-template-columns: repeat(3,1fr); } }
-  .adm-card { background: #fff; border-radius: 14px; border: 1px solid #e2e8f0; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
-  .adm-kpi-icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
-  .adm-kpi-val { font-size: 22px; font-weight: 700; color: #0f172a; font-family: 'DM Mono',monospace; line-height: 1.1; }
-  .adm-kpi-label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.4px; margin-top: 4px; }
-  .adm-kpi-sub { font-size: 11px; color: #94a3b8; margin-top: 2px; }
-  .adm-section-title { font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 14px; }
-  .adm-bar-row { margin-bottom: 12px; }
-  .adm-bar-top { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 5px; }
-  .adm-bar-label { color: #475569; font-weight: 500; display: flex; align-items: center; gap: 6px; }
-  .adm-bar-val { color: #0f172a; font-weight: 700; }
-  .adm-bar-track { height: 8px; background: #f1f5f9; border-radius: 99px; overflow: hidden; }
+  @media(min-width: 640px) { .adm-grid-3 { grid-template-columns: repeat(2, 1fr); } }
+  @media(min-width: 960px) { .adm-grid-3 { grid-template-columns: repeat(3, 1fr); } }
+  .adm-card { background: ${T.surface}; border-radius: 12px; border: 1px solid ${T.border}; padding: 18px; }
+  .adm-kpi-icon { width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; }
+  .adm-kpi-val { font-size: 26px; font-weight: 800; color: ${T.text}; letter-spacing: -0.8px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .adm-kpi-label { font-size: 11px; font-weight: 700; color: ${T.textMuted}; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 5px; }
+  .adm-kpi-sub { font-size: 11px; color: ${T.textMuted}; margin-top: 3px; }
+  .adm-section-title { font-size: 13px; font-weight: 700; color: ${T.textDim}; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px; }
+  .adm-bar-row { margin-bottom: 14px; }
+  .adm-bar-top { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
+  .adm-bar-label { color: ${T.textDim}; font-weight: 500; display: flex; align-items: center; gap: 6px; }
+  .adm-bar-val { color: ${T.text}; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .adm-bar-track { height: 6px; background: ${T.bg}; border-radius: 99px; overflow: hidden; }
   .adm-bar-fill { height: 100%; border-radius: 99px; transition: width 0.5s; }
-  .adm-quick-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 16px; text-decoration: none; display: flex; align-items: center; gap: 14px; transition: box-shadow 0.15s, border-color 0.15s; }
-  .adm-quick-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); border-color: #bfdbfe; }
-  .adm-quick-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  .adm-org-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
+  .adm-stat-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-top: 1px solid ${T.border}; }
+  .adm-quick-card { background: ${T.surface}; border: 1px solid ${T.border}; border-radius: 12px; padding: 18px; text-decoration: none; display: flex; align-items: center; gap: 14px; transition: border-color 0.15s, background 0.15s; }
+  .adm-quick-card:hover { border-color: ${T.borderHigh}; background: ${T.surfaceHigh}; }
+  .adm-quick-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid ${T.border}; }
+  .adm-org-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid ${T.border}; }
   .adm-org-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .adm-divider { height: 1px; background: ${T.border}; }
 `;
 
 function confColor(c: number | null) {
-  if (!c) return '#94a3b8';
-  if (c >= 0.85) return '#16a34a';
-  if (c >= 0.65) return '#d97706';
-  return '#e11d48';
+  if (!c) return T.textMuted;
+  if (c >= 0.85) return T.success;
+  if (c >= 0.65) return T.warning;
+  return T.error;
 }
 
 function confLabel(c: number | null) {
@@ -93,16 +110,16 @@ export default function AdminDashboardPage() {
   }, [router]);
 
   if (loading) return (
-    <div style={{ minHeight: '100svh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <Loader2 size={32} color="#7c3aed" style={{ animation: 'spin 1s linear infinite' }} />
+    <div style={{ minHeight: '100svh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: T.bg }}>
+      <Loader2 size={28} color={T.accent} style={{ animation: 'spin 1s linear infinite' }} />
     </div>
   );
 
   if (error) return (
-    <div style={{ minHeight: '100svh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: 'DM Sans, sans-serif' }}>
-      <AlertTriangle size={48} color="#e11d48" />
-      <p style={{ fontSize: 17, fontWeight: 700, color: '#0f172a', margin: '16px 0 8px' }}>{error}</p>
-      <button onClick={() => router.push('/')} style={{ color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>Back to app</button>
+    <div style={{ minHeight: '100svh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: 'Inter, system-ui, sans-serif', background: T.bg }}>
+      <AlertTriangle size={40} color={T.error} />
+      <p style={{ fontSize: 16, fontWeight: 700, color: T.text, margin: '16px 0 8px' }}>{error}</p>
+      <button onClick={() => router.push('/')} style={{ color: T.accent, background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>← Back to app</button>
     </div>
   );
 
@@ -121,45 +138,46 @@ export default function AdminDashboardPage() {
       <style>{css}</style>
       <div className="adm">
         <header className="adm-header">
-          <div className="adm-header-row">
-            <div className="adm-logo">
-              <div className="adm-logo-mark"><Shield size={18} color="#fff" /></div>
-              <div className="adm-title">Admin Console</div>
-            </div>
-            <Link href="/" className="adm-back">← App</Link>
+          <div className="adm-logo">
+            <div className="adm-logo-dot" />
+            <div className="adm-logo-text">Admin Console</div>
+            <div className="adm-badge">Go Capture</div>
           </div>
-          <select className="adm-org-select" value={orgFilter} onChange={e => setOrgFilter(e.target.value)}>
-            <option value="all">All Organisations</option>
-            {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-          </select>
+          {orgs.length > 0 && (
+            <select className="adm-org-select" value={orgFilter} onChange={e => setOrgFilter(e.target.value)}>
+              <option value="all">All Organisations</option>
+              {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+            </select>
+          )}
+          <Link href="/" className="adm-back">← App</Link>
         </header>
 
         <main className="adm-main">
 
-          {/* Service Health KPIs */}
+          {/* KPI row */}
           <div className="adm-grid-4">
             {[
               {
-                icon: <FileText size={18} color="#2563eb" />, bg: '#eff6ff',
+                icon: <FileText size={17} color={T.accent} />, bg: T.accentGlow,
                 val: docsProcessed.toLocaleString(),
                 label: 'Docs Processed',
                 sub: filteredOrg ? filteredOrg.name : `+${stats?.invoicesThisWeek || 0} this week`,
               },
               {
-                icon: <Activity size={18} color="#7c3aed" />, bg: '#f5f3ff',
+                icon: <Activity size={17} color={T.purple} />, bg: T.purpleBg,
                 val: confPct !== null ? `${confPct}%` : '—',
                 label: 'Avg OCR Confidence',
                 sub: confLabel(avgConf),
                 valColor: confColor(avgConf),
               },
               {
-                icon: <AlertTriangle size={18} color="#d97706" />, bg: '#fffbeb',
+                icon: <AlertTriangle size={17} color={T.warning} />, bg: T.warningBg,
                 val: (stats?.lowConfidenceCount || 0).toString(),
                 label: 'Low Confidence',
                 sub: 'scans below 70%',
               },
               {
-                icon: <Users size={18} color="#16a34a" />, bg: '#f0fdf4',
+                icon: <Users size={17} color={T.success} />, bg: T.successBg,
                 val: usersCount.toLocaleString(),
                 label: 'Users',
                 sub: filteredOrg ? `in ${filteredOrg.name}` : `${stats?.activeUsers || 0} active`,
@@ -167,7 +185,7 @@ export default function AdminDashboardPage() {
             ].map((k) => (
               <div key={k.label} className="adm-card">
                 <div className="adm-kpi-icon" style={{ background: k.bg }}>{k.icon}</div>
-                <div className="adm-kpi-val" style={{ color: (k as any).valColor || '#0f172a' }}>{k.val}</div>
+                <div className="adm-kpi-val" style={{ color: (k as any).valColor || T.text }}>{k.val}</div>
                 <div className="adm-kpi-label">{k.label}</div>
                 <div className="adm-kpi-sub">{k.sub}</div>
               </div>
@@ -179,14 +197,14 @@ export default function AdminDashboardPage() {
             <div className="adm-card">
               <div className="adm-section-title">Capture Source</div>
               {[
-                { icon: <Camera size={14} />, label: 'Camera', val: stats?.invoicesBySource.camera || 0, color: '#3b82f6' },
-                { icon: <Upload size={14} />, label: 'Upload', val: stats?.invoicesBySource.upload || 0, color: '#22c55e' },
-                { icon: <Mail size={14} />, label: 'Email', val: stats?.invoicesBySource.email || 0, color: '#a855f7' },
+                { icon: <Camera size={13} color={T.accent} />, label: 'Camera', val: stats?.invoicesBySource.camera || 0, color: T.accent },
+                { icon: <Upload size={13} color={T.success} />, label: 'Upload', val: stats?.invoicesBySource.upload || 0, color: T.success },
+                { icon: <Mail size={13} color={T.purple} />, label: 'Email', val: stats?.invoicesBySource.email || 0, color: T.purple },
               ].map((b) => (
                 <div key={b.label} className="adm-bar-row">
                   <div className="adm-bar-top">
                     <span className="adm-bar-label">{b.icon}{b.label}</span>
-                    <span className="adm-bar-val">{b.val} <span style={{ color: '#94a3b8', fontWeight: 400 }}>({Math.round((b.val / srcTotal) * 100)}%)</span></span>
+                    <span className="adm-bar-val">{b.val} <span style={{ color: T.textMuted, fontWeight: 400 }}>({Math.round((b.val / srcTotal) * 100)}%)</span></span>
                   </div>
                   <div className="adm-bar-track">
                     <div className="adm-bar-fill" style={{ width: `${(b.val / srcTotal) * 100}%`, background: b.color }} />
@@ -197,9 +215,9 @@ export default function AdminDashboardPage() {
 
             <div className="adm-card">
               <div className="adm-section-title">OCR Health</div>
-              <div style={{ marginBottom: 14 }}>
+              <div style={{ marginBottom: 16 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 6 }}>
-                  <span style={{ color: '#475569', fontWeight: 500 }}>Average Confidence</span>
+                  <span style={{ color: T.textDim, fontWeight: 500 }}>Average Confidence</span>
                   <span style={{ fontWeight: 700, color: confColor(avgConf) }}>{confPct !== null ? `${confPct}%` : '—'}</span>
                 </div>
                 <div className="adm-bar-track">
@@ -212,9 +230,9 @@ export default function AdminDashboardPage() {
                 { label: 'Email Invoices', val: stats?.totalEmailInvoices || 0, warn: false },
                 { label: 'Activity (24h)', val: stats?.recentActivity || 0, warn: false },
               ].map(row => (
-                <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderTop: '1px solid #f1f5f9' }}>
-                  <span style={{ fontSize: 13, color: '#475569' }}>{row.label}</span>
-                  <span style={{ fontSize: 14, fontWeight: 700, fontFamily: 'DM Mono, monospace', color: row.warn ? '#d97706' : '#0f172a' }}>{row.val}</span>
+                <div key={row.label} className="adm-stat-row">
+                  <span style={{ fontSize: 13, color: T.textDim }}>{row.label}</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: row.warn ? T.warning : T.text }}>{row.val}</span>
                 </div>
               ))}
             </div>
@@ -226,37 +244,36 @@ export default function AdminDashboardPage() {
               <div className="adm-section-title">Organisations · Service Usage</div>
               {orgs.map((org) => (
                 <div key={org.id} className="adm-org-row">
-                  <div style={{ width: 32, height: 32, borderRadius: 8, background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Zap size={14} color="#2563eb" />
+                  <div style={{ width: 36, height: 36, borderRadius: 9, background: T.accentGlow, border: `1px solid rgba(56,189,248,0.2)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Zap size={15} color={T.accent} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>{org.name}</div>
-                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{org.user_count} user{org.user_count !== 1 ? 's' : ''} · {org.invoice_count} invoices</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{org.name}</div>
+                    <div style={{ fontSize: 11, color: T.textMuted, marginTop: 2 }}>{org.user_count} user{org.user_count !== 1 ? 's' : ''} · {org.invoice_count} invoices</div>
                   </div>
-                  <div style={{ textAlign: 'right', marginRight: 12 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: confColor(org.avg_confidence) }}>
+                  <div style={{ textAlign: 'right', marginRight: 10, flexShrink: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: confColor(org.avg_confidence) }}>
                       {org.avg_confidence ? `${Math.round(org.avg_confidence * 100)}%` : '—'}
                     </div>
-                    <div style={{ fontSize: 10, color: '#94a3b8' }}>OCR</div>
+                    <div style={{ fontSize: 10, color: T.textMuted }}>OCR</div>
                   </div>
                   {org.avg_confidence === null ? (
-                    <div style={{ width: 16, height: 16, borderRadius: '50%', background: '#e2e8f0', flexShrink: 0 }} />
+                    <div style={{ width: 14, height: 14, borderRadius: '50%', background: T.border, flexShrink: 0 }} />
                   ) : org.avg_confidence >= 0.85 ? (
-                    <CheckCircle size={16} color="#16a34a" style={{ flexShrink: 0 }} />
+                    <CheckCircle size={15} color={T.success} style={{ flexShrink: 0 }} />
                   ) : (
-                    <AlertTriangle size={16} color={org.avg_confidence >= 0.65 ? '#d97706' : '#e11d48'} style={{ flexShrink: 0 }} />
+                    <AlertTriangle size={15} color={org.avg_confidence >= 0.65 ? T.warning : T.error} style={{ flexShrink: 0 }} />
                   )}
                 </div>
               ))}
             </div>
           )}
 
-
           {/* Platform Costs */}
           <div className="adm-card">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <div className="adm-section-title" style={{ margin: 0 }}>Platform Costs · This Month</div>
-              <span style={{ fontSize: 11, color: '#94a3b8' }}>est.</span>
+              <span style={{ fontSize: 11, color: T.textMuted }}>est.</span>
             </div>
             {(() => {
               const scanCount = filteredOrg ? filteredOrg.invoice_count : (stats?.totalInvoices || 0);
@@ -266,27 +283,27 @@ export default function AdminDashboardPage() {
               const totalCost = claudeCost + supabaseCost + vercelCost;
               const costPerDoc = scanCount > 0 ? totalCost / scanCount : 0;
               const items = [
-                { label: 'Claude OCR', detail: `${scanCount} scans × $0.02`, cost: claudeCost, color: '#7c3aed' },
-                { label: 'Supabase Pro', detail: 'fixed monthly', cost: supabaseCost, color: '#3b82f6' },
-                { label: 'Vercel Pro', detail: 'fixed monthly', cost: vercelCost, color: '#0f172a' },
+                { label: 'Claude OCR', detail: `${scanCount} scans × $0.02`, cost: claudeCost, color: T.purple },
+                { label: 'Supabase Pro', detail: 'fixed monthly', cost: supabaseCost, color: T.accent },
+                { label: 'Vercel Pro', detail: 'fixed monthly', cost: vercelCost, color: T.textDim },
               ];
               return (
                 <>
                   {items.map(item => (
-                    <div key={item.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #f1f5f9' }}>
+                    <div key={item.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: `1px solid ${T.border}` }}>
                       <div>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{item.label}</div>
-                        <div style={{ fontSize: 11, color: '#94a3b8' }}>{item.detail}</div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: T.text }}>{item.label}</div>
+                        <div style={{ fontSize: 11, color: T.textMuted, marginTop: 2 }}>{item.detail}</div>
                       </div>
-                      <div style={{ fontSize: 14, fontWeight: 700, fontFamily: 'DM Mono, monospace', color: item.color }}>${item.cost.toFixed(2)}</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: item.color }}>${item.cost.toFixed(2)}</div>
                     </div>
                   ))}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 10, marginTop: 2 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 12 }}>
                     <div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>Total</div>
-                      {costPerDoc > 0 && <div style={{ fontSize: 11, color: '#94a3b8' }}>${costPerDoc.toFixed(3)} per document</div>}
+                      <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>Total</div>
+                      {costPerDoc > 0 && <div style={{ fontSize: 11, color: T.textMuted, marginTop: 2 }}>${costPerDoc.toFixed(3)} per document</div>}
                     </div>
-                    <div style={{ fontSize: 16, fontWeight: 700, fontFamily: 'DM Mono, monospace', color: '#0f172a' }}>${totalCost.toFixed(2)}</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: -0.5, color: T.text }}>${totalCost.toFixed(2)}</div>
                   </div>
                 </>
               );
@@ -294,24 +311,27 @@ export default function AdminDashboardPage() {
           </div>
 
           {/* Quick links */}
-          <div className="adm-grid-3">
-            {[
-              { href: '/admin/users', icon: <Users size={18} color="#2563eb" />, bg: '#eff6ff', title: 'User Management', desc: 'Manage users, roles, organisations' },
-              { href: '/admin/orgs', icon: <Shield size={18} color="#9333ea" />, bg: '#faf5ff', title: 'Organisations', desc: 'Org codes, member assignment' },
-              { href: '/admin/analytics', icon: <TrendingUp size={18} color="#16a34a" />, bg: '#f0fdf4', title: 'OCR Analytics', desc: 'Field accuracy and correction patterns' },
-              { href: '/invoices/list', icon: <FileText size={18} color="#7c3aed" />, bg: '#f5f3ff', title: 'All Invoices', desc: 'Browse and export all invoices' },
-              { href: '/admin/journal', icon: <Activity size={18} color="#0ea5e9" />, bg: '#f0f9ff', title: 'Activity Journal', desc: 'Live feed of all user events' },
-              { href: '/admin/activity-report', icon: <Zap size={18} color="#f59e0b" />, bg: '#fffbeb', title: 'Activity Report', desc: 'Usage stats, heatmaps, leaderboard' },
-            ].map((q) => (
-              <Link key={q.href} href={q.href} className="adm-quick-card">
-                <div className="adm-quick-icon" style={{ background: q.bg }}>{q.icon}</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>{q.title}</div>
-                  <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{q.desc}</div>
-                </div>
-                <ArrowRight size={16} color="#cbd5e1" />
-              </Link>
-            ))}
+          <div>
+            <div className="adm-section-title" style={{ marginBottom: 12 }}>Quick Links</div>
+            <div className="adm-grid-3">
+              {[
+                { href: '/admin/users', icon: <Users size={17} color={T.accent} />, bg: T.accentGlow, border: 'rgba(56,189,248,0.2)', title: 'User Management', desc: 'Manage users, roles, organisations' },
+                { href: '/admin/orgs', icon: <Shield size={17} color={T.purple} />, bg: T.purpleBg, border: 'rgba(192,132,252,0.2)', title: 'Organisations', desc: 'Org codes, member assignment' },
+                { href: '/admin/analytics', icon: <TrendingUp size={17} color={T.success} />, bg: T.successBg, border: 'rgba(134,239,172,0.2)', title: 'OCR Analytics', desc: 'Field accuracy and correction patterns' },
+                { href: '/invoices/list', icon: <FileText size={17} color={T.warning} />, bg: T.warningBg, border: 'rgba(253,186,116,0.2)', title: 'All Invoices', desc: 'Browse and export all invoices' },
+                { href: '/admin/journal', icon: <Activity size={17} color={T.accent} />, bg: T.accentGlow, border: 'rgba(56,189,248,0.2)', title: 'Activity Journal', desc: 'Live feed of all user events' },
+                { href: '/admin/activity-report', icon: <Zap size={17} color={T.warning} />, bg: T.warningBg, border: 'rgba(253,186,116,0.2)', title: 'Activity Report', desc: 'Usage stats, heatmaps, leaderboard' },
+              ].map((q) => (
+                <Link key={q.href} href={q.href} className="adm-quick-card">
+                  <div className="adm-quick-icon" style={{ background: q.bg, borderColor: q.border }}>{q.icon}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>{q.title}</div>
+                    <div style={{ fontSize: 12, color: T.textMuted, marginTop: 3 }}>{q.desc}</div>
+                  </div>
+                  <ArrowRight size={15} color={T.textMuted} style={{ flexShrink: 0 }} />
+                </Link>
+              ))}
+            </div>
           </div>
 
         </main>

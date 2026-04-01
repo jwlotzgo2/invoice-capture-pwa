@@ -45,8 +45,12 @@ function getMatchStatus(inv: Invoice): 'match' | 'off' | 'none' {
   const itemsTotal = items.reduce((s: number, i: any) => s + (i.line_total ?? 0), 0);
   const invoiceTotal = inv.amount ?? 0;
   if (invoiceTotal === 0) return 'none';
+  // Check against VAT-inclusive total (lines already include VAT)
+  const matchesIncl = Math.abs(Math.round(itemsTotal * 100) - Math.round(invoiceTotal * 100)) < 2;
+  // Check against VAT-exclusive total (lines are ex-VAT)
   const exclTotal = invoiceTotal - (inv.vat_amount ?? 0);
-  return Math.abs(Math.round(itemsTotal * 100) - Math.round(exclTotal * 100)) < 2 ? 'match' : 'off';
+  const matchesExcl = Math.abs(Math.round(itemsTotal * 100) - Math.round(exclTotal * 100)) < 2;
+  return (matchesIncl || matchesExcl) ? 'match' : 'off';
 }
 
 const css = `

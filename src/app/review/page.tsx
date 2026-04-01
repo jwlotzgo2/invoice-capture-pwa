@@ -46,8 +46,12 @@ function getMatchStatus(inv: Invoice): 'match' | 'off' | 'none' {
   if (items.length === 0) return 'none';
   const itemsTotal = items.reduce((s: number, i: any) => s + (i.line_total ?? 0), 0);
   if (!inv.amount) return 'none';
+  // Check against VAT-inclusive total (lines already include VAT)
+  const matchesIncl = Math.abs(Math.round(itemsTotal * 100) - Math.round(inv.amount * 100)) < 2;
+  // Check against VAT-exclusive total (lines are ex-VAT)
   const exclTotal = inv.amount - (inv.vat_amount ?? 0);
-  return Math.abs(Math.round(itemsTotal * 100) - Math.round(exclTotal * 100)) < 2 ? 'match' : 'off';
+  const matchesExcl = Math.abs(Math.round(itemsTotal * 100) - Math.round(exclTotal * 100)) < 2;
+  return (matchesIncl || matchesExcl) ? 'match' : 'off';
 }
 
 const css = `
@@ -283,7 +287,7 @@ export default function ReviewPage() {
 
   const filtered = invoices.filter(inv => {
     if (filterMatched !== 'all' && getMatchStatus(inv) !== filterMatched) return false;
-    if (filterDupes === 'dupes' && !findDuplicate(inv, invoices) !== null) return false;
+    if (filterDupes === 'dupes' && findDuplicate(inv, invoices) === null) return false;
     if (search) {
       const q = search.toLowerCase();
       if (!(inv.supplier||'').toLowerCase().includes(q) && !(inv.document_number||'').toLowerCase().includes(q) && !(inv.description||'').toLowerCase().includes(q)) return false;
