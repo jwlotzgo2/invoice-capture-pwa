@@ -11,21 +11,21 @@ import {
 import AdminShell from '@/components/AdminShell';
 
 const C = {
-  bg:           '#070e1a',
-  surface:      '#0c1628',
-  surfaceHi:    '#0f1e35',
-  border:       '#142a45',
-  borderHi:     '#1d3f63',
-  accent:       '#0096c7',
-  accentBright: '#22d3ee',
-  accentGlow:   'rgba(0,150,199,0.1)',
-  green:        '#10b981',
-  amber:        '#f59e0b',
-  red:          '#ef4444',
-  purple:       '#a855f7',
-  text:         '#d4e5f5',
-  dim:          '#6890b0',
-  muted:        '#2d4a65',
+  bg:           '#0f0f0f',
+  surface:      '#1c1c1c',
+  surfaceHi:    '#282828',
+  border:       '#2a2a2a',
+  borderHi:     '#383838',
+  accent:       '#38bdf8',
+  accentBright: '#7dd3fc',
+  accentGlow:   'rgba(56,189,248,0.1)',
+  green:        '#86efac',
+  amber:        '#fdba74',
+  red:          '#fca5a5',
+  purple:       '#c084fc',
+  text:         '#f0f0f0',
+  dim:          '#a3a3a3',
+  muted:        '#6b6b6b',
 };
 
 const pageCss = `
@@ -56,13 +56,13 @@ const pageCss = `
   .jn-action { font-size: 13px; font-weight: 600; color: ${C.text}; }
   .jn-user-pill { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: ${C.dim}; background: ${C.surfaceHi}; padding: 2px 8px; border-radius: 99px; flex-shrink: 0; }
   .jn-detail-chip { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 99px; flex-shrink: 0; }
-  .jn-time { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: ${C.muted}; white-space: nowrap; flex-shrink: 0; font-variant-numeric: tabular-nums; margin-left: auto; }
+  .jn-time { font-family: ui-monospace, monospace; font-size: 11px; color: ${C.muted}; white-space: nowrap; flex-shrink: 0; font-variant-numeric: tabular-nums; margin-left: auto; }
 
   .jn-empty { text-align: center; padding: 60px 20px; color: ${C.muted}; font-size: 14px; }
   .jn-load-more {
     width: 100%; padding: 11px; background: ${C.surfaceHi}; border: 1px solid ${C.border};
     border-radius: 8px; color: ${C.dim}; font-size: 13px; cursor: pointer; margin-top: 8px;
-    font-family: 'IBM Plex Sans', system-ui, sans-serif; transition: background 0.12s, border-color 0.12s;
+    font-family: Inter, system-ui, sans-serif; transition: background 0.12s, border-color 0.12s;
   }
   .jn-load-more:hover { background: ${C.surface}; border-color: ${C.borderHi}; }
   .jn-count { font-size: 11px; color: ${C.muted}; text-align: center; padding: 8px 0 4px; }
@@ -76,13 +76,13 @@ const pageCss = `
   .jn-search input {
     background: none; border: none; outline: none; color: ${C.text};
     font-size: 13px; padding: 7px 0; width: 180px;
-    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    font-family: Inter, system-ui, sans-serif;
   }
   .jn-search input::placeholder { color: ${C.muted}; }
 
   .jn-select {
     padding: 7px 10px; border: 1px solid ${C.border}; border-radius: 7px; font-size: 12px;
-    font-family: 'IBM Plex Sans', system-ui, sans-serif; color: ${C.text}; outline: none;
+    font-family: Inter, system-ui, sans-serif; color: ${C.text}; outline: none;
     background: ${C.bg}; transition: border-color 0.15s;
   }
   .jn-select:focus { border-color: ${C.accent}; }

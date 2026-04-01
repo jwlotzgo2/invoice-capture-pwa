@@ -77,7 +77,24 @@ export default function DocumentsPage() {
           .eq('user_id', user?.id || '').order(sortBy, { ascending: sortDir === 'asc' }),
         supabase.from('projects').select('id,name').eq('user_id', user?.id || ''),
       ]);
-      setDocs(invData || []);
+
+      const rawDocs = invData || [];
+
+      // Signed URLs expire — regenerate fresh ones for all docs with image_path.
+      // Using batch createSignedUrls so we make a single storage request.
+      const pathDocs = rawDocs.filter((d: any) => d.image_path);
+      if (pathDocs.length > 0) {
+        const { data: signedData } = await supabase.storage
+          .from('invoices')
+          .createSignedUrls(pathDocs.map((d: any) => d.image_path as string), 60 * 60 * 2); // 2 hours
+        const urlMap: Record<string, string> = {};
+        (signedData || []).forEach((item: any, i: number) => {
+          if (item.signedUrl) urlMap[pathDocs[i].id] = item.signedUrl;
+        });
+        setDocs(rawDocs.map((d: any) => ({ ...d, image_url: urlMap[d.id] ?? d.image_url })));
+      } else {
+        setDocs(rawDocs);
+      }
       setProjects(projData || []);
     } finally { setLoading(false); }
   }, [supabase, sortBy, sortDir]);

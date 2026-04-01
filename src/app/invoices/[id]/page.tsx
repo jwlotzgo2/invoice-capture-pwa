@@ -88,7 +88,13 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       try {
         const { data, error } = await supabase.from('invoices').select('*').eq('id', id).single();
         if (error) throw error;
-        setInvoice(data);
+        // Regenerate signed URL if image_path is present (stored URLs expire after ~1 year)
+        let resolvedData = data;
+        if (data?.image_path) {
+          const { data: signed } = await supabase.storage.from('invoices').createSignedUrl(data.image_path, 60 * 60 * 2);
+          if (signed?.signedUrl) resolvedData = { ...data, image_url: signed.signedUrl };
+        }
+        setInvoice(resolvedData);
         setCategory(data.category || null);
         setLineItems(Array.isArray(data.line_items) ? data.line_items : []);
         setProjectId(data.project_id || null);

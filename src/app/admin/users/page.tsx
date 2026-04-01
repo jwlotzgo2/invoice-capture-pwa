@@ -14,24 +14,24 @@ interface User {
 }
 
 const C = {
-  bg:           '#070e1a',
-  surface:      '#0c1628',
-  surfaceHi:    '#0f1e35',
-  border:       '#142a45',
-  borderHi:     '#1d3f63',
-  accent:       '#0096c7',
-  accentBright: '#22d3ee',
-  accentGlow:   'rgba(0,150,199,0.1)',
-  green:        '#10b981',
-  greenGlow:    'rgba(16,185,129,0.1)',
-  amber:        '#f59e0b',
-  red:          '#ef4444',
-  redGlow:      'rgba(239,68,68,0.1)',
-  purple:       '#a855f7',
-  purpleGlow:   'rgba(168,85,247,0.1)',
-  text:         '#d4e5f5',
-  dim:          '#6890b0',
-  muted:        '#2d4a65',
+  bg:           '#0f0f0f',
+  surface:      '#1c1c1c',
+  surfaceHi:    '#282828',
+  border:       '#2a2a2a',
+  borderHi:     '#383838',
+  accent:       '#38bdf8',
+  accentBright: '#7dd3fc',
+  accentGlow:   'rgba(56,189,248,0.1)',
+  green:        '#86efac',
+  greenGlow:    'rgba(134,239,172,0.1)',
+  amber:        '#fdba74',
+  red:          '#fca5a5',
+  redGlow:      'rgba(252,165,165,0.1)',
+  purple:       '#c084fc',
+  purpleGlow:   'rgba(192,132,252,0.1)',
+  text:         '#f0f0f0',
+  dim:          '#a3a3a3',
+  muted:        '#6b6b6b',
 };
 
 const pageCss = `
@@ -89,13 +89,13 @@ const pageCss = `
   .usr-search input {
     background: none; border: none; outline: none;
     color: ${C.text}; font-size: 13px; padding: 7px 0; width: 220px;
-    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    font-family: Inter, system-ui, sans-serif;
   }
   .usr-search input::placeholder { color: ${C.muted}; }
 
   .usr-select {
     padding: 7px 10px; border: 1px solid ${C.border}; border-radius: 7px; font-size: 12px;
-    font-family: 'IBM Plex Sans', system-ui, sans-serif; color: ${C.text}; outline: none;
+    font-family: Inter, system-ui, sans-serif; color: ${C.text}; outline: none;
     background: ${C.bg}; transition: border-color 0.15s; min-width: 140px;
   }
   .usr-select:focus { border-color: ${C.accent}; }
@@ -109,7 +109,7 @@ const pageCss = `
 
   .usr-empty { text-align: center; padding: 60px 24px; color: ${C.muted}; }
 
-  .usr-mono { font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; }
+  .usr-mono { font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums; }
 `;
 
 function formatTime(date: string | null) {

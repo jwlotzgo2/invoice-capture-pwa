@@ -201,9 +201,25 @@ export default function ReviewPage() {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     const { data: { session: _sess } } = await supabase.auth.getSession();
-      const user = _sess?.user;
+    const user = _sess?.user;
     const { data } = await supabase.from('invoices').select('*').eq('user_id', user?.id||'').order('created_at', {ascending:false});
-    setInvoices(data || []);
+    const rawInvoices = data || [];
+
+    // Regenerate signed URLs in batch — stored URLs expire after ~1 year
+    const pathRows = rawInvoices.filter((i: any) => i.image_path);
+    if (pathRows.length > 0) {
+      const { data: signedData } = await supabase.storage
+        .from('invoices')
+        .createSignedUrls(pathRows.map((i: any) => i.image_path as string), 60 * 60 * 2);
+      const urlMap: Record<string, string> = {};
+      (signedData || []).forEach((item: any, idx: number) => {
+        if (item.signedUrl) urlMap[pathRows[idx].id] = item.signedUrl;
+      });
+      setInvoices(rawInvoices.map((i: any) => ({ ...i, image_url: urlMap[i.id] ?? i.image_url })));
+    } else {
+      setInvoices(rawInvoices);
+    }
+
     const { data: proj } = await supabase.from('projects').select('id,name').eq('user_id', user?.id||'').order('name');
     setProjects(proj || []);
     setLoading(false);

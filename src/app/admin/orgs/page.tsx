@@ -7,23 +7,23 @@ import { Plus, Trash2, Pencil, Check, X, Copy, Loader2, Users, RefreshCw, Buildi
 import AdminShell from '@/components/AdminShell';
 
 const C = {
-  bg:           '#070e1a',
-  surface:      '#0c1628',
-  surfaceHi:    '#0f1e35',
-  border:       '#142a45',
-  borderHi:     '#1d3f63',
-  accent:       '#0096c7',
-  accentBright: '#22d3ee',
-  accentGlow:   'rgba(0,150,199,0.1)',
-  green:        '#10b981',
-  greenGlow:    'rgba(16,185,129,0.1)',
-  amber:        '#f59e0b',
-  red:          '#ef4444',
-  redGlow:      'rgba(239,68,68,0.1)',
-  purple:       '#a855f7',
-  text:         '#d4e5f5',
-  dim:          '#6890b0',
-  muted:        '#2d4a65',
+  bg:           '#0f0f0f',
+  surface:      '#1c1c1c',
+  surfaceHi:    '#282828',
+  border:       '#2a2a2a',
+  borderHi:     '#383838',
+  accent:       '#38bdf8',
+  accentBright: '#7dd3fc',
+  accentGlow:   'rgba(56,189,248,0.1)',
+  green:        '#86efac',
+  greenGlow:    'rgba(134,239,172,0.1)',
+  amber:        '#fdba74',
+  red:          '#fca5a5',
+  redGlow:      'rgba(252,165,165,0.1)',
+  purple:       '#c084fc',
+  text:         '#f0f0f0',
+  dim:          '#a3a3a3',
+  muted:        '#6b6b6b',
 };
 
 const pageCss = `
@@ -115,7 +115,7 @@ const pageCss = `
     display: inline-flex; align-items: center; gap: 5px;
     padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;
     border: 1px solid ${C.border}; background: ${C.surfaceHi}; color: ${C.dim};
-    cursor: pointer; font-family: 'IBM Plex Sans', system-ui, sans-serif; transition: border-color 0.14s, color 0.14s;
+    cursor: pointer; font-family: Inter, system-ui, sans-serif; transition: border-color 0.14s, color 0.14s;
   }
   .od-btn:hover { border-color: ${C.borderHi}; color: ${C.text}; }
   .od-btn-primary { background: ${C.accent}; border-color: ${C.accent}; color: #fff; }
@@ -125,19 +125,19 @@ const pageCss = `
 
   .od-input {
     flex: 1; padding: 8px 12px; border: 1px solid ${C.border}; border-radius: 7px;
-    font-size: 13px; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: ${C.text};
+    font-size: 13px; font-family: Inter, system-ui, sans-serif; color: ${C.text};
     background: ${C.bg}; outline: none; transition: border-color 0.15s;
   }
   .od-input:focus { border-color: ${C.accent}; }
 
   .od-code {
-    font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 700;
+    font-family: ui-monospace, monospace; font-size: 16px; font-weight: 700;
     letter-spacing: 3px; color: ${C.accentBright};
   }
 
   .od-select {
     padding: 6px 10px; border: 1px solid ${C.border}; border-radius: 6px; font-size: 12px;
-    font-family: 'IBM Plex Sans', system-ui, sans-serif; color: ${C.text}; outline: none;
+    font-family: Inter, system-ui, sans-serif; color: ${C.text}; outline: none;
     background: ${C.bg}; cursor: pointer;
   }
 
@@ -150,7 +150,7 @@ const pageCss = `
     display: flex; align-items: center; gap: 6px;
     padding: 7px 14px; border-radius: 7px; border: none;
     background: ${C.accent}; color: #fff; font-size: 13px; font-weight: 600;
-    cursor: pointer; font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    cursor: pointer; font-family: Inter, system-ui, sans-serif;
   }
   .od-add-btn:hover { background: ${C.accentBright}; color: ${C.bg}; }
 
@@ -372,7 +372,7 @@ export default function AdminOrgsPage() {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
                       {org.org_code && (
-                        <span style={{ fontFamily: 'IBM Plex Mono', fontSize: 11, color: C.dim, letterSpacing: 1 }}>{org.org_code}</span>
+                        <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: 11, color: C.dim, letterSpacing: 1 }}>{org.org_code}</span>
                       )}
                       <span style={{ fontSize: 11, color: C.muted }}>{org.member_count} member{org.member_count !== 1 ? 's' : ''}</span>
                     </div>

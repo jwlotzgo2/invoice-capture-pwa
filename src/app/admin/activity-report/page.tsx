@@ -10,25 +10,25 @@ import {
 import AdminShell from '@/components/AdminShell';
 
 const C = {
-  bg:           '#070e1a',
-  surface:      '#0c1628',
-  surfaceHi:    '#0f1e35',
-  border:       '#142a45',
-  borderHi:     '#1d3f63',
-  accent:       '#0096c7',
-  accentBright: '#22d3ee',
-  accentGlow:   'rgba(0,150,199,0.1)',
-  green:        '#10b981',
-  greenGlow:    'rgba(16,185,129,0.1)',
-  amber:        '#f59e0b',
-  amberGlow:    'rgba(245,158,11,0.1)',
-  red:          '#ef4444',
-  redGlow:      'rgba(239,68,68,0.1)',
-  purple:       '#a855f7',
-  purpleGlow:   'rgba(168,85,247,0.1)',
-  text:         '#d4e5f5',
-  dim:          '#6890b0',
-  muted:        '#2d4a65',
+  bg:           '#0f0f0f',
+  surface:      '#1c1c1c',
+  surfaceHi:    '#282828',
+  border:       '#2a2a2a',
+  borderHi:     '#383838',
+  accent:       '#38bdf8',
+  accentBright: '#7dd3fc',
+  accentGlow:   'rgba(56,189,248,0.1)',
+  green:        '#86efac',
+  greenGlow:    'rgba(134,239,172,0.1)',
+  amber:        '#fdba74',
+  amberGlow:    'rgba(253,186,116,0.1)',
+  red:          '#fca5a5',
+  redGlow:      'rgba(252,165,165,0.1)',
+  purple:       '#c084fc',
+  purpleGlow:   'rgba(192,132,252,0.1)',
+  text:         '#f0f0f0',
+  dim:          '#a3a3a3',
+  muted:        '#6b6b6b',
 };
 
 const pageCss = `
@@ -55,14 +55,14 @@ const pageCss = `
   .ar-card-amber   { border-top-color: ${C.amber}; }
 
   .ar-kpi-icon { width: 30px; height: 30px; border-radius: 7px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
-  .ar-kpi-val { font-family: 'IBM Plex Mono', monospace; font-size: 22px; font-weight: 700; color: ${C.text}; line-height: 1; font-variant-numeric: tabular-nums; }
+  .ar-kpi-val { font-family: ui-monospace, monospace; font-size: 22px; font-weight: 700; color: ${C.text}; line-height: 1; font-variant-numeric: tabular-nums; }
   .ar-kpi-label { font-size: 10px; font-weight: 700; color: ${C.muted}; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px; }
 
   .ar-section-label { font-size: 10px; font-weight: 700; color: ${C.muted}; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px; }
 
   .ar-bar-row { margin-bottom: 12px; }
   .ar-bar-top { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px; color: ${C.dim}; }
-  .ar-bar-val { font-family: 'IBM Plex Mono', monospace; font-weight: 700; color: ${C.text}; font-variant-numeric: tabular-nums; }
+  .ar-bar-val { font-family: ui-monospace, monospace; font-weight: 700; color: ${C.text}; font-variant-numeric: tabular-nums; }
   .ar-bar-track { height: 5px; background: ${C.bg}; border-radius: 99px; overflow: hidden; }
   .ar-bar-fill { height: 100%; border-radius: 99px; transition: width 0.6s ease; }
 
@@ -80,7 +80,7 @@ const pageCss = `
 
   .ar-select {
     padding: 7px 10px; border: 1px solid ${C.border}; border-radius: 7px; font-size: 12px;
-    font-family: 'IBM Plex Sans', system-ui, sans-serif; color: ${C.text}; outline: none;
+    font-family: Inter, system-ui, sans-serif; color: ${C.text}; outline: none;
     background: ${C.bg}; transition: border-color 0.15s;
   }
   .ar-select:focus { border-color: ${C.accent}; }
@@ -321,7 +321,7 @@ export default function AdminActivityReport() {
                   <tbody>
                     {stats.userLeaderboard.map((u, i) => (
                       <tr key={u.user_id}>
-                        <td style={{ color: C.muted, fontSize: 11, fontFamily: 'IBM Plex Mono', fontVariantNumeric: 'tabular-nums' }}>{i + 1}</td>
+                        <td style={{ color: C.muted, fontSize: 11, fontFamily: 'ui-monospace, monospace', fontVariantNumeric: 'tabular-nums' }}>{i + 1}</td>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <div className="ar-avatar">{(u.full_name || u.email || '?')[0].toUpperCase()}</div>
@@ -331,9 +331,9 @@ export default function AdminActivityReport() {
                             </div>
                           </div>
                         </td>
-                        <td style={{ textAlign: 'right', fontFamily: 'IBM Plex Mono', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{u.count}</td>
-                        <td style={{ textAlign: 'right', fontFamily: 'IBM Plex Mono', color: C.purple, fontVariantNumeric: 'tabular-nums' }}>{u.scans}</td>
-                        <td style={{ textAlign: 'right', fontFamily: 'IBM Plex Mono', color: C.green, fontVariantNumeric: 'tabular-nums' }}>{u.logins}</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'ui-monospace, monospace', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{u.count}</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'ui-monospace, monospace', color: C.purple, fontVariantNumeric: 'tabular-nums' }}>{u.scans}</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'ui-monospace, monospace', color: C.green, fontVariantNumeric: 'tabular-nums' }}>{u.logins}</td>
                       </tr>
                     ))}
                   </tbody>

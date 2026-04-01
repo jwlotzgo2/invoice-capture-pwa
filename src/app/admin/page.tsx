@@ -30,25 +30,25 @@ interface DashboardStats {
 }
 
 const C = {
-  bg:           '#070e1a',
-  surface:      '#0c1628',
-  surfaceHi:    '#0f1e35',
-  border:       '#142a45',
-  borderHi:     '#1d3f63',
-  accent:       '#0096c7',
-  accentBright: '#22d3ee',
-  accentGlow:   'rgba(0,150,199,0.1)',
-  green:        '#10b981',
-  greenGlow:    'rgba(16,185,129,0.1)',
-  amber:        '#f59e0b',
-  amberGlow:    'rgba(245,158,11,0.1)',
-  red:          '#ef4444',
-  redGlow:      'rgba(239,68,68,0.1)',
-  purple:       '#a855f7',
-  purpleGlow:   'rgba(168,85,247,0.1)',
-  text:         '#d4e5f5',
-  dim:          '#6890b0',
-  muted:        '#2d4a65',
+  bg:           '#0f0f0f',
+  surface:      '#1c1c1c',
+  surfaceHi:    '#282828',
+  border:       '#2a2a2a',
+  borderHi:     '#383838',
+  accent:       '#38bdf8',
+  accentBright: '#7dd3fc',
+  accentGlow:   'rgba(56,189,248,0.1)',
+  green:        '#86efac',
+  greenGlow:    'rgba(134,239,172,0.1)',
+  amber:        '#fdba74',
+  amberGlow:    'rgba(253,186,116,0.1)',
+  red:          '#fca5a5',
+  redGlow:      'rgba(252,165,165,0.1)',
+  purple:       '#c084fc',
+  purpleGlow:   'rgba(192,132,252,0.1)',
+  text:         '#f0f0f0',
+  dim:          '#a3a3a3',
+  muted:        '#6b6b6b',
 };
 
 const pageCss = `
@@ -79,7 +79,7 @@ const pageCss = `
   .adm-card-purple { border-top-color: ${C.purple}; }
 
   .adm-kpi-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; }
-  .adm-kpi-val { font-family: 'IBM Plex Mono', monospace; font-size: 26px; font-weight: 700; color: ${C.text}; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .adm-kpi-val { font-family: ui-monospace, monospace; font-size: 26px; font-weight: 700; color: ${C.text}; line-height: 1.1; font-variant-numeric: tabular-nums; }
   .adm-kpi-label { font-size: 10px; font-weight: 700; color: ${C.muted}; text-transform: uppercase; letter-spacing: 1px; margin-top: 6px; }
   .adm-kpi-sub { font-size: 11px; color: ${C.dim}; margin-top: 3px; }
 
@@ -88,7 +88,7 @@ const pageCss = `
   .adm-bar-row { margin-bottom: 14px; }
   .adm-bar-top { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
   .adm-bar-label { color: ${C.dim}; font-weight: 500; display: flex; align-items: center; gap: 6px; }
-  .adm-bar-val { color: ${C.text}; font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .adm-bar-val { color: ${C.text}; font-family: ui-monospace, monospace; font-weight: 700; font-variant-numeric: tabular-nums; }
   .adm-bar-track { height: 5px; background: ${C.bg}; border-radius: 99px; overflow: hidden; }
   .adm-bar-fill { height: 100%; border-radius: 99px; transition: width 0.5s; }
 
@@ -115,7 +115,7 @@ const pageCss = `
 
   .adm-select {
     padding: 7px 10px; border: 1px solid ${C.border}; border-radius: 7px; font-size: 12px;
-    font-family: 'IBM Plex Sans', system-ui, sans-serif; color: ${C.text}; outline: none;
+    font-family: Inter, system-ui, sans-serif; color: ${C.text}; outline: none;
     background: ${C.bg}; transition: border-color 0.15s; min-width: 150px;
   }
   .adm-select:focus { border-color: ${C.accent}; }
@@ -263,7 +263,7 @@ export default function AdminDashboardPage() {
                 <div style={{ marginBottom: 14 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 6 }}>
                     <span style={{ color: C.dim, fontWeight: 500 }}>Average Confidence</span>
-                    <span style={{ fontFamily: 'IBM Plex Mono', fontWeight: 700, color: confColor(avgConf), fontVariantNumeric: 'tabular-nums' }}>{confPct !== null ? `${confPct}%` : '—'}</span>
+                    <span style={{ fontFamily: 'ui-monospace, monospace', fontWeight: 700, color: confColor(avgConf), fontVariantNumeric: 'tabular-nums' }}>{confPct !== null ? `${confPct}%` : '—'}</span>
                   </div>
                   <div className="adm-bar-track">
                     <div className="adm-bar-fill" style={{ width: `${confPct || 0}%`, background: confColor(avgConf) }} />
@@ -277,7 +277,7 @@ export default function AdminDashboardPage() {
                 ].map(row => (
                   <div key={row.label} className="adm-stat-row">
                     <span style={{ fontSize: 13, color: C.dim }}>{row.label}</span>
-                    <span style={{ fontSize: 14, fontFamily: 'IBM Plex Mono', fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: row.warn ? C.amber : C.text }}>{row.val}</span>
+                    <span style={{ fontSize: 14, fontFamily: 'ui-monospace, monospace', fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: row.warn ? C.amber : C.text }}>{row.val}</span>
                   </div>
                 ))}
               </div>
@@ -297,7 +297,7 @@ export default function AdminDashboardPage() {
                       <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{org.user_count} user{org.user_count !== 1 ? 's' : ''} · {org.invoice_count} invoices</div>
                     </div>
                     <div style={{ textAlign: 'right', marginRight: 8, flexShrink: 0 }}>
-                      <div style={{ fontSize: 13, fontFamily: 'IBM Plex Mono', fontWeight: 700, color: confColor(org.avg_confidence) }}>
+                      <div style={{ fontSize: 13, fontFamily: 'ui-monospace, monospace', fontWeight: 700, color: confColor(org.avg_confidence) }}>
                         {org.avg_confidence ? `${Math.round(org.avg_confidence * 100)}%` : '—'}
                       </div>
                       <div style={{ fontSize: 10, color: C.muted }}>OCR</div>
@@ -341,7 +341,7 @@ export default function AdminDashboardPage() {
                         <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{item.label}</div>
                         <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{item.detail}</div>
                       </div>
-                      <div style={{ fontFamily: 'IBM Plex Mono', fontSize: 14, fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: item.color }}>${item.cost.toFixed(2)}</div>
+                      <div style={{ fontFamily: 'ui-monospace, monospace', fontSize: 14, fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: item.color }}>${item.cost.toFixed(2)}</div>
                     </div>
                   ))}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 12 }}>
@@ -349,7 +349,7 @@ export default function AdminDashboardPage() {
                       <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Total</div>
                       {costPerDoc > 0 && <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>${costPerDoc.toFixed(3)} per document</div>}
                     </div>
-                    <div style={{ fontFamily: 'IBM Plex Mono', fontSize: 18, fontWeight: 700, letterSpacing: -0.5, color: C.text }}>${totalCost.toFixed(2)}</div>
+                    <div style={{ fontFamily: 'ui-monospace, monospace', fontSize: 18, fontWeight: 700, letterSpacing: -0.5, color: C.text }}>${totalCost.toFixed(2)}</div>
                   </div>
                 </>
               );

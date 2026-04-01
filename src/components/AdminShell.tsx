@@ -15,29 +15,28 @@ const NAV = [
 ];
 
 const C = {
-  bg:           '#070e1a',
-  sidebar:      '#090f1c',
-  surface:      '#0c1628',
-  surfaceHi:    '#0f1e35',
-  border:       '#142a45',
-  borderHi:     '#1d3f63',
-  accent:       '#0096c7',
-  accentBright: '#22d3ee',
-  accentGlow:   'rgba(0,150,199,0.1)',
-  text:         '#d4e5f5',
-  dim:          '#6890b0',
-  muted:        '#2d4a65',
+  bg:           '#0f0f0f',
+  sidebar:      '#141414',
+  surface:      '#1c1c1c',
+  surfaceHi:    '#282828',
+  border:       '#2a2a2a',
+  borderHi:     '#383838',
+  accent:       '#38bdf8',
+  accentBright: '#7dd3fc',
+  accentGlow:   'rgba(56,189,248,0.1)',
+  text:         '#f0f0f0',
+  dim:          '#a3a3a3',
+  muted:        '#6b6b6b',
 };
 
 const shellCss = `
-  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;700&display=swap');
   @keyframes spin { to { transform: rotate(360deg); } }
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; }
   body { background: ${C.bg}; }
 
   .shell-root {
-    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    font-family: Inter, system-ui, sans-serif;
     min-height: 100svh;
     background: ${C.bg};
     color: ${C.text};
@@ -78,7 +77,7 @@ const shellCss = `
   }
   .shell-logo-text-wrap { display: flex; flex-direction: column; }
   .shell-logo-admin {
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: Inter, system-ui, sans-serif;
     font-size: 13px;
     font-weight: 700;
     color: ${C.text};
@@ -164,7 +163,7 @@ const shellCss = `
     flex-shrink: 0;
   }
   .shell-topbar-title {
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: Inter, system-ui, sans-serif;
     font-size: 16px;
     font-weight: 700;
     color: ${C.text};

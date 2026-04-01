@@ -6,25 +6,25 @@ import { RefreshCw, Target, BarChart3, AlertTriangle, TrendingUp, TrendingDown, 
 import AdminShell from '@/components/AdminShell';
 
 const C = {
-  bg:           '#070e1a',
-  surface:      '#0c1628',
-  surfaceHi:    '#0f1e35',
-  border:       '#142a45',
-  borderHi:     '#1d3f63',
-  accent:       '#0096c7',
-  accentBright: '#22d3ee',
-  accentGlow:   'rgba(0,150,199,0.1)',
-  green:        '#10b981',
-  greenGlow:    'rgba(16,185,129,0.1)',
-  amber:        '#f59e0b',
-  amberGlow:    'rgba(245,158,11,0.1)',
-  red:          '#ef4444',
-  redGlow:      'rgba(239,68,68,0.1)',
-  purple:       '#a855f7',
-  purpleGlow:   'rgba(168,85,247,0.1)',
-  text:         '#d4e5f5',
-  dim:          '#6890b0',
-  muted:        '#2d4a65',
+  bg:           '#0f0f0f',
+  surface:      '#1c1c1c',
+  surfaceHi:    '#282828',
+  border:       '#2a2a2a',
+  borderHi:     '#383838',
+  accent:       '#38bdf8',
+  accentBright: '#7dd3fc',
+  accentGlow:   'rgba(56,189,248,0.1)',
+  green:        '#86efac',
+  greenGlow:    'rgba(134,239,172,0.1)',
+  amber:        '#fdba74',
+  amberGlow:    'rgba(253,186,116,0.1)',
+  red:          '#fca5a5',
+  redGlow:      'rgba(252,165,165,0.1)',
+  purple:       '#c084fc',
+  purpleGlow:   'rgba(192,132,252,0.1)',
+  text:         '#f0f0f0',
+  dim:          '#a3a3a3',
+  muted:        '#6b6b6b',
 };
 
 const pageCss = `
@@ -54,7 +54,7 @@ const pageCss = `
   .an-card-red     { border-top-color: ${C.red}; }
 
   .an-kpi-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
-  .an-kpi-val { font-family: 'IBM Plex Mono', monospace; font-size: 24px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+  .an-kpi-val { font-family: ui-monospace, monospace; font-size: 24px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
   .an-kpi-label { font-size: 10px; font-weight: 700; color: ${C.muted}; text-transform: uppercase; letter-spacing: 1px; margin-top: 6px; }
 
   .an-section-label { font-size: 10px; font-weight: 700; color: ${C.muted}; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px; }
@@ -64,14 +64,14 @@ const pageCss = `
   .an-field-name { color: ${C.dim}; font-weight: 500; }
   .an-field-right { display: flex; gap: 10px; align-items: center; }
   .an-corrections { font-size: 11px; color: ${C.muted}; }
-  .an-pct { font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .an-pct { font-family: ui-monospace, monospace; font-weight: 700; font-variant-numeric: tabular-nums; }
   .an-track { height: 5px; background: ${C.bg}; border-radius: 99px; overflow: hidden; }
   .an-fill { height: 100%; border-radius: 99px; transition: width 0.6s ease; }
 
   .an-rank-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: ${C.surfaceHi}; border-radius: 8px; margin-bottom: 6px; }
   .an-rank-num { width: 22px; height: 22px; border-radius: 6px; background: ${C.border}; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: ${C.dim}; flex-shrink: 0; }
   .an-rank-name { flex: 1; font-size: 13px; color: ${C.text}; font-weight: 500; }
-  .an-rank-count { font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 700; color: ${C.amber}; }
+  .an-rank-count { font-family: ui-monospace, monospace; font-size: 12px; font-weight: 700; color: ${C.amber}; }
 
   .an-table { width: 100%; border-collapse: collapse; }
   .an-table th { font-size: 10px; font-weight: 700; color: ${C.muted}; text-transform: uppercase; letter-spacing: 1px; padding: 0 0 10px; text-align: left; }
@@ -82,7 +82,7 @@ const pageCss = `
 
   .an-select {
     padding: 7px 10px; border: 1px solid ${C.border}; border-radius: 7px; font-size: 12px;
-    font-family: 'IBM Plex Sans', system-ui, sans-serif; color: ${C.text}; outline: none;
+    font-family: Inter, system-ui, sans-serif; color: ${C.text}; outline: none;
     background: ${C.bg}; transition: border-color 0.15s;
   }
   .an-select:focus { border-color: ${C.accent}; }
@@ -314,7 +314,7 @@ export default function AdminAnalyticsPage() {
                             <td style={{ color: C.green, maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {edit.edited_value || '—'}
                             </td>
-                            <td style={{ color: C.muted, whiteSpace: 'nowrap', fontFamily: 'IBM Plex Mono', fontSize: 11 }}>
+                            <td style={{ color: C.muted, whiteSpace: 'nowrap', fontFamily: 'ui-monospace, monospace', fontSize: 11 }}>
                               {new Date(edit.created_at).toLocaleDateString('en-ZA')}
                             </td>
                           </tr>
