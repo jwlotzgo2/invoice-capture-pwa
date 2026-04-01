@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import {
   User, Building2, Phone, Mail, LogOut, Shield, ChevronRight, Loader2, Check,
   FolderOpen, Bell, BellOff, Tag, Users, Copy, RefreshCw, Crown, UserMinus,
-  ChevronDown, ChevronUp, Send,
+  ChevronDown, ChevronUp, Send, Download,
 } from 'lucide-react';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 
@@ -129,6 +129,11 @@ export default function SettingsPage() {
   const [transferLoading, setTransferLoading] = useState(false);
   const [teamMsg, setTeamMsg] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
 
+  // PWA install
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [isStandalone, setIsStandalone] = useState(false);
+  const [installDone, setInstallDone] = useState(false);
+
   const router = useRouter();
   const supabase = createClient();
 
@@ -140,6 +145,18 @@ export default function SettingsPage() {
       setMembers(json.members || []);
     }
     setMembersLoading(false);
+  }, []);
+
+  // Capture PWA install prompt
+  useEffect(() => {
+    setIsStandalone(
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as any).standalone === true
+    );
+    const handler = (e: Event) => { e.preventDefault(); setInstallPrompt(e); };
+    window.addEventListener('beforeinstallprompt', handler);
+    window.addEventListener('appinstalled', () => { setInstallPrompt(null); setInstallDone(true); });
+    return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
   useEffect(() => {
@@ -191,6 +208,13 @@ export default function SettingsPage() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut(); router.push('/auth/login');
+  };
+
+  const handleInstall = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === 'accepted') { setInstallPrompt(null); setInstallDone(true); }
   };
 
   const handleJoinOrg = async () => {
@@ -763,6 +787,24 @@ export default function SettingsPage() {
               </div>
             </div>
           </div>
+
+          {/* Install PWA */}
+          {!isStandalone && (installPrompt || installDone) && (
+            <button
+              onClick={handleInstall}
+              disabled={installDone || !installPrompt}
+              style={{
+                width: '100%', padding: 14, borderRadius: 6, marginBottom: 10,
+                border: `1px solid rgba(56,189,248,0.3)`, background: 'rgba(56,189,248,0.08)',
+                color: installDone ? T.textMuted : T.cyan, fontFamily: 'inherit', fontSize: 14, fontWeight: 600,
+                cursor: installDone ? 'default' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                opacity: installDone ? 0.6 : 1,
+              }}>
+              {installDone ? <Check size={16} /> : <Download size={16} />}
+              {installDone ? 'App Installed' : 'Install App'}
+            </button>
+          )}
 
           {/* Sign out */}
           <button onClick={handleSignOut} style={{
