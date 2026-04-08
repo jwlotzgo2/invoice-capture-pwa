@@ -33,7 +33,7 @@ interface Doc {
 interface Project { id: string; name: string; }
 
 const fmtDate = (d: string | null) => d ? new Date(d).toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
-const fmtZAR = (n: number | null) => n == null ? '' : new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR', minimumFractionDigits: 0 }).format(n).replace('ZAR', 'R');
+const fmtZAR = (n: number | null) => n == null ? '' : new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n).replace('ZAR\u00a0', 'R ').replace('ZAR', 'R');
 const isPdf = (doc: Doc) => doc.image_url?.toLowerCase().includes('.pdf') || doc.image_path?.toLowerCase().endsWith('.pdf');
 
 function copyToClipboard(text: string) {
@@ -70,8 +70,7 @@ export default function DocumentsPage() {
   const fetch_ = useCallback(async () => {
     setLoading(true);
     try {
-      const { data: { session: _sess } } = await supabase.auth.getSession();
-      const user = _sess?.user;
+      const { data: { user } } = await supabase.auth.getUser();
       const [{ data: invData }, { data: projData }] = await Promise.all([
         supabase.from('invoices').select('id,supplier,description,invoice_date,amount,document_number,image_url,image_path,project_id,created_at,source')
           .eq('user_id', user?.id || '').order(sortBy, { ascending: sortDir === 'asc' }),

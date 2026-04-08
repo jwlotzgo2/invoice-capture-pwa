@@ -21,7 +21,7 @@ interface Project {
 }
 
 const fmtZAR = (n: number) =>
-  new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n).replace('ZAR', 'R');
+  new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n).replace('ZAR\u00a0', 'R ').replace('ZAR', 'R');
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -42,8 +42,7 @@ export default function ProjectsPage() {
   const fetchProjects = async () => {
     setLoading(true);
     try {
-      const { data: { session: _sess } } = await supabase.auth.getSession();
-      const user = _sess?.user;
+      const { data: { user } } = await supabase.auth.getUser();
       const { data: proj } = await supabase
         .from('projects').select('id, name, created_at')
         .eq('user_id', user?.id || '').order('name');
@@ -55,13 +54,13 @@ export default function ProjectsPage() {
 
         const counts: Record<string, number> = {};
         const totals: Record<string, number> = {};
-        (inv || []).forEach(i => {
+        (inv || []).forEach((i: any) => {
           if (i.project_id) {
             counts[i.project_id] = (counts[i.project_id] || 0) + 1;
             totals[i.project_id] = (totals[i.project_id] || 0) + (i.amount || 0);
           }
         });
-        setProjects(proj.map(p => ({ ...p, invoice_count: counts[p.id] || 0, total_spend: totals[p.id] || 0 })));
+        setProjects(proj.map((p: any) => ({ ...p, invoice_count: counts[p.id] || 0, total_spend: totals[p.id] || 0 })));
       }
     } finally { setLoading(false); }
   };
@@ -72,8 +71,7 @@ export default function ProjectsPage() {
     if (!newName.trim()) return;
     setSaving(true); setError(null);
     try {
-      const { data: { session: _sess } } = await supabase.auth.getSession();
-      const user = _sess?.user;
+      const { data: { user } } = await supabase.auth.getUser();
       const { error: err } = await supabase.from('projects').insert({ name: newName.trim(), user_id: user?.id });
       if (err) throw err;
       setNewName(''); setAdding(false);

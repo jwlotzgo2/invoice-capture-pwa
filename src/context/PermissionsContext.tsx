@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { OrgRole } from '@/types/invoice';
 
@@ -46,10 +47,11 @@ const PermissionsContext = createContext<Permissions>(defaultPermissions);
 export function PermissionsProvider({ children }: { children: ReactNode }) {
   const [perms, setPerms] = useState<Permissions>(defaultPermissions);
   const supabase = createClient();
+  const router = useRouter();
 
   const load = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (!user || error) {
       setPerms({ ...defaultPermissions, loading: false });
       return;
     }
@@ -89,10 +91,45 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     load();
-    // Re-load when auth state changes (login/logout)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => load());
-    return () => subscription.unsubscribe();
-  }, [load]);
+
+    // Listen for auth events: refresh permissions on token refresh, redirect on sign-out
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string) => {
+      if (event === 'SIGNED_OUT') {
+        setPerms({ ...defaultPermissions, loading: false });
+        router.push('/auth/login');
+      } else {
+        load();
+      }
+    });
+
+    // When the PWA comes back to the foreground, proactively refresh the session.
+    // Without this, an expired token won't be refreshed until the next getUser() call,
+    // which silently returns null and leaves the app blank.
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        supabase.auth.getUser().then((res: Awaited<ReturnType<typeof supabase.auth.getUser>>) => {
+          const user = res.data?.user;
+          if (!user) {
+            router.push('/auth/login');
+          } else {
+            load();
+          }
+        });
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    // When the device reconnects after being offline, reload auth + permissions.
+    // Without this, pages that failed to fetch while offline stay blank until manual refresh.
+    const handleOnline = () => { load(); };
+    window.addEventListener('online', handleOnline);
+
+    return () => {
+      subscription.unsubscribe();
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [load, router, supabase]);
 
   return (
     <PermissionsContext.Provider value={{ ...perms, refresh: load }}>

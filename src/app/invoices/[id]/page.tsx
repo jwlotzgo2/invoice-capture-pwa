@@ -23,7 +23,7 @@ const CATEGORIES: InvoiceCategory[] = [
 ];
 
 const fmtZAR = (n: number | null | undefined) =>
-  n != null ? `R ${Math.round(n).toLocaleString('en-ZA')}` : null;
+  n != null ? `R ${n.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : null;
 
 const css = `
   * { box-sizing:border-box; }

@@ -28,7 +28,8 @@ function getBucket(days: number) {
   return BUCKETS.find(b => days >= b.min && days <= b.max) || BUCKETS[3];
 }
 
-const fmtZAR = (n: number) => `R ${Math.round(n).toLocaleString('en-ZA')}`;
+const fmtZAR = (n: number) => `R ${n.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const fmtKPI = (n: number) => `R ${Math.round(n).toLocaleString('en-ZA')}`;
 const fmtDate = (d: string | null) => d ? new Date(d).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
 
 const css = `
@@ -79,14 +80,14 @@ export default function OpenInvoicesPage() {
 
   const fetchInvoices = useCallback(async () => {
     setLoading(true);
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { user } } = await supabase.auth.getUser();
     const { data } = await supabase
       .from('invoices')
       .select('*')
-      .eq('user_id', session?.user?.id || '')
+      .eq('user_id', user?.id || '')
       .eq('is_paid', false)
       .order('invoice_date', { ascending: true });
-    setInvoices((data || []).filter(i => i.amount && i.amount > 0));
+    setInvoices((data || []).filter((i: any) => i.amount && i.amount > 0));
     setLoading(false);
   }, []);
 
@@ -183,7 +184,7 @@ export default function OpenInvoicesPage() {
           <div className="oi-grid-4">
             <div className="oi-kpi">
               <div style={{ fontSize: 10, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}><DollarSign size={11} color={T.error} />Total Outstanding</div>
-              <div className="oi-kpi-val" style={{ color: T.error }}>{fmtZAR(total)}</div>
+              <div className="oi-kpi-val" style={{ color: T.error }}>{fmtKPI(total)}</div>
             </div>
             <div className="oi-kpi">
               <div style={{ fontSize: 10, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}><AlertCircle size={11} color={T.warning} />Open Invoices</div>
@@ -195,7 +196,7 @@ export default function OpenInvoicesPage() {
             </div>
             <div className="oi-kpi">
               <div style={{ fontSize: 10, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}><TrendingUp size={11} color={T.blue} />Avg per Invoice</div>
-              <div className="oi-kpi-val">{invoices.length ? fmtZAR(total / invoices.length) : '—'}</div>
+              <div className="oi-kpi-val">{invoices.length ? fmtKPI(total / invoices.length) : '—'}</div>
             </div>
           </div>
 

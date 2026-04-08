@@ -195,7 +195,7 @@ export default function InvoiceListPage() {
     logActivity('export_csv', { count: filtered.length });
   };
 
-  const fmtZAR = (n: number) => `R ${Math.round(n).toLocaleString('en-ZA')}`;
+  const fmtZAR = (n: number) => `R ${n.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const SortIcon = ({ f }: { f: SortField }) => sortBy===f ? (sortDir==='desc'?<ChevronDown size={12}/>:<ChevronUp size={12}/>):null;
 
   return (

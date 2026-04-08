@@ -20,7 +20,7 @@ const CATEGORIES: InvoiceCategory[] = [
   'Professional Services','Food & Entertainment','Equipment','Marketing','Other',
 ];
 
-const fmtZAR = (n:number|null|undefined)=>n!=null?`R ${Math.round(n).toLocaleString('en-ZA')}`:null;
+const fmtZAR = (n:number|null|undefined)=>n!=null?`R ${n.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`:null;
 
 function findDuplicate(inv: Invoice, all: Invoice[]): Invoice | null {
   return all.find(other => {
@@ -41,17 +41,22 @@ function findDuplicate(inv: Invoice, all: Invoice[]): Invoice | null {
   }) ?? null;
 }
 
-function getMatchStatus(inv: Invoice): 'match' | 'off' | 'none' {
+type MatchStatus = 'match-incl' | 'match-excl' | 'off' | 'none';
+
+function getMatchStatus(inv: Invoice): MatchStatus {
   const items = Array.isArray(inv.line_items) ? inv.line_items : [];
   if (items.length === 0) return 'none';
   const itemsTotal = items.reduce((s: number, i: any) => s + (i.line_total ?? 0), 0);
   if (!inv.amount) return 'none';
-  // Check against VAT-inclusive total (lines already include VAT)
-  const matchesIncl = Math.abs(Math.round(itemsTotal * 100) - Math.round(inv.amount * 100)) < 2;
-  // Check against VAT-exclusive total (lines are ex-VAT)
-  const exclTotal = inv.amount - (inv.vat_amount ?? 0);
-  const matchesExcl = Math.abs(Math.round(itemsTotal * 100) - Math.round(exclTotal * 100)) < 2;
-  return (matchesIncl || matchesExcl) ? 'match' : 'off';
+  const tol = 2; // 2 cents tolerance
+  // 1. Lines are VAT-inclusive → sum matches the invoice total directly
+  if (Math.abs(Math.round(itemsTotal * 100) - Math.round(inv.amount * 100)) < tol) return 'match-incl';
+  // 2. Lines are VAT-exclusive → sum matches invoice total minus captured VAT
+  const vat = inv.vat_amount ?? 0;
+  if (vat > 0 && Math.abs(Math.round(itemsTotal * 100) - Math.round((inv.amount - vat) * 100)) < tol) return 'match-excl';
+  // 3. VAT not captured on invoice — try inferring 15% VAT rate on lines
+  if (vat === 0 && Math.abs(Math.round(itemsTotal * 115) - Math.round(inv.amount * 100)) < tol * 10) return 'match-excl';
+  return 'off';
 }
 
 const css = `
@@ -178,7 +183,7 @@ export default function ReviewPage() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Invoice | null>(null);
   const [search, setSearch] = useState('');
-  const [filterMatched, setFilterMatched] = useState<'all'|'match'|'off'|'none'>('all');
+  const [filterMatched, setFilterMatched] = useState<'all'|'match'|'off'|'none'|'match-incl'|'match-excl'>('all');
   const [filterDupes, setFilterDupes] = useState<'all'|'dupes'|'clean'>('all');
   const [zoom, setZoom] = useState(1);
   const [projects, setProjects] = useState<{id:string;name:string}[]>([]);
@@ -200,8 +205,7 @@ export default function ReviewPage() {
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
-    const { data: { session: _sess } } = await supabase.auth.getSession();
-    const user = _sess?.user;
+    const { data: { user } } = await supabase.auth.getUser();
     const { data } = await supabase.from('invoices').select('*').eq('user_id', user?.id||'').order('created_at', {ascending:false});
     const rawInvoices = data || [];
 
@@ -302,7 +306,14 @@ export default function ReviewPage() {
   const fc = (field: keyof InvoiceFormData, val: string) => setFormData(p => ({ ...p, [field]: val }));
 
   const filtered = invoices.filter(inv => {
-    if (filterMatched !== 'all' && getMatchStatus(inv) !== filterMatched) return false;
+    if (filterMatched !== 'all') {
+      const ms = getMatchStatus(inv);
+      if (filterMatched === 'match' && ms !== 'match-incl' && ms !== 'match-excl') return false;
+      if (filterMatched === 'match-incl' && ms !== 'match-incl') return false;
+      if (filterMatched === 'match-excl' && ms !== 'match-excl') return false;
+      if (filterMatched === 'off' && ms !== 'off') return false;
+      if (filterMatched === 'none' && ms !== 'none') return false;
+    }
     if (filterDupes === 'dupes' && findDuplicate(inv, invoices) === null) return false;
     if (search) {
       const q = search.toLowerCase();
@@ -340,6 +351,8 @@ export default function ReviewPage() {
             </div>
             <div className="filter-chips">
               <button className={`fchip${filterMatched==='match'?' active':''}`} onClick={()=>setFilterMatched(v=>v==='match'?'all':'match')}>✓ Matched</button>
+              <button className={`fchip${filterMatched==='match-incl'?' active':''}`} style={filterMatched==='match-incl'?{borderColor:T.success,background:'rgba(134,239,172,0.1)',color:T.success}:{}} onClick={()=>setFilterMatched(v=>v==='match-incl'?'all':'match-incl')}>✓ incl. VAT</button>
+              <button className={`fchip${filterMatched==='match-excl'?' active':''}`} style={filterMatched==='match-excl'?{borderColor:T.success,background:'rgba(134,239,172,0.1)',color:T.success}:{}} onClick={()=>setFilterMatched(v=>v==='match-excl'?'all':'match-excl')}>✓ excl. VAT</button>
               <button className={`fchip${filterMatched==='off'?' active':''}`} onClick={()=>setFilterMatched(v=>v==='off'?'all':'off')}>⚠ Off</button>
               <button className={`fchip orange${filterDupes==='dupes'?' active':''}`} onClick={()=>setFilterDupes(v=>v==='dupes'?'all':'dupes')}>⚡ Dupes{dupeCount>0?` (${dupeCount})`:''}</button>
             </div>
@@ -361,7 +374,8 @@ export default function ReviewPage() {
                     </div>
                     <div className="inv-meta">{inv.document_number?`#${inv.document_number} · `:''}{inv.invoice_date||inv.created_at?.slice(0,10)||''}</div>
                     <div className="badge-row">
-                      {match==='match'&&<span className="badge" style={{background:'rgba(134,239,172,0.12)',color:T.success,borderColor:T.success}}>✓</span>}
+                      {match==='match-incl'&&<span className="badge" style={{background:'rgba(134,239,172,0.12)',color:T.success,borderColor:T.success}}>✓ incl</span>}
+                      {match==='match-excl'&&<span className="badge" style={{background:'rgba(134,239,172,0.12)',color:T.success,borderColor:T.success}}>✓ excl</span>}
                       {match==='off'&&<span className="badge" style={{background:'rgba(252,165,165,0.12)',color:T.error,borderColor:T.error}}>⚠</span>}
                       {match==='none'&&<span className="badge" style={{color:T.textMuted,borderColor:T.border}}>no lines</span>}
                       {duped&&<span className="badge" style={{background:'rgba(253,186,116,0.12)',color:T.warning,borderColor:T.warning}}>⚡ dup</span>}
