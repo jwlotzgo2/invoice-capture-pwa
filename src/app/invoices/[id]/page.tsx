@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Invoice, InvoiceFormData, LineItem, InvoiceCategory, DocumentType, DocStatus, DOCUMENT_TYPE_LABELS, DOC_STATUS_LABELS } from '@/types/invoice';
 import InvoiceForm from '@/components/InvoiceForm';
-import { ArrowLeft, Trash2, Edit2, Loader2, AlertCircle, ScanLine, CheckCircle, ZoomIn, X } from 'lucide-react';
+import { ArrowLeft, Trash2, Edit2, Loader2, AlertCircle, ScanLine, CheckCircle, ZoomIn, X, CreditCard, ChevronDown } from 'lucide-react';
 import { logActivity } from '@/lib/logActivity';
 import { usePermissions } from '@/context/PermissionsContext';
 
@@ -77,6 +77,26 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   const [projects, setProjects] = useState<{id:string;name:string}[]>([]);
   const [projectId, setProjectId] = useState<string | null>(null);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [markingPaid, setMarkingPaid] = useState(false);
+  const [showPaymentPicker, setShowPaymentPicker] = useState(false);
+
+  const PAYMENT_METHODS = ['Cash','Card','EFT','Bank Transfer','Other'];
+
+  const handleTogglePaid = async (method?: string) => {
+    if (!invoice) return;
+    setMarkingPaid(true);
+    try {
+      const newPaid = !invoice.is_paid;
+      const updates: any = { is_paid: newPaid, updated_at: new Date().toISOString() };
+      if (newPaid && method) updates.payment_method = method.toLowerCase().replace(' ', '_');
+      if (!newPaid) updates.payment_method = null;
+      const { error: updateError } = await supabase.from('invoices').update(updates).eq('id', id);
+      if (updateError) throw updateError;
+      setInvoice({ ...invoice, ...updates });
+      setShowPaymentPicker(false);
+    } catch (err) { setError(err instanceof Error ? err.message : 'Failed to update'); }
+    finally { setMarkingPaid(false); }
+  };
   const [formData, setFormData] = useState<InvoiceFormData>({
     supplier:'', description:'', invoice_date:'', amount:'', vat_amount:'', products_services:'', business_name:'',
   });
@@ -107,8 +127,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
     };
     fetchInvoice();
     const fetchProjects = async () => {
-      const { data: { session: _sess } } = await supabase.auth.getSession();
-      const user = _sess?.user;
+      const { data: { user } } = await supabase.auth.getUser();
       const { data } = await supabase.from('projects').select('id,name').eq('user_id', user?.id||'').order('name');
       setProjects(data || []);
     };
@@ -116,8 +135,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   }, [id]);
 
   const checkDuplicate = async (inv: any) => {
-    const { data: { session: _sess } } = await supabase.auth.getSession();
-      const user = _sess?.user;
+    const { data: { user } } = await supabase.auth.getUser();
     if (inv.document_number) {
       const { data } = await supabase.from('invoices').select('id').eq('user_id', user?.id||'').eq('document_number', inv.document_number).neq('id', id).limit(1);
       if (data && data.length > 0) { setDuplicateWarning(`Doc ref ${inv.document_number} exists on another record`); return; }
@@ -290,6 +308,42 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
             {category && <span className="badge" style={{background:T.blueGlow,color:T.blue,borderColor:T.blue}}>{category}</span>}
             {invoice.is_paid && <span className="badge" style={{background:'rgba(134,239,172,0.12)',color:T.success,borderColor:T.success}}>{invoice.payment_method?invoice.payment_method.toUpperCase():'PAID'}</span>}
           </div>
+
+          {/* Paid toggle — always visible in view mode */}
+          {!editing && (
+            <div style={{marginBottom:12}}>
+              {invoice.is_paid ? (
+                <button
+                  onClick={() => handleTogglePaid()}
+                  disabled={markingPaid}
+                  style={{width:'100%',padding:'10px 16px',borderRadius:8,border:`1px solid ${T.success}`,background:'rgba(134,239,172,0.08)',color:T.success,fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+                  {markingPaid ? <Loader2 size={15} style={{animation:'tspin 1s linear infinite'}}/> : <CheckCircle size={15}/>}
+                  {invoice.payment_method ? invoice.payment_method.replace('_',' ').replace(/\b\w/g,c=>c.toUpperCase()) : 'Paid'} — tap to mark unpaid
+                </button>
+              ) : showPaymentPicker ? (
+                <div style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:8,padding:12}}>
+                  <div style={{fontSize:12,color:T.textMuted,marginBottom:8}}>Select payment method</div>
+                  <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:10}}>
+                    {PAYMENT_METHODS.map(m => (
+                      <button key={m} onClick={() => handleTogglePaid(m)} disabled={markingPaid}
+                        style={{padding:'7px 14px',borderRadius:6,border:`1px solid ${T.border}`,background:T.surfaceHigh,color:T.text,fontSize:13,cursor:'pointer',fontFamily:'inherit'}}>
+                        {markingPaid ? <Loader2 size={13} style={{animation:'tspin 1s linear infinite'}}/> : m}
+                      </button>
+                    ))}
+                  </div>
+                  <button onClick={() => setShowPaymentPicker(false)} style={{background:'none',border:'none',color:T.textMuted,fontSize:12,cursor:'pointer',fontFamily:'inherit'}}>Cancel</button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowPaymentPicker(true)}
+                  style={{width:'100%',padding:'10px 16px',borderRadius:8,border:`1px solid ${T.border}`,background:'transparent',color:T.textDim,fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+                  <CreditCard size={15}/>
+                  Mark as Paid
+                  <ChevronDown size={14}/>
+                </button>
+              )}
+            </div>
+          )}
 
           {editing ? (
             <>

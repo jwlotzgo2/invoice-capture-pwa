@@ -39,18 +39,22 @@ function findDuplicate(inv: Invoice, all: Invoice[]): Invoice | null {
   }) ?? null;
 }
 
-function getMatchStatus(inv: Invoice): 'match' | 'off' | 'none' {
+type MatchStatus = 'match-incl' | 'match-excl' | 'off' | 'none';
+
+function getMatchStatus(inv: Invoice): MatchStatus {
   const items = Array.isArray(inv.line_items) ? inv.line_items : [];
   if (items.length === 0) return 'none';
   const itemsTotal = items.reduce((s: number, i: any) => s + (i.line_total ?? 0), 0);
-  const invoiceTotal = inv.amount ?? 0;
-  if (invoiceTotal === 0) return 'none';
-  // Check against VAT-inclusive total (lines already include VAT)
-  const matchesIncl = Math.abs(Math.round(itemsTotal * 100) - Math.round(invoiceTotal * 100)) < 2;
-  // Check against VAT-exclusive total (lines are ex-VAT)
-  const exclTotal = invoiceTotal - (inv.vat_amount ?? 0);
-  const matchesExcl = Math.abs(Math.round(itemsTotal * 100) - Math.round(exclTotal * 100)) < 2;
-  return (matchesIncl || matchesExcl) ? 'match' : 'off';
+  if (!inv.amount) return 'none';
+  const tol = 2; // 2 cents tolerance
+  // 1. Lines are VAT-inclusive → sum matches the invoice total directly
+  if (Math.abs(Math.round(itemsTotal * 100) - Math.round(inv.amount * 100)) < tol) return 'match-incl';
+  // 2. Lines are VAT-exclusive → sum matches invoice total minus captured VAT
+  const vat = inv.vat_amount ?? 0;
+  if (vat > 0 && Math.abs(Math.round(itemsTotal * 100) - Math.round((inv.amount - vat) * 100)) < tol) return 'match-excl';
+  // 3. VAT not captured on invoice — try inferring 15% VAT rate on lines
+  if (vat === 0 && Math.abs(Math.round(itemsTotal * 115) - Math.round(inv.amount * 100)) < tol * 10) return 'match-excl';
+  return 'off';
 }
 
 const css = `
@@ -97,7 +101,7 @@ export default function InvoiceListPage() {
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo] = useState('');
   const [filterProject, setFilterProject] = useState('');
-  const [filterMatched, setFilterMatched] = useState<'all'|'match'|'off'|'none'>('all');
+  const [filterMatched, setFilterMatched] = useState<'all'|'match'|'match-incl'|'match-excl'|'off'|'none'>('all');
   const [filterDuplicates, setFilterDuplicates] = useState<'all'|'dupes'|'clean'>('all');
   const [filterPaid, setFilterPaid] = useState<'all'|'paid'|'unpaid'>('all');
   const [projects, setProjects] = useState<{id:string;name:string}[]>([]);
@@ -105,15 +109,14 @@ export default function InvoiceListPage() {
   const [sortDir, setSortDir] = useState<'asc'|'desc'>('desc');
   const router = useRouter();
   const supabase = createClient();
-  const { isOrgOwner, inOrg, canCapture } = usePermissions();
-  // Only org owners can mark invoices as paid; solo users can always do it
-  const canMarkPaid = !inOrg || isOrgOwner;
+  const { canCapture } = usePermissions();
+  // Every user can mark their own invoices as paid — it's personal payment tracking
+  const canMarkPaid = true;
 
   const fetchInvoices = useCallback(async () => {
     setLoading(true);
     try {
-      const { data: { session: _sess } } = await supabase.auth.getSession();
-      const user = _sess?.user;
+      const { data: { user } } = await supabase.auth.getUser();
       const { data } = await supabase.from('invoices').select('id,supplier,description,invoice_date,amount,vat_amount,document_number,document_type,project_id,status,category,is_paid,payment_method,line_items,image_path,created_at').eq('user_id', user?.id || '').order(sortBy, { ascending: sortDir === 'asc' });
       setInvoices((data as unknown as Invoice[]) || []);
     } finally { setLoading(false); }
@@ -136,8 +139,7 @@ export default function InvoiceListPage() {
   }, [fetchInvoices]);
   useEffect(() => {
     const load = async () => {
-      const { data: { session: _sess } } = await supabase.auth.getSession();
-      const user = _sess?.user;
+      const { data: { user } } = await supabase.auth.getUser();
       const { data } = await supabase.from('projects').select('id,name').eq('user_id', user?.id||'').order('name');
       setProjects(data || []);
     };
@@ -149,7 +151,14 @@ export default function InvoiceListPage() {
     if (filterProject && (inv as any).project_id !== filterProject) return false;
     if (filterDateFrom && inv.invoice_date && inv.invoice_date < filterDateFrom) return false;
     if (filterDateTo && inv.invoice_date && inv.invoice_date > filterDateTo) return false;
-    if (filterMatched !== 'all' && getMatchStatus(inv) !== filterMatched) return false;
+    if (filterMatched !== 'all') {
+      const ms = getMatchStatus(inv);
+      if (filterMatched === 'match' && ms !== 'match-incl' && ms !== 'match-excl') return false;
+      if (filterMatched === 'match-incl' && ms !== 'match-incl') return false;
+      if (filterMatched === 'match-excl' && ms !== 'match-excl') return false;
+      if (filterMatched === 'off' && ms !== 'off') return false;
+      if (filterMatched === 'none' && ms !== 'none') return false;
+    }
     if (filterDuplicates === 'dupes' && findDuplicate(inv, invoices) === null) return false;
     if (filterPaid === 'paid' && !inv.is_paid) return false;
     if (filterPaid === 'unpaid' && inv.is_paid) return false;
@@ -210,6 +219,8 @@ export default function InvoiceListPage() {
           {/* Quick filter chips */}
           <div style={{ display:'flex',gap:6,padding:'8px 16px',overflowX:'auto',scrollbarWidth:'none',maxWidth:'100vw' }}>
             <button className={`filter-chip${filterMatched==='match'?' active':''}`} onClick={()=>setFilterMatched(v=>v==='match'?'all':'match')}>✓ Matched</button>
+            <button className={`filter-chip${filterMatched==='match-incl'?' active':''}`} style={filterMatched==='match-incl'?{borderColor:T.success,background:'rgba(134,239,172,0.1)',color:T.success}:{}} onClick={()=>setFilterMatched(v=>v==='match-incl'?'all':'match-incl')}>✓ incl. VAT</button>
+            <button className={`filter-chip${filterMatched==='match-excl'?' active':''}`} style={filterMatched==='match-excl'?{borderColor:T.success,background:'rgba(134,239,172,0.1)',color:T.success}:{}} onClick={()=>setFilterMatched(v=>v==='match-excl'?'all':'match-excl')}>✓ excl. VAT</button>
             <button className={`filter-chip${filterMatched==='off'?' active':''}`} onClick={()=>setFilterMatched(v=>v==='off'?'all':'off')}>⚠ Off</button>
             <button className={`filter-chip${filterDuplicates==='dupes'?' active':''}`} style={{ borderColor: filterDuplicates==='dupes'?T.warning:T.border, color: filterDuplicates==='dupes'?T.warning:T.textDim, background: filterDuplicates==='dupes'?'rgba(253,186,116,0.12)':'transparent' }} onClick={()=>setFilterDuplicates(v=>v==='dupes'?'all':'dupes')}>
               ⚡ Dupes{dupeCount>0?` (${dupeCount})`:''}</button>
@@ -281,7 +292,8 @@ export default function InvoiceListPage() {
                   </div>
                 </div>
                 <div style={{display:'flex',gap:6,flexWrap:'wrap',marginTop:6,alignItems:'center'}}>
-                  {matchStatus==='match' && <span className="badge" style={{background:'rgba(134,239,172,0.12)',color:T.success,borderColor:T.success}}>✓ Match</span>}
+                  {matchStatus==='match-incl' && <span className="badge" style={{background:'rgba(134,239,172,0.12)',color:T.success,borderColor:T.success}}>✓ incl. VAT</span>}
+                  {matchStatus==='match-excl' && <span className="badge" style={{background:'rgba(134,239,172,0.12)',color:T.success,borderColor:T.success}}>✓ excl. VAT</span>}
                   {matchStatus==='off' && <span className="badge" style={{background:'rgba(252,165,165,0.12)',color:T.error,borderColor:T.error}}>⚠ Off</span>}
                   {dupedDoc && (
                     <span className="badge" style={{background:'rgba(253,186,116,0.12)',color:T.warning,borderColor:T.warning}}>
